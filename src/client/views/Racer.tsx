@@ -576,7 +576,7 @@ function RulesTab({ state, meId }: { state: StatePayload; meId: number }) {
     <div className="rc-rules">
       <section className="rc-lives">
         <h1 className="rc-lives-head">
-          Win and you get to keep racing, lose twice and you're out.
+          Win and you keep racing, lose twice and you're out.
         </h1>
 
         <div className="rc-pips-block">
