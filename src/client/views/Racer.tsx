@@ -31,6 +31,13 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 const ID_KEY = "race-tracker.id";
+const TAB_KEY = "race-tracker.tab";
+
+/** Validated against the known tabs, so a stale stored value can't blank the view. */
+function storedTab(): Tab {
+  const stored = localStorage.getItem(TAB_KEY);
+  return TABS.some((t) => t.id === stored) ? (stored as Tab) : "now";
+}
 
 export function RacerView({ state }: { state: StatePayload }) {
   const [meId, setMeId] = useState<number | null>(() => {
@@ -189,11 +196,15 @@ function TrackRule() {
 // ---------------------------------------------------------------------------------
 
 function Main({ state, meId }: { state: StatePayload; meId: number }) {
-  const [tab, setTab] = useState<Tab>("now");
+  const [tab, setTab] = useState<Tab>(storedTab);
   const me = racerById(state, meId);
   const messages = useMessages(state, meId);
 
   useRaceAlerts(state, meId, messages);
+
+  useEffect(() => {
+    localStorage.setItem(TAB_KEY, tab);
+  }, [tab]);
 
   return (
     <div className="rc">
