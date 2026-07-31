@@ -8,6 +8,8 @@ type Props = {
   dim?: boolean;
   current?: boolean;
   compact?: boolean;
+  /** Off inside bracket columns, where the column header already names it. */
+  showRound?: boolean;
   onSelect?: (match: PublicMatch) => void;
 };
 
@@ -51,7 +53,15 @@ function Side({
   );
 }
 
-export function MatchCard({ state, match, dim, current, compact = false, onSelect }: Props) {
+export function MatchCard({
+  state,
+  match,
+  dim,
+  current,
+  compact = false,
+  showRound = true,
+  onSelect,
+}: Props) {
   const classes = ["mc"];
   if (dim) {
     classes.push("mc-dim");
@@ -71,10 +81,9 @@ export function MatchCard({ state, match, dim, current, compact = false, onSelec
 
   const body = (
     <>
-      {/* No match code here. The column header already names the round, and a
-          code is only useful to someone cross-referencing a chart. */}
+      {/* No match code: it only helps someone cross-referencing a chart. */}
       <div className="mc-head">
-        <span className="code">{match.label}</span>
+        <span className="code">{showRound ? match.label : ""}</span>
         {match.state === "bye" ? <span className="mc-tag">bye</span> : null}
         {current ? <span className="mc-tag mc-tag-live">racing</span> : null}
       </div>

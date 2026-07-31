@@ -30,6 +30,10 @@
 .rc-body {
   padding: var(--s-4);
   padding-bottom: var(--s-6);
+  /* Grid items default to min-width: auto, so the bracket's column strip was
+     forcing the whole page wider than the phone instead of scrolling inside
+     its own overflow-x container. */
+  min-width: 0;
 }
 
 .rc-nav {
@@ -277,6 +281,7 @@
 
 .rc-columns {
   display: flex;
+  min-width: 0;
   gap: var(--s-3);
   padding-bottom: var(--s-3);
   scroll-snap-type: x mandatory;

@@ -726,6 +726,7 @@ function BracketTab({ state, meId }: { state: StatePayload; meId: number }) {
                   match={match}
                   dim={myPath && !mine.has(match.id)}
                   current={match.id === state.event.currentMatch}
+                  showRound={false}
                   onSelect={setDetail}
                 />
               ))}

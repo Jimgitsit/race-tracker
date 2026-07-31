@@ -127,7 +127,7 @@ function Year({ year }: { year: number }) {
             <h2 className="rc-column-head">{column.label}</h2>
             <div className="stack rc-column-body">
               {column.matches.map((match) => (
-                <MatchCard key={match.id} state={state} match={match} />
+                <MatchCard key={match.id} state={state} match={match} showRound={false} />
               ))}
             </div>
           </section>
