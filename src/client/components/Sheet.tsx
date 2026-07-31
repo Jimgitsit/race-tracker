@@ -136,7 +136,7 @@ export function Sheet({ open, title, onClose, children }: Props) {
   return (
     <div
       className="sheet-backdrop"
-      style={offset > 0 ? { opacity: 1 - progress * 0.55 } : undefined}
+      style={{ opacity: 1 - progress * 0.55 }}
       onClick={onClose}
     >
       <div
@@ -146,7 +146,11 @@ export function Sheet({ open, title, onClose, children }: Props) {
         aria-label={title}
         tabIndex={-1}
         ref={panel}
-        style={offset > 0 ? { transform: `translateY(${offset}px)` } : undefined}
+        // Always present rather than dropped at zero: removing and re-adding the
+        // property is a second thing that can retrigger animation on the way to
+        // rest. The entry keyframes still win for their 260ms, because CSS
+        // animations outrank inline styles in the cascade.
+        style={{ transform: `translateY(${offset}px)` }}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="sheet-head">
