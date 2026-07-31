@@ -214,24 +214,48 @@
   width: min(560px, 100%);
   max-height: 88dvh;
   overflow-y: auto;
-  padding: var(--s-3) var(--s-4) calc(var(--s-5) + var(--safe-bottom));
+  padding: 0 var(--s-4) calc(var(--s-5) + var(--safe-bottom));
   border-radius: var(--r-lg) var(--r-lg) 0 0;
   background: var(--surface);
   border-top: 2px solid var(--track);
   box-shadow: var(--shadow-lg);
-  animation: sheet-up 180ms cubic-bezier(0.2, 0.8, 0.3, 1);
+  /* Vertical panning stays native so the body scrolls; the header opts out. */
+  touch-action: pan-y;
+  animation: sheet-up 260ms cubic-bezier(0.2, 0.9, 0.25, 1);
+  transition: transform 220ms cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+
+/* While a finger is on it the sheet must track exactly, with no easing. */
+.sheet-dragging {
+  transition: none;
+  animation: none;
+}
+
+/* Sticky so the grip stays grabbable after the body has been scrolled. */
+.sheet-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding-top: var(--s-3);
+  margin-bottom: var(--s-4);
+  background: var(--surface);
+  touch-action: none;
+  cursor: grab;
+}
+
+.sheet-dragging .sheet-head {
+  cursor: grabbing;
 }
 
 .sheet-grip {
-  width: 40px;
-  height: 4px;
+  width: 44px;
+  height: 5px;
   margin: 0 auto var(--s-3);
   border-radius: 999px;
   background: var(--surface-3);
 }
 
 .sheet-title {
-  margin-bottom: var(--s-4);
   font-size: var(--t-xl);
 }
 
@@ -244,8 +268,7 @@
 
 @keyframes sheet-up {
   from {
-    transform: translateY(14px);
-    opacity: 0;
+    transform: translateY(100%);
   }
 }
 
