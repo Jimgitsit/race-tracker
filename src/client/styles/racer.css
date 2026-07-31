@@ -16,15 +16,27 @@
   background: var(--ground);
 }
 
+.rc-top-id {
+  min-width: 0;
+}
+
 .rc-count {
   margin-top: 2px;
   color: var(--ink-dim);
+}
+
+.rc-top-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--s-2);
 }
 
 .rc-share {
   min-height: 40px;
   padding: 0 var(--s-3);
   font-size: var(--t-sm);
+  white-space: nowrap;
 }
 
 .rc-body {
@@ -210,6 +222,46 @@
 .rc-wait-note {
   color: var(--ink-dim);
   text-align: center;
+}
+
+.rc-wait-join {
+  margin-top: var(--s-3);
+}
+
+/* --- spectating -------------------------------------------------------------- */
+
+.rc-watch {
+  align-self: center;
+  padding: var(--s-3);
+  font-size: var(--t-base);
+  font-weight: 600;
+  color: var(--ink-dim);
+}
+
+.rc-watching {
+  padding: var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+}
+
+.rc-watching-head {
+  font-family: var(--display);
+  font-size: var(--t-lg);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+
+.rc-watching-sub {
+  margin-top: var(--s-1);
+  font-size: var(--t-sm);
+  color: var(--ink-dim);
+}
+
+.rc-watching-sub strong {
+  color: var(--ink);
 }
 
 .rc-photo {

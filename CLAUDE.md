@@ -36,6 +36,10 @@ stays inspectable.
 - **Display fit maths measures `clientHeight`**, which includes padding — so `.disp-canvas`
   must stay padding-free or the bracket clips at the bottom. Padding goes inside the scaled
   content.
+- **The big screen also renders on a phone** (spectators can flip to it), so it must survive
+  portrait. Two rules keep it honest: clamp against **`vmin`, not `vh`** (identical on any
+  landscape viewport, so the TV never changes), and use **`minmax(0, …)` grid tracks, never a
+  bare `1fr`** — `1fr` floors at min-content and the banner blows past the screen width.
 - **Two QR types, different exposure rules.** The join QR is a bare URL and is safe anywhere.
   The re-link QR carries a racer's token and must never reach the big screen. They're
   separate components on purpose.

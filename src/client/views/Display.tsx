@@ -13,16 +13,46 @@ type Density = "full" | "compact" | "collapsed";
 const MODES: Mode[] = ["AUTO", "MAIN", "LOSERS", "CONSOLATION", "EVERYTHING"];
 const CONTROL_TIMEOUT_MS = 6000;
 
-export function DisplayView({ state }: { state: StatePayload }) {
+export function DisplayView({
+  state,
+  onExit,
+}: {
+  state: StatePayload;
+  onExit?: () => void;
+}) {
   useWakeLock();
 
-  if (state.event.phase === "registration") {
-    return <Registration state={state} />;
-  }
-  if (state.event.phase === "complete") {
-    return <Finished state={state} />;
-  }
-  return <Racing state={state} />;
+  const body =
+    state.event.phase === "registration" ? (
+      <Registration state={state} />
+    ) : state.event.phase === "complete" ? (
+      <Finished state={state} />
+    ) : (
+      <Racing state={state} />
+    );
+
+  return (
+    <div className={onExit ? "disp-shell disp-shell-exit" : "disp-shell"}>
+      {body}
+      {onExit ? <ExitBar onExit={onExit} /> : null}
+    </div>
+  );
+}
+
+/**
+ * Only rendered for a phone that flipped here from the spectator view. This
+ * layout is 16:9 by design, so it says the one thing that fixes it on a phone
+ * rather than pretending portrait is fine.
+ */
+function ExitBar({ onExit }: { onExit: () => void }) {
+  return (
+    <div className="disp-exit">
+      <button type="button" className="disp-exit-btn" onClick={onExit}>
+        ← Back
+      </button>
+      <span className="disp-exit-hint">Turn your phone sideways</span>
+    </div>
+  );
 }
 
 /**

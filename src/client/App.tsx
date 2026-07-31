@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { BASE } from "./lib/api.ts";
 import { useRace } from "./lib/useRace.ts";
@@ -39,7 +39,7 @@ function parseRoute(): Route {
   return { name: "racer" };
 }
 
-function useRoute(): Route {
+function useRoute(): [Route, (path: string) => void] {
   const [route, setRoute] = useState<Route>(parseRoute);
 
   useEffect(() => {
@@ -48,12 +48,25 @@ function useRoute(): Route {
     return () => window.removeEventListener("popstate", sync);
   }, []);
 
-  return route;
+  const go = useCallback((path: string) => {
+    window.history.pushState({}, "", `${BASE}${path}`);
+    setRoute(parseRoute());
+  }, []);
+
+  return [route, go];
 }
 
 export function App() {
-  const route = useRoute();
+  const [route, go] = useRoute();
   const { state, connected } = useRace();
+
+  /**
+   * The big screen is normally a TV opened straight at /display, where a "back"
+   * button is clutter with nothing to click it. It only earns its place when a
+   * phone flipped to it from the spectator view — so the way in is what decides
+   * whether there is a way out.
+   */
+  const [cameFromPhone, setCameFromPhone] = useState(false);
 
   if (route.name === "history") {
     return <HistoryView year={route.year} />;
@@ -72,8 +85,28 @@ export function App() {
     <>
       {connected ? null : <p className="offline-banner">Reconnecting…</p>}
       {route.name === "director" ? <DirectorView state={state} /> : null}
-      {route.name === "display" ? <DisplayView state={state} /> : null}
-      {route.name === "racer" ? <RacerView state={state} /> : null}
+      {route.name === "display" ? (
+        <DisplayView
+          state={state}
+          onExit={
+            cameFromPhone
+              ? () => {
+                  setCameFromPhone(false);
+                  window.history.back();
+                }
+              : undefined
+          }
+        />
+      ) : null}
+      {route.name === "racer" ? (
+        <RacerView
+          state={state}
+          onOpenDisplay={() => {
+            setCameFromPhone(true);
+            go("display");
+          }}
+        />
+      ) : null}
     </>
   );
 }

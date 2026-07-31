@@ -76,7 +76,8 @@ URL stays typeable (`jimmcgowen.com/race-tracker/display`). All in-app links mus
 
 **First visit** (no token in `localStorage`):
 1. Name entry. Single field, big button. Reject empty and duplicate names (case-insensitive)
-   with an inline message.
+   with an inline message. A secondary **"Just watching"** link goes straight to the
+   spectator view (§3.1a).
 2. "You're in!" → optional "Add a photo of your car" (camera or library). Skippable, and
    addable later from the Racers tab.
 3. Store the returned token in `localStorage`. That token is the racer's identity forever
@@ -113,6 +114,25 @@ it is unreadable on a phone. Instead:
 (`Racing` / `1 loss` / `Out — top 12`). Tap for a detail sheet with that racer's match
 history. The viewer's own card is first and has an `Edit` affordance (change name / add or
 replace photo) — name edits only allowed before the roster locks.
+
+### 3.1a Spectator view — `/` with no identity
+
+Most people in the room aren't racing. Anyone who opens `/` without a token gets the **same
+four tabs** as a racer, not a cut-down page: they're standing at the same track looking at
+the same bracket, and everything except *your* status, *your* photo, *your* alerts and
+*your* path through the bracket is equally theirs to read. Internally this is the racer view
+with `meId: null`.
+
+- Before the roster locks, `/` is the sign-up form; "Just watching" opts into the spectator
+  view and is remembered across a refresh. From there a **"Changed my mind — I'm racing"**
+  button goes back to sign-up while registration is still open.
+- Once the roster locks there is no sign-up left to show, so `/` **is** the spectator view.
+  (It used to be a dead end offering `/display` on a phone, which is the wrong shape for a
+  hand.)
+- Messages: broadcasts only, and they come from the public state payload rather than
+  `/api/me/messages` — a spectator has no token, and direct messages are not theirs.
+- A **Big screen** button in the header flips to `/display` and back. It only appears for
+  spectators; a racer's header keeps Share alone.
 
 ### 3.2 Director view — `/director` (mobile)
 
@@ -220,6 +240,22 @@ on-screen control bar showing the mapping, which auto-hides after 6s.
 - Request a `navigator.wakeLock` so the TV doesn't sleep, and re-request it on
   `visibilitychange` (browsers drop the lock when the tab is backgrounded).
 - No auth. Anyone who can reach the URL can watch — that's the point.
+
+**On a phone.** A spectator can flip here from `/` (§3.1a), so the layout has to survive a
+viewport it was not drawn for. It stays one 16:9-shaped screen, scaled down — it does not
+reflow into a phone layout, because the phone layout already exists one tap away.
+
+- Sizes clamp against **`vmin`, not `vh`**. On any landscape viewport the two are identical,
+  so the TV is untouched; in portrait, `vh` sizes the banner off a dimension the screen
+  doesn't have and shoves the far car off-screen.
+- Grid tracks are `minmax(0, …)`, never a bare `1fr`: a `1fr` track floors at its content's
+  min-content width, which is the same bug from the other direction.
+- Below TV size the size floors come off (they exist so nothing shrinks on a 65" screen),
+  the banner row takes only the height it uses instead of a fixed share, and the footer QR
+  goes — nobody scans the phone they're holding.
+- A **Back** control appears *only* when a phone navigated here in-app, never on a TV opened
+  straight at the URL. In portrait it also carries a "turn your phone sideways" hint and the
+  banner gets a lane so the two don't overlap.
 
 ### 3.4 Messages and alerts
 

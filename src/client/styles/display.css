@@ -95,19 +95,24 @@
 
 /* --- racing ------------------------------------------------------------------- */
 
+/* minmax(0, …) throughout, not 1fr: a bare 1fr track floors at its content's
+   min-content width, so on a narrow screen the banner sizes itself off the
+   names rather than off the screen and pushes the far car out of view. */
 .disp-racing {
   display: grid;
   grid-template-rows: 22% 1fr auto;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .disp-banner {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: var(--s-6);
   padding: var(--s-4) var(--s-6);
   border-bottom: 4px solid var(--track);
   background: linear-gradient(180deg, rgb(232 83 28 / 10%), transparent);
+  min-width: 0;
   min-height: 0;
 }
 
@@ -141,14 +146,14 @@
 }
 
 .disp-banner-car .avatar {
-  width: clamp(90px, 13vh, 190px);
-  height: clamp(90px, 13vh, 190px);
+  width: clamp(90px, 13vmin, 190px);
+  height: clamp(90px, 13vmin, 190px);
   border-radius: var(--r-md);
   object-fit: cover;
 }
 
 .disp-banner-name {
-  font-size: clamp(2rem, 5.2vh, 4.4rem);
+  font-size: clamp(2rem, 5.2vmin, 4.4rem);
   line-height: 0.92;
   overflow-wrap: anywhere;
 }
@@ -201,7 +206,7 @@
 
 .disp-vs {
   font-family: var(--display);
-  font-size: clamp(1.6rem, 3.6vh, 3rem);
+  font-size: clamp(1.6rem, 3.6vmin, 3rem);
   font-weight: 800;
   color: var(--track);
 }
@@ -488,6 +493,155 @@
 .disp-foot-right .qr-url,
 .disp-join-left .qr-url {
   display: none;
+}
+
+/* --- a phone flipped sideways -------------------------------------------------- */
+
+/*
+ * Every size above has a floor so that nothing on a 65" TV shrinks to nothing.
+ * On a phone those floors are precisely what breaks the layout: the viewport is
+ * shorter than the floor, so the banner cannot shrink and shoves the names off
+ * the side. Below TV size the floors come off and the chrome gives the bracket
+ * the room it needs — the same screen, just small.
+ */
+@media (max-height: 560px), (max-width: 900px) {
+  /* A fixed share of the height is right on a TV, where the banner is the thing
+     you read from the sofa. Here every pixel it doesn't need belongs to the
+     bracket, so it takes only what it uses. */
+  .disp-racing {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .disp-eyebrow {
+    font-size: 0.55rem;
+    letter-spacing: 0.16em;
+  }
+
+  .disp-banner {
+    gap: var(--s-3);
+    padding: var(--s-2) var(--s-3);
+    border-bottom-width: 2px;
+  }
+
+  .disp-banner-car {
+    gap: var(--s-2);
+  }
+
+  .disp-banner-car .avatar {
+    width: clamp(34px, 13vmin, 190px);
+    height: clamp(34px, 13vmin, 190px);
+  }
+
+  .disp-banner-name {
+    font-size: clamp(0.95rem, 5.2vmin, 4.4rem);
+  }
+
+  .disp-banner-idle {
+    font-size: 1.4rem;
+  }
+
+  .disp-vs {
+    font-size: clamp(0.9rem, 3.6vmin, 3rem);
+  }
+
+  .disp-banner-round {
+    font-size: 0.55rem;
+  }
+
+  .disp-stamp {
+    font-size: 3rem;
+  }
+
+  .disp-foot {
+    gap: var(--s-3);
+    padding: var(--s-1) var(--s-3);
+  }
+
+  /* Both strips shrink from the same basis, so neither can pin the footer wider
+     than the screen and push the other one off it. */
+  .disp-ondeck {
+    flex: 1 1 0;
+    gap: var(--s-3);
+  }
+
+  .disp-ondeck-item {
+    font-size: 0.85rem;
+  }
+
+  /* Twice the on-deck strip's share: on-deck truncates to fewer heats and still
+     reads, but a message cut to one word says nothing at all. */
+  .disp-announce {
+    flex: 2 1 0;
+    padding: var(--s-1) var(--s-2);
+    border-left-width: 2px;
+    font-size: 0.8rem;
+  }
+
+  .disp-announce-tag {
+    font-size: 0.55rem;
+  }
+
+  .disp-announce-when {
+    display: none;
+  }
+
+  .disp-progress {
+    font-size: 0.7rem;
+  }
+
+  /* A QR is an invitation to someone across the room. Nobody scans the phone
+     they are holding. */
+  .disp-foot-right .qr-shell {
+    display: none;
+  }
+}
+
+/* --- back out to the phone view ----------------------------------------------- */
+
+.disp-exit {
+  position: fixed;
+  top: calc(var(--safe-top) + var(--s-2));
+  left: var(--s-3);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.disp-exit-btn {
+  min-height: 40px;
+  padding: 0 var(--s-4);
+  border-radius: 999px;
+  background: rgb(15 11 8 / 92%);
+  border: 1px solid var(--track);
+  font-family: var(--body);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--ink);
+  backdrop-filter: blur(6px);
+}
+
+.disp-exit-hint {
+  display: none;
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* The hint is only true where it's actionable: a portrait phone. On a laptop or
+   a rotated phone the layout is already the shape it was drawn for. */
+@media (orientation: portrait) and (max-width: 820px) {
+  .disp-exit-hint {
+    display: block;
+  }
+
+  /* Portrait is the one shape narrow enough that the floating bar lands on top
+     of the banner rather than beside it, so there it gets a lane of its own. */
+  .disp-shell-exit .disp-banner {
+    padding-top: 54px;
+  }
 }
 
 .disp-controls {

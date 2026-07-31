@@ -32,6 +32,7 @@ const TABS: { id: Tab; label: string }[] = [
 
 const ID_KEY = "race-tracker.id";
 const TAB_KEY = "race-tracker.tab";
+const WATCH_KEY = "race-tracker.watching";
 
 /** Validated against the known tabs, so a stale stored value can't blank the view. */
 function storedTab(): Tab {
@@ -39,12 +40,21 @@ function storedTab(): Tab {
   return TABS.some((t) => t.id === stored) ? (stored as Tab) : "now";
 }
 
-export function RacerView({ state }: { state: StatePayload }) {
+export function RacerView({
+  state,
+  onOpenDisplay,
+}: {
+  state: StatePayload;
+  onOpenDisplay: () => void;
+}) {
   const [meId, setMeId] = useState<number | null>(() => {
     const stored = localStorage.getItem(ID_KEY);
     return stored ? Number(stored) : null;
   });
   const [resolving, setResolving] = useState(() => getToken() !== null && meId === null);
+  // Someone who chose to watch during registration stays a spectator across a
+  // refresh, rather than being dropped back on the sign-up form every time.
+  const [watching, setWatching] = useState(() => localStorage.getItem(WATCH_KEY) === "1");
 
   // A re-link QR delivers a token with no id attached, so ask the server who we are.
   useEffect(() => {
@@ -94,10 +104,24 @@ export function RacerView({ state }: { state: StatePayload }) {
     );
   }
 
-  if (me === null) {
+  const startWatching = () => {
+    localStorage.setItem(WATCH_KEY, "1");
+    setWatching(true);
+  };
+
+  const stopWatching = () => {
+    localStorage.removeItem(WATCH_KEY);
+    setWatching(false);
+  };
+
+  // Sign-up is only worth showing while it can still be acted on. Once the roster
+  // locks, everyone without a car is a spectator, and the whole app is the
+  // spectator view — the same tabs a racer gets, minus the parts that are theirs.
+  if (me === null && !watching && state.event.phase === "registration") {
     return (
       <Join
         state={state}
+        onWatch={startWatching}
         onJoined={(id) => {
           setMeId(id);
           setResolving(false);
@@ -106,19 +130,32 @@ export function RacerView({ state }: { state: StatePayload }) {
     );
   }
 
-  return <Main state={state} meId={me.id} />;
+  return (
+    <Main
+      state={state}
+      meId={me?.id ?? null}
+      onOpenDisplay={onOpenDisplay}
+      onJoin={me === null && state.event.phase === "registration" ? stopWatching : undefined}
+    />
+  );
 }
 
 // ---------------------------------------------------------------------------------
 // Registration
 // ---------------------------------------------------------------------------------
 
-function Join({ state, onJoined }: { state: StatePayload; onJoined: (id: number) => void }) {
+function Join({
+  state,
+  onJoined,
+  onWatch,
+}: {
+  state: StatePayload;
+  onJoined: (id: number) => void;
+  onWatch: () => void;
+}) {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-
-  const closed = state.event.phase !== "registration";
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -136,21 +173,6 @@ function Join({ state, onJoined }: { state: StatePayload; onJoined: (id: number)
       setBusy(false);
     }
   };
-
-  if (closed) {
-    return (
-      <main className="rc-join">
-        <TrackRule />
-        <h1 className="rc-join-title">{state.event.name}</h1>
-        <p className="rc-join-sub">
-          Registration has closed — {state.event.racerCount} cars are racing.
-        </p>
-        <a className="btn btn-primary btn-block" href="display">
-          Watch the bracket
-        </a>
-      </main>
-    );
-  }
 
   return (
     <main className="rc-join">
@@ -183,6 +205,10 @@ function Join({ state, onJoined }: { state: StatePayload; onJoined: (id: number)
           {busy ? "Signing you up…" : "I'm racing"}
         </button>
       </form>
+
+      <button type="button" className="rc-watch" onClick={onWatch}>
+        Just watching →
+      </button>
     </main>
   );
 }
@@ -195,9 +221,24 @@ function TrackRule() {
 // Main
 // ---------------------------------------------------------------------------------
 
-function Main({ state, meId }: { state: StatePayload; meId: number }) {
+/**
+ * The same four tabs whether you're racing or watching. A spectator is not a
+ * lesser user with a cut-down app — they're at the same party looking at the same
+ * bracket, so `meId: null` only removes the parts that are personally yours (your
+ * status line, your photo, your alerts, your path through the bracket).
+ */
+function Main({
+  state,
+  meId,
+  onOpenDisplay,
+  onJoin,
+}: {
+  state: StatePayload;
+  meId: number | null;
+  onOpenDisplay: () => void;
+  onJoin?: () => void;
+}) {
   const [tab, setTab] = useState<Tab>(storedTab);
-  const me = racerById(state, meId);
   const messages = useMessages(state, meId);
 
   useRaceAlerts(state, meId, messages);
@@ -209,7 +250,7 @@ function Main({ state, meId }: { state: StatePayload; meId: number }) {
   return (
     <div className="rc">
       <header className="rc-top">
-        <div>
+        <div className="rc-top-id">
           <p className="eyebrow">{state.event.name}</p>
           <p className="rc-count code">
             {state.event.phase === "registration"
@@ -217,7 +258,14 @@ function Main({ state, meId }: { state: StatePayload; meId: number }) {
               : `Heat ${state.event.heatsDone} of ${state.event.heatsTotal}`}
           </p>
         </div>
-        <ShareButton state={state} />
+        <div className="rc-top-actions">
+          {meId === null ? (
+            <button type="button" className="btn btn-ghost rc-share" onClick={onOpenDisplay}>
+              Big screen
+            </button>
+          ) : null}
+          <ShareButton state={state} />
+        </div>
       </header>
 
       <main className="rc-body">
@@ -227,6 +275,7 @@ function Main({ state, meId }: { state: StatePayload; meId: number }) {
             meId={meId}
             messages={messages}
             onExplain={() => setTab("rules")}
+            onJoin={onJoin}
           />
         ) : null}
         {tab === "bracket" ? <BracketTab state={state} meId={meId} /> : null}
@@ -248,7 +297,11 @@ function Main({ state, meId }: { state: StatePayload; meId: number }) {
         ))}
       </nav>
 
-      {me ? null : <p className="offline-banner">Your registration wasn't found.</p>}
+      {/* An id with no racer behind it means the director removed them after the
+          roster locked — distinct from a spectator, who never had one. */}
+      {meId !== null && racerById(state, meId) === null ? (
+        <p className="offline-banner">Your registration wasn't found.</p>
+      ) : null}
     </div>
   );
 }
@@ -300,11 +353,13 @@ function NowTab({
   meId,
   messages,
   onExplain,
+  onJoin,
 }: {
   state: StatePayload;
-  meId: number;
+  meId: number | null;
   messages: Message[];
   onExplain: () => void;
+  onJoin?: () => void;
 }) {
   const me = racerById(state, meId);
   const status = statusFor(state, me);
@@ -322,9 +377,14 @@ function NowTab({
           <p className="eyebrow">On the grid</p>
           <p className="rc-wait-count">{state.event.racerCount}</p>
           <p className="rc-wait-note">Waiting for the race director to start.</p>
+          {onJoin ? (
+            <button type="button" className="btn btn-ghost rc-wait-join" onClick={onJoin}>
+              Changed my mind — I'm racing
+            </button>
+          ) : null}
         </section>
         <MessageList messages={messages} />
-        <AlertsCard />
+        {me ? <AlertsCard /> : null}
         {me ? <PhotoCard racer={me} /> : null}
       </div>
     );
@@ -332,7 +392,10 @@ function NowTab({
 
   // When the viewer is in the heat on screen, the card above already says so in
   // letters an inch tall — repeating it underneath is the same sentence twice.
-  const racingNow = current !== null && (current.a === meId || current.b === meId);
+  // The null check is load-bearing: an empty slot is also null, so a spectator
+  // would otherwise match every heat with a slot still to be filled.
+  const racingNow =
+    meId !== null && current !== null && (current.a === meId || current.b === meId);
 
   return (
     <div className="stack">
@@ -346,6 +409,10 @@ function NowTab({
           {status.detail ? <p className="rc-status-detail">{status.detail}</p> : null}
         </section>
       ) : null}
+
+      {/* Sits where a racer's own status line goes: this is the spectator's
+          answer to the same question, "what am I looking at?" */}
+      {me === null ? <WatchingNote /> : null}
 
       <button type="button" className="rc-explain" onClick={onExplain}>
         {me && me.losses === 1 && me.status !== "out"
@@ -364,10 +431,26 @@ function NowTab({
         </section>
       ) : null}
 
-      <AlertsCard />
+      {me ? <AlertsCard /> : null}
 
       {me ? <PhotoCard racer={me} /> : null}
     </div>
+  );
+}
+
+/**
+ * Says out loud why there's no "you're up next" card here, so a spectator doesn't
+ * spend the evening assuming the page is broken.
+ */
+function WatchingNote() {
+  return (
+    <section className="rc-watching">
+      <p className="rc-watching-head">You're watching</p>
+      <p className="rc-watching-sub">
+        Everything updates on its own. Tap <strong>Big screen</strong> up top to put the whole
+        bracket on a TV — or turn your phone sideways.
+      </p>
+    </section>
   );
 }
 
@@ -492,11 +575,11 @@ function NowCard({
 }: {
   state: StatePayload;
   match: PublicMatch;
-  meId: number;
+  meId: number | null;
 }) {
   const a = racerById(state, match.a);
   const b = racerById(state, match.b);
-  const mine = match.a === meId || match.b === meId;
+  const mine = meId !== null && (match.a === meId || match.b === meId);
 
   return (
     <section className={`rc-now ${mine ? "rc-now-mine" : ""}`}>
@@ -506,9 +589,9 @@ function NowCard({
       </div>
 
       <div className="rc-now-cars">
-        <RacerBlock racer={a} highlight={match.a === meId} />
+        <RacerBlock racer={a} highlight={mine && match.a === meId} />
         <p className="rc-vs">VS</p>
-        <RacerBlock racer={b} highlight={match.b === meId} />
+        <RacerBlock racer={b} highlight={mine && match.b === meId} />
       </div>
 
       {mine ? <p className="rc-thats-you">That's you — get to the track</p> : null}
@@ -590,7 +673,7 @@ function PhotoCard({ racer }: { racer: NonNullable<ReturnType<typeof racerById>>
  * up top — "one loss left" lands where "double elimination" does not, though the
  * term itself is named once for the people who already know it.
  */
-function RulesTab({ state, meId }: { state: StatePayload; meId: number }) {
+function RulesTab({ state, meId }: { state: StatePayload; meId: number | null }) {
   const me = racerById(state, meId);
   const losses = me?.losses ?? 0;
   const out = me?.status === "out";
@@ -611,14 +694,16 @@ function RulesTab({ state, meId }: { state: StatePayload; meId: number }) {
           Win and you keep racing, lose twice and you're out.
         </h1>
 
-        <div className="rc-pips-block">
-          <p className="eyebrow rc-pips-label">Losses</p>
-          <div className="rc-pips" role="img" aria-label={`${losses} of 2 losses`}>
-            <span className={`rc-pip ${losses >= 1 ? "rc-pip-taken" : ""}`} />
-            <span className={`rc-pip ${losses >= 2 ? "rc-pip-taken" : ""}`} />
+        {me ? (
+          <div className="rc-pips-block">
+            <p className="eyebrow rc-pips-label">Losses</p>
+            <div className="rc-pips" role="img" aria-label={`${losses} of 2 losses`}>
+              <span className={`rc-pip ${losses >= 1 ? "rc-pip-taken" : ""}`} />
+              <span className={`rc-pip ${losses >= 2 ? "rc-pip-taken" : ""}`} />
+            </div>
+            <p className="rc-lives-sub">{tally}</p>
           </div>
-          <p className="rc-lives-sub">{tally}</p>
-        </div>
+        ) : null}
       </section>
 
       <p className="rc-rules-aside">
@@ -681,14 +766,25 @@ function RulesTab({ state, meId }: { state: StatePayload; meId: number }) {
 
       <section className="rc-rules-block">
         <h2 className="rc-rules-h">What you actually have to do</h2>
-        <ul className="rc-do">
-          <li>
-            Keep the <strong>Now</strong> tab open. It says who you're racing and when you're
-            up.
-          </li>
-          <li>Stay near the track. Wander off and they'll run someone else's heat first.</li>
-          <li>That's it. Someone else is keeping score.</li>
-        </ul>
+        {me ? (
+          <ul className="rc-do">
+            <li>
+              Keep the <strong>Now</strong> tab open. It says who you're racing and when you're
+              up.
+            </li>
+            <li>Stay near the track. Wander off and they'll run someone else's heat first.</li>
+            <li>That's it. Someone else is keeping score.</li>
+          </ul>
+        ) : (
+          <ul className="rc-do">
+            <li>
+              Nothing. You're watching — the <strong>Now</strong> tab always has the heat
+              that's running.
+            </li>
+            <li>Pick a favourite off the Racers tab and follow them down the bracket.</li>
+            <li>Heckle responsibly.</li>
+          </ul>
+        )}
       </section>
     </div>
   );
@@ -705,12 +801,15 @@ const GROUPS = [
   { key: "C", label: "Consolation", brackets: ["C"] },
 ];
 
-function BracketTab({ state, meId }: { state: StatePayload; meId: number }) {
+function BracketTab({ state, meId }: { state: StatePayload; meId: number | null }) {
   const [group, setGroup] = useState("W");
   const [myPath, setMyPath] = useState(true);
   const [detail, setDetail] = useState<PublicMatch | null>(null);
 
-  const mine = useMemo(() => pathOf(state, meId), [state, meId]);
+  const mine = useMemo(
+    () => (meId === null ? new Set<number>() : pathOf(state, meId)),
+    [state, meId],
+  );
   const groups = GROUPS.filter(
     (g) => g.key !== "C" || state.event.consolation,
   );
@@ -740,14 +839,16 @@ function BracketTab({ state, meId }: { state: StatePayload; meId: number }) {
         ))}
       </div>
 
-      <button
-        type="button"
-        className={`chip rc-mypath ${myPath ? "chip-live" : ""}`}
-        onClick={() => setMyPath((on) => !on)}
-        aria-pressed={myPath}
-      >
-        My path {myPath ? "on" : "off"}
-      </button>
+      {meId === null ? null : (
+        <button
+          type="button"
+          className={`chip rc-mypath ${myPath ? "chip-live" : ""}`}
+          onClick={() => setMyPath((on) => !on)}
+          aria-pressed={myPath}
+        >
+          My path {myPath ? "on" : "off"}
+        </button>
+      )}
 
       <div className="rc-columns scroll-x">
         {columns.map((column) => (
@@ -759,7 +860,7 @@ function BracketTab({ state, meId }: { state: StatePayload; meId: number }) {
                   key={match.id}
                   state={state}
                   match={match}
-                  dim={myPath && !mine.has(match.id)}
+                  dim={meId !== null && myPath && !mine.has(match.id)}
                   current={match.id === state.event.currentMatch}
                   showRound={false}
                   onSelect={setDetail}
@@ -777,9 +878,15 @@ function BracketTab({ state, meId }: { state: StatePayload; meId: number }) {
       >
         {detail ? (
           <div className="rc-detail">
-            <RacerBlock racer={racerById(state, detail.a)} highlight={detail.a === meId} />
+            <RacerBlock
+              racer={racerById(state, detail.a)}
+              highlight={meId !== null && detail.a === meId}
+            />
             <p className="rc-vs">VS</p>
-            <RacerBlock racer={racerById(state, detail.b)} highlight={detail.b === meId} />
+            <RacerBlock
+              racer={racerById(state, detail.b)}
+              highlight={meId !== null && detail.b === meId}
+            />
           </div>
         ) : null}
       </Sheet>
@@ -791,7 +898,7 @@ function BracketTab({ state, meId }: { state: StatePayload; meId: number }) {
 // Racers
 // ---------------------------------------------------------------------------------
 
-function RacersTab({ state, meId }: { state: StatePayload; meId: number }) {
+function RacersTab({ state, meId }: { state: StatePayload; meId: number | null }) {
   const [detail, setDetail] = useState<number | null>(null);
 
   const ordered = useMemo(() => {

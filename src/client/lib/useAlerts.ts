@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { api, type StatePayload } from "./api.ts";
 import { alertsEnabled, fire } from "./alerts.ts";
@@ -9,10 +9,19 @@ export type Message = { id: number; body: string; at: number; direct: boolean };
  * Refetch this racer's messages whenever the epoch moves. The epoch lives in the
  * public state payload but the message bodies do not — direct messages are only
  * ever handed out against a racer's own token.
+ *
+ * A spectator has no token and so nothing to fetch, but broadcasts ride along in
+ * the public payload — and a broadcast is exactly the part of the director's
+ * traffic they're entitled to see.
  */
 export function useMessages(state: StatePayload | null, meId: number | null) {
   const [messages, setMessages] = useState<Message[]>([]);
   const epoch = state?.messageEpoch ?? 0;
+
+  const broadcasts = useMemo(
+    () => (state?.announcements ?? []).map((row) => ({ ...row, direct: false })),
+    [state?.announcements],
+  );
 
   useEffect(() => {
     if (meId === null) {
@@ -36,7 +45,7 @@ export function useMessages(state: StatePayload | null, meId: number | null) {
     };
   }, [epoch, meId]);
 
-  return messages;
+  return meId === null ? broadcasts : messages;
 }
 
 /**
