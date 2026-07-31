@@ -1,0 +1,600 @@
+/*
+ * Big screen. Landscape, glanceable from 15 feet, driven by a TV remote if at all.
+ * Prefix: .disp- (and .dm- for its match cards, .trk- for the track connectors).
+ */
+
+.disp {
+  height: 100dvh;
+  overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 0%, #1d1610 0%, var(--ground-deep) 70%);
+}
+
+.disp-eyebrow {
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* --- registration ------------------------------------------------------------- */
+
+.disp-join {
+  display: grid;
+  grid-template-columns: minmax(420px, 34%) 1fr;
+  gap: var(--s-7);
+  padding: var(--s-6);
+}
+
+.disp-join-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--s-4);
+}
+
+.disp-join-title {
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  color: var(--ink);
+}
+
+.disp-join-cta {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--track-rail);
+}
+
+.disp-join-right {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  min-height: 0;
+}
+
+.disp-join-count {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+}
+
+.disp-count-num {
+  font-family: var(--display);
+  font-size: clamp(3rem, 8vw, 7rem);
+  font-weight: 800;
+  line-height: 0.85;
+  color: var(--track-rail);
+}
+
+.disp-count-label {
+  font-family: var(--mono);
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--ink-faint);
+}
+
+.disp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: var(--s-3);
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.disp-grid-car {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.disp-grid-name {
+  font-size: 1.1rem;
+  overflow-wrap: anywhere;
+}
+
+/* --- racing ------------------------------------------------------------------- */
+
+.disp-racing {
+  display: grid;
+  grid-template-rows: 22% 1fr auto;
+}
+
+.disp-banner {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--s-6);
+  padding: var(--s-4) var(--s-6);
+  border-bottom: 4px solid var(--track);
+  background: linear-gradient(180deg, rgb(232 83 28 / 10%), transparent);
+  min-height: 0;
+}
+
+.disp-banner-idle {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-family: var(--display);
+  font-size: 3rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.disp-banner-car {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  min-width: 0;
+  transition: opacity 300ms ease;
+}
+
+.disp-banner-left {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.disp-banner-right {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.disp-banner-car .avatar {
+  width: clamp(90px, 13vh, 190px);
+  height: clamp(90px, 13vh, 190px);
+  border-radius: var(--r-md);
+  object-fit: cover;
+}
+
+.disp-banner-name {
+  font-size: clamp(2rem, 5.2vh, 4.4rem);
+  line-height: 0.92;
+  overflow-wrap: anywhere;
+}
+
+.is-won .disp-banner-name {
+  color: var(--track-rail);
+}
+
+.is-lost {
+  opacity: 0.35;
+}
+
+.is-lost .disp-banner-name {
+  text-decoration: line-through;
+}
+
+.disp-stamp {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.4);
+  font-size: 7rem;
+  color: var(--win);
+  text-shadow: 0 0 24px rgb(0 0 0 / 80%);
+  animation: stamp 420ms cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes stamp {
+  to {
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.disp-banner-result {
+  animation: flash 600ms ease;
+}
+
+@keyframes flash {
+  30% {
+    background: rgb(232 83 28 / 26%);
+  }
+}
+
+.disp-banner-mid {
+  display: grid;
+  justify-items: center;
+  gap: var(--s-1);
+}
+
+.disp-vs {
+  font-family: var(--display);
+  font-size: clamp(1.6rem, 3.6vh, 3rem);
+  font-weight: 800;
+  color: var(--track);
+}
+
+.disp-banner-round {
+  font-size: 0.85rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* --- bracket canvas ----------------------------------------------------------- */
+
+/* No padding here: the fit maths measures against clientHeight, which includes
+   padding, so any padding on the frame gets double-counted and clips the bottom
+   of the bracket. Breathing room lives inside the scaled content instead. */
+.disp-canvas {
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.disp-scale {
+  position: relative;
+  transform-origin: top left;
+  width: max-content;
+  transition: transform 260ms cubic-bezier(0.3, 0.8, 0.3, 1);
+}
+
+.disp-track {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+/* Two strokes make the cross-section: a wide rail underneath, a narrower bed on
+   top, leaving the rail colour showing along both edges. */
+.trk-rail,
+.trk-bed {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.trk-rail {
+  stroke: var(--track-rail);
+  stroke-width: 11;
+}
+
+.trk-bed {
+  stroke: var(--track);
+  stroke-width: 6.5;
+}
+
+.trk-rail.trk-loser {
+  stroke: #2f6a92;
+}
+
+.trk-bed.trk-loser {
+  stroke: #1c4763;
+}
+
+.trk-car {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 5;
+  offset-distance: 0%;
+  offset-rotate: 0deg;
+  filter: drop-shadow(0 0 14px var(--track-glow));
+  animation: trk-travel 1.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.trk-car .avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--track-rail);
+}
+
+@keyframes trk-travel {
+  to {
+    offset-distance: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trk-car {
+    animation: none;
+    offset-distance: 100%;
+  }
+}
+
+.disp-tree {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: stretch;
+  gap: 38px;
+  padding: 16px 22px;
+}
+
+/* A wider gap plus a hairline where one bracket ends and the next begins. */
+.disp-col-group {
+  margin-left: 30px;
+  padding-left: 34px;
+  border-left: 1px solid var(--line-soft);
+}
+
+.disp-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.disp-col-head {
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+.disp-col-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  flex: 1;
+  gap: 14px;
+}
+
+.disp-col-collapsed {
+  align-self: center;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: var(--s-2) var(--s-1);
+  border-radius: var(--r-md);
+  border: 1px dashed var(--line);
+  background: rgb(255 255 255 / 2%);
+  min-width: 46px;
+}
+
+.disp-col-code {
+  font-family: var(--display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--ink-faint);
+}
+
+.disp-col-tally {
+  color: var(--track);
+}
+
+/* --- display match card -------------------------------------------------------- */
+
+.dm {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 7px 10px;
+  min-width: 190px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-left: 3px solid var(--track);
+}
+
+.disp-col-compact .dm {
+  min-width: 150px;
+  padding: 5px 8px;
+}
+
+.dm-losers {
+  border-left-color: var(--cold);
+}
+
+.dm-bye {
+  opacity: 0.4;
+  border-left-color: var(--line);
+}
+
+.dm-current {
+  border-color: var(--track-rail);
+  box-shadow: 0 0 0 2px var(--track-rail), 0 0 30px rgb(255 107 44 / 40%);
+  animation: dm-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes dm-pulse {
+  50% {
+    box-shadow: 0 0 0 2px var(--track-rail), 0 0 46px rgb(255 107 44 / 70%);
+  }
+}
+
+.dm-side {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.dm-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 1.15rem;
+  color: var(--ink-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.disp-col-compact .dm-name {
+  font-size: 1rem;
+}
+
+.dm-won .dm-name {
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.dm-lost .dm-name {
+  color: var(--ink-faint);
+  text-decoration: line-through;
+}
+
+.dm-check {
+  color: var(--win);
+  font-weight: 700;
+}
+
+/* --- foot + controls ----------------------------------------------------------- */
+
+.disp-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-5);
+  padding: var(--s-3) var(--s-6);
+  border-top: 1px solid var(--line);
+  background: var(--ground-deep);
+}
+
+.disp-ondeck {
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.disp-ondeck-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-family: var(--display);
+  font-size: 1.4rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+
+.disp-ondeck-vs {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--track);
+}
+
+.disp-ondeck-empty {
+  color: var(--ink-faint);
+}
+
+.disp-foot-right {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+}
+
+.disp-progress {
+  font-size: 1rem;
+  color: var(--ink-dim);
+}
+
+.disp-foot-right .qr-url,
+.disp-join-left .qr-url {
+  display: none;
+}
+
+.disp-controls {
+  position: fixed;
+  bottom: var(--s-6);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+  padding: var(--s-3) var(--s-5);
+  border-radius: 999px;
+  background: rgb(15 11 8 / 94%);
+  border: 1px solid var(--track);
+  box-shadow: var(--shadow-lg);
+  animation: fade-in 160ms ease;
+}
+
+.disp-control-mode {
+  font-family: var(--display);
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--track-rail);
+}
+
+.disp-control-key {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-dim);
+}
+
+/* --- finished ------------------------------------------------------------------ */
+
+.disp-finished {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: var(--s-5);
+  padding: var(--s-6);
+}
+
+.disp-finished-title {
+  font-size: clamp(3rem, 11vh, 8rem);
+  color: var(--track-rail);
+}
+
+.disp-podium {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(240px, 22vw));
+  align-items: end;
+  gap: var(--s-5);
+}
+
+.disp-pod {
+  display: grid;
+  justify-items: center;
+  gap: var(--s-2);
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  border-bottom: 6px solid var(--line);
+}
+
+/* The winner's card is taller, not transform-scaled: a transform leaves the old
+   footprint behind, so the card grew over whatever sat beneath it. */
+.disp-pod-gold {
+  border-bottom-color: var(--gold);
+  padding-block: var(--s-6) var(--s-5);
+  box-shadow: 0 0 60px rgb(242 182 54 / 18%);
+}
+
+.disp-pod-silver {
+  border-bottom-color: var(--silver);
+}
+
+.disp-pod-bronze {
+  border-bottom-color: var(--bronze);
+}
+
+.disp-pod-place {
+  font-family: var(--mono);
+  font-size: 1rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.disp-pod-gold .disp-pod-place {
+  color: var(--gold);
+}
+
+.disp-pod-name {
+  font-size: clamp(1.8rem, 3.4vw, 3.2rem);
+  line-height: 1.05;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.disp-consolation {
+  margin-top: var(--s-3);
+  font-size: 1.3rem;
+  color: var(--ink-dim);
+}
+
+.disp-consolation strong {
+  color: var(--cold-rail);
+}

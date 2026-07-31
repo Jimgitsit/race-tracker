@@ -1,0 +1,365 @@
+/* Shared components: avatars, match cards, sheets, QR blocks, chips. */
+
+/* --- avatar ----------------------------------------------------------------- */
+
+.avatar {
+  flex: none;
+  border-radius: var(--r-sm);
+  object-fit: cover;
+  background: var(--surface-2);
+  aspect-ratio: 1;
+}
+
+.avatar-sm {
+  width: 34px;
+  height: 34px;
+}
+
+.avatar-md {
+  width: 56px;
+  height: 56px;
+}
+
+.avatar-lg {
+  width: 96px;
+  height: 96px;
+}
+
+.avatar-xl {
+  width: 100%;
+  height: auto;
+  border-radius: var(--r-md);
+}
+
+.avatar-initial {
+  display: grid;
+  place-items: center;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 0.62em;
+  color: #fff;
+  line-height: 1;
+}
+
+.avatar-lg.avatar-initial,
+.avatar-xl.avatar-initial {
+  font-size: 2.4rem;
+}
+
+.avatar-empty {
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--line);
+  background: transparent;
+}
+
+.avatar-tbd {
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  color: var(--ink-faint);
+}
+
+/* --- match card -------------------------------------------------------------- */
+
+.mc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  width: 100%;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-left: 3px solid var(--track);
+  text-align: left;
+  transition: opacity 160ms ease, border-color 160ms ease;
+}
+
+.mc-losers {
+  border-left-color: var(--cold);
+}
+
+.mc-bye {
+  border-left-color: var(--line);
+  opacity: 0.5;
+}
+
+.mc-dim {
+  opacity: 0.24;
+}
+
+.mc-current {
+  border-color: var(--track-rail);
+  border-left-color: var(--track-rail);
+  box-shadow: 0 0 0 1px var(--track-rail), 0 0 24px rgb(232 83 28 / 30%);
+}
+
+.mc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+
+.mc-tag {
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+}
+
+.mc-tag-live {
+  color: var(--track-rail);
+}
+
+.mc-side {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.mc-name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--t-md);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-dim);
+}
+
+.mc-won .mc-name {
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.mc-lost .mc-name {
+  color: var(--ink-faint);
+  text-decoration: line-through;
+}
+
+.mc-check {
+  color: var(--win);
+  font-weight: 700;
+}
+
+.mc-compact .mc-name {
+  font-size: var(--t-base);
+}
+
+/* --- chips ------------------------------------------------------------------- */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  padding: 2px var(--s-2);
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+
+.chip-live {
+  border-color: var(--track);
+  color: var(--track-rail);
+}
+
+.chip-warn {
+  border-color: var(--track-deep);
+  color: var(--track-rail);
+}
+
+.chip-out {
+  border-color: var(--line);
+  color: var(--ink-faint);
+}
+
+.chip-gold {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.chip-silver {
+  border-color: var(--silver);
+  color: var(--silver);
+}
+
+.chip-idle {
+  border-color: var(--line);
+  color: var(--ink-dim);
+}
+
+/* --- sheet ------------------------------------------------------------------- */
+
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgb(0 0 0 / 62%);
+  backdrop-filter: blur(2px);
+  animation: fade-in 140ms ease;
+}
+
+.sheet {
+  width: min(560px, 100%);
+  max-height: 88dvh;
+  overflow-y: auto;
+  padding: var(--s-3) var(--s-4) calc(var(--s-5) + var(--safe-bottom));
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  background: var(--surface);
+  border-top: 2px solid var(--track);
+  box-shadow: var(--shadow-lg);
+  animation: sheet-up 180ms cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+.sheet-grip {
+  width: 40px;
+  height: 4px;
+  margin: 0 auto var(--s-3);
+  border-radius: 999px;
+  background: var(--surface-3);
+}
+
+.sheet-title {
+  margin-bottom: var(--s-4);
+  font-size: var(--t-xl);
+}
+
+.sheet-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-3);
+  margin-top: var(--s-5);
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* --- QR ---------------------------------------------------------------------- */
+
+.qr-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.qr-shell {
+  display: grid;
+  place-items: center;
+  padding: var(--s-2);
+  border-radius: var(--r-md);
+  background: var(--ink);
+}
+
+.qr-shell svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.qr-label {
+  font-weight: 600;
+  text-align: center;
+}
+
+.qr-url {
+  color: var(--ink-faint);
+  text-align: center;
+}
+
+.qr-warn {
+  max-width: 30ch;
+  font-size: var(--t-sm);
+  color: var(--track-rail);
+  text-align: center;
+}
+
+/* --- app chrome -------------------------------------------------------------- */
+
+/*
+ * A literal slice of track: two light rails either side of a darker bed. It's the
+ * same cross-section the bracket connectors draw, so the motif reads as one idea
+ * rather than decoration.
+ */
+.track-rule {
+  height: 10px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to bottom,
+    var(--track-rail) 0 2px,
+    var(--track) 2px 8px,
+    var(--track-rail) 8px 10px
+  );
+}
+
+.boot {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--s-4);
+  min-height: 100dvh;
+  padding: var(--s-5);
+}
+
+.boot-track {
+  width: 180px;
+  height: 10px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to bottom,
+    var(--track-rail) 0 2px,
+    var(--track) 2px 8px,
+    var(--track-rail) 8px 10px
+  );
+  animation: boot-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes boot-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* --- misc -------------------------------------------------------------------- */
+
+.empty-note {
+  padding: var(--s-6) var(--s-4);
+  text-align: center;
+  color: var(--ink-faint);
+}
+
+.offline-banner {
+  position: fixed;
+  top: calc(var(--safe-top) + var(--s-2));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 80;
+  padding: var(--s-1) var(--s-3);
+  border-radius: 999px;
+  background: var(--surface-3);
+  border: 1px solid var(--line);
+  font-size: var(--t-xs);
+  font-family: var(--mono);
+  color: var(--ink-dim);
+}

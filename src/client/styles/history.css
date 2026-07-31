@@ -1,0 +1,97 @@
+/* Past races. Prefix: .hist- — reuses the racer view's bracket columns read-only. */
+
+.hist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+  min-height: 100dvh;
+  padding: calc(var(--safe-top) + var(--s-5)) var(--s-4) calc(var(--safe-bottom) + var(--s-6));
+}
+
+.hist-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.hist-title {
+  font-size: var(--t-3xl);
+}
+
+.hist-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  list-style: none;
+}
+
+.hist-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "year champ"
+    "year meta";
+  align-items: center;
+  gap: var(--s-1) var(--s-4);
+  padding: var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  border-left: 4px solid var(--track);
+  text-decoration: none;
+  color: inherit;
+}
+
+.hist-year {
+  grid-area: year;
+  font-family: var(--display);
+  font-size: var(--t-2xl);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--track-rail);
+}
+
+.hist-champ {
+  grid-area: champ;
+  display: flex;
+  flex-direction: column;
+}
+
+.hist-champ-name {
+  font-size: var(--t-lg);
+}
+
+.hist-meta {
+  grid-area: meta;
+  color: var(--ink-faint);
+}
+
+.hist-podium {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-3);
+}
+
+.hist-pod {
+  display: grid;
+  justify-items: center;
+  gap: var(--s-1);
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.hist-pod-place {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.hist-pod-name {
+  font-size: var(--t-md);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.hist-back {
+  align-self: flex-start;
+}

@@ -1,0 +1,82 @@
+/*
+ * Design tokens (DESIGN §10).
+ *
+ * The palette is lifted off a real Hot Wheels track set rather than the brand
+ * logo: the orange bed with its lighter raised rails, sitting on a warm dark
+ * garage floor. Every colour below has a job — orange is the winners side and
+ * the track itself, steel blue is the losers side so the two halves read apart
+ * from across a room, green only ever means "confirmed".
+ *
+ * Committed dark, single theme: the TV demands it, it's an evening event, and
+ * all three views are in the same room at once.
+ */
+
+:root {
+  /* Track — the signature material. */
+  --track: #e8531c;
+  --track-rail: #ff9152;
+  --track-deep: #a8380f;
+  --track-glow: #ff6b2c;
+
+  /* Losers side — cold, so the two halves of the bracket separate at 15 feet. */
+  --cold: #3e8fc4;
+  --cold-rail: #7cc0e8;
+  --cold-deep: #1f5c86;
+
+  /* Ground: warm dark, biased toward the accent. Not a pure near-black. */
+  --ground: #17120e;
+  --ground-deep: #0f0b08;
+  --surface: #221b15;
+  --surface-2: #2e2620;
+  --surface-3: #3a3129;
+  --line: #3d332b;
+  --line-soft: #2b241e;
+
+  /* Ink. */
+  --ink: #f7f1ea;
+  --ink-dim: #a99c90;
+  --ink-faint: #6e6259;
+
+  /* Semantic — separate from the accent, per the information-design rule. */
+  --win: #63c257;
+  --danger: #e5484d;
+  --gold: #f2b636;
+  --silver: #c9ccd1;
+  --bronze: #c8813f;
+
+  /* Type. */
+  --display: "Big Shoulders Display", "Arial Narrow", sans-serif;
+  --body: "Archivo", system-ui, -apple-system, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+
+  --t-xs: 0.6875rem;
+  --t-sm: 0.8125rem;
+  --t-base: 0.9375rem;
+  --t-md: 1.0625rem;
+  --t-lg: 1.375rem;
+  --t-xl: 1.875rem;
+  --t-2xl: 2.5rem;
+  --t-3xl: 3.5rem;
+  --t-4xl: 5rem;
+
+  /* Space. */
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 0.75rem;
+  --s-4: 1rem;
+  --s-5: 1.5rem;
+  --s-6: 2rem;
+  --s-7: 3rem;
+
+  --r-sm: 4px;
+  --r-md: 8px;
+  --r-lg: 14px;
+
+  --shadow: 0 2px 8px rgb(0 0 0 / 40%);
+  --shadow-lg: 0 8px 32px rgb(0 0 0 / 55%);
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  color-scheme: dark;
+}

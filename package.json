@@ -1,0 +1,28 @@
+{
+  "name": "race-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "start": "bun run src/server/index.ts",
+    "test": "RACE_TRACKER_DATA_DIR=.test-data bun test",
+    "fonts": "bun run tools/fetch-fonts.ts",
+    "icon": "bun run tools/gen-icon.ts"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0"
+  }
+}

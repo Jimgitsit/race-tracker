@@ -1,0 +1,305 @@
+/* Director view — one thumb, no reading, possibly in daylight. Prefix: .dir- */
+
+/* Fixed height, not min-height: the racing screen's tap targets will happily grow
+   past the viewport and push Undo off the bottom edge, which is the one control
+   that has to be reachable at all times. */
+.dir {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.dir-login {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  min-height: 100dvh;
+  padding: calc(var(--safe-top) + var(--s-6)) var(--s-5) var(--s-6);
+  justify-content: center;
+}
+
+.dir-login-title {
+  font-size: var(--t-3xl);
+}
+
+.dir-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: calc(var(--safe-top) + var(--s-4)) var(--s-4) var(--s-3);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.dir-count {
+  font-family: var(--display);
+  font-size: var(--t-4xl);
+  font-weight: 800;
+  line-height: 0.9;
+  color: var(--track-rail);
+}
+
+.dir-count-label {
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--ink-faint);
+}
+
+.dir-roster {
+  overflow-y: auto;
+  padding: var(--s-3) var(--s-4);
+}
+
+.dir-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  list-style: none;
+}
+
+.dir-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+}
+
+.dir-row-name {
+  min-width: 0;
+  font-size: var(--t-md);
+  text-align: left;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.dir-rename {
+  min-height: 40px;
+}
+
+.dir-row-actions {
+  display: flex;
+  gap: var(--s-2);
+}
+
+.dir-mini {
+  min-height: 36px;
+  padding: 0 var(--s-2);
+  font-size: var(--t-xs);
+}
+
+.dir-foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-4) calc(var(--safe-bottom) + var(--s-4));
+  border-top: 1px solid var(--line);
+  background: var(--ground-deep);
+}
+
+.dir-confirm-line {
+  font-size: var(--t-md);
+  color: var(--ink);
+}
+
+.dir-confirm-warn {
+  margin-top: var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-sm);
+  background: rgb(232 83 28 / 12%);
+  border-left: 3px solid var(--track);
+  font-size: var(--t-sm);
+  color: var(--ink-dim);
+}
+
+/* --- racing: two giant tap targets ------------------------------------------- */
+
+.dir-racing-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: calc(var(--safe-top) + var(--s-3)) var(--s-4) var(--s-2);
+}
+
+.dir-targets {
+  display: grid;
+  grid-template-rows: 1fr auto 1fr;
+  gap: var(--s-2);
+  padding: 0 var(--s-3);
+  min-height: 0;
+}
+
+.dir-target {
+  position: relative;
+  display: grid;
+  align-items: end;
+  min-height: 0;
+  padding: 0;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  border: 2px solid var(--surface-3);
+  background: var(--surface);
+}
+
+/* Deliberately not colour-coded per side. Orange means winners bracket and blue
+   means losers bracket everywhere else in this app; borrowing them here to mean
+   "top car" and "bottom car" would teach the wrong thing to the one person who
+   cannot afford to misread the screen. */
+.dir-target .avatar-initial {
+  font-size: 6rem;
+}
+
+.dir-target .avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0;
+  grid-area: 1 / 1;
+}
+
+.dir-target-name {
+  grid-area: 1 / 1;
+  align-self: end;
+  /* .racer-name sets line-height .95, which crops this face's descenders at
+     display sizes — override it here rather than loosening it everywhere. */
+  line-height: 1.08;
+  padding: var(--s-5) var(--s-4) var(--s-4);
+  font-size: var(--t-2xl);
+  color: #fff;
+  text-shadow: 0 2px 12px rgb(0 0 0 / 90%);
+  background: linear-gradient(to top, rgb(0 0 0 / 82%), transparent);
+  overflow-wrap: anywhere;
+}
+
+.dir-target:active {
+  border-color: var(--track-rail);
+}
+
+.dir-target:disabled {
+  opacity: 0.45;
+}
+
+.dir-vs {
+  display: grid;
+  place-items: center;
+  font-family: var(--display);
+  font-size: var(--t-lg);
+  font-weight: 800;
+  color: var(--ink-faint);
+}
+
+.dir-racing-foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-4) calc(var(--safe-bottom) + var(--s-3));
+}
+
+.dir-foot-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-3);
+}
+
+.dir-idle {
+  display: grid;
+  align-content: center;
+  gap: var(--s-4);
+  padding: var(--s-6) var(--s-4);
+}
+
+.dir-confirm-car {
+  margin-bottom: var(--s-3);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+
+/* --- consolation picker ------------------------------------------------------ */
+
+.dir-pick-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  max-height: 46dvh;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.dir-pick {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.dir-pick input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--track);
+}
+
+.dir-pick-name {
+  font-size: var(--t-md);
+  overflow-wrap: anywhere;
+}
+
+/* --- podium ------------------------------------------------------------------ */
+
+.dir-podium {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  overflow-y: auto;
+}
+
+.dir-podium-row {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border-left: 4px solid var(--line);
+}
+
+.dir-podium-gold {
+  border-left-color: var(--gold);
+}
+
+.dir-podium-silver {
+  border-left-color: var(--silver);
+}
+
+.dir-podium-bronze {
+  border-left-color: var(--bronze);
+}
+
+.dir-podium-consolation {
+  border-left-color: var(--cold);
+}
+
+.dir-podium-place {
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+}
+
+.dir-podium-name {
+  font-size: var(--t-xl);
+  overflow-wrap: anywhere;
+}

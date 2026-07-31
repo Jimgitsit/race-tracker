@@ -1,10 +1,14 @@
 # race-tracker — Design Doc
 
-**Status:** design, not built · **Written:** 2026-07-30
+**Status:** in build · **Written:** 2026-07-30 · **Revised:** 2026-07-30 (decisions locked)
 
 A dead-simple double-elimination bracket tracker for a Hot Wheels race. No times, no
 scores — every heat has exactly one winner and one loser. Three views: racers on their
 phones, the race director on a phone, and the full bracket on a big screen.
+
+**Known facts about the event** (these drive most of the decisions below): ~25–30 racers,
+so a **32-slot bracket**. Mostly **adults, drinking**, plus a couple of kids. It runs a few
+hours on **one track**. It happens **every year**, and past years must be kept.
 
 ---
 
@@ -14,14 +18,16 @@ phones, the race director on a phone, and the full bracket on a big screen.
 - Open self-registration: a racer enters a name and is entered in the race. Optional photo
   of their car.
 - Double-elimination bracket, generated when the director locks the roster.
+- A **16-racer consolation bracket** (single elim) the director can start once people have
+  been knocked out, and interleave with the late main-bracket heats.
 - Racer view (mobile): who's racing now, the bracket, the roster.
 - Director view (mobile, password-gated): who's up, tap the winner, undo.
-- Big-screen view: the whole bracket at once, auto-updating, no interaction.
+- Big-screen view: the bracket, auto-updating, drivable with a **TV remote**.
+- **QR codes everywhere** for joining, because 30 tipsy adults will not type a URL.
+- **Yearly archive**: a finished race is frozen and viewable forever at `/history`.
 
 **Out:** times, lane assignments, heats of >2 cars, accounts/passwords for racers,
-multiple concurrent events, persistence beyond this one race.
-
-**Scale:** designed for 4–32 racers. Test at 8 and 16.
+multiple *concurrent* events, a single/double-elimination format toggle (double, always).
 
 ---
 
@@ -31,10 +37,12 @@ multiple concurrent events, persistence beyond this one race.
 |---|---|---|
 | Runtime | Bun | House default. |
 | Server | single `server.ts` using `Bun.serve` | One file is enough; matches `bandsaw-tensioner`, `or-name`. |
-| DB | SQLite via `bun:sqlite`, file `data/race.db` | Single-box, single-event, tiny. **Not Neon** — a shared autosuspending compute is the wrong tool for something this small and this latency-sensitive on race day. |
+| DB | SQLite via `bun:sqlite`, file `data/race.db`, **WAL** | Single-box, single-event, tiny. **Not Neon** — a shared autosuspending compute is the wrong tool for something this small and this latency-sensitive on race day. |
 | Frontend | React 19 + Vite → `dist/`, served static by `server.ts` | Real interactive state across three views. |
 | Live updates | SSE (`EventSource`) | One-way server→client, auto-reconnects for free, no polling. |
-| Photos | files on disk under `data/photos/`, resized **client-side** | No server-side image library needed. |
+| Photos | files on disk under `data/photos/<year>/`, resized **client-side** | No server-side image library. Local disk, so a flaky uplink can't break race day. |
+| Archive backup | **AWS S3**, written once per year | Offsite copy of an accumulating archive. Off the race-day path entirely. |
+| QR | `qrcode` npm, rendered to canvas | Small, standard; not worth hand-rolling an encoder. |
 | Port | **58013** | Next free (58000–58012 taken — see `wiki/notes/serving-infra.md`). |
 | Route | `https://jimmcgowen.com/race-tracker/` | Path-prefix mount, per house convention. |
 
@@ -44,14 +52,21 @@ multiple concurrent events, persistence beyond this one race.
 [`react-tournament-brackets`](https://github.com/g-loot/react-tournament-brackets) is
 LGPL-2.1 (a wrinkle for a public repo) and you'd override its match card anyway, since car
 photos are the whole point of ours. The genuinely hard part is loser-bracket routing, and
-§4 specifies that outright — it's ~100 lines. Build the view with CSS grid.
+§4 specifies that outright.
+
+**S3, not R2.** R2's headline advantage is zero egress, and a backup is written once a year
+and read approximately never — so the advantage doesn't apply. AWS creds are already
+configured machine-wide (`cli-agent`, account `535836328331`, us-west-2) and inherited by
+every project under `~/dev-local`, while R2 would mean a new bucket, its own CORS, and the
+wrangler local-vs-remote footgun documented in `wiki/notes/cloudflare-wrangler.md`. Bun
+ships `Bun.S3Client`, so this is a few lines and no SDK.
 
 ---
 
 ## 3. Views
 
 Everything is **mobile-first** except `/display`, which is **big-screen only** (assume
-landscape 1080p+, viewed from across the room, no mouse or keyboard).
+landscape 1080p+, viewed from across the room, driven by a TV remote if at all).
 
 Routing is path-based with a catch-all → `index.html` fallback in `server.ts`, so the TV
 URL stays typeable (`jimmcgowen.com/race-tracker/display`). All in-app links must be
@@ -78,14 +93,14 @@ URL stays typeable (`jimmcgowen.com/race-tracker/display`). All in-app links mus
   - `Your next race: vs Emma — Winners Round 2`
   - `Your next race: vs TBD — Losers Round 1`
   - `You're up next!`
-  - `Knocked out — finished 5th` (with the two racers who beat you)
+  - `Knocked out — top 12 of 30` (with the two racers who beat you)
   - `🏆 You won!`
 - Before the roster is locked, this tab shows the waiting state instead: racer count,
-  "Waiting for the race director to start."
+  "Waiting for the race director to start," and a **Share** button (§3.4).
 
 **`Bracket`** — the mobile bracket. **Do not attempt the classic connector-line tree here**;
 it is unreadable on a phone. Instead:
-- A `Winners / Losers / Finals` segmented toggle at the top.
+- A `Winners / Losers / Finals / Consolation` segmented toggle at the top.
 - Rounds as horizontally scrollable columns, snap-scrolling, round name in a sticky header
   (`Winners R2`). Each column is a vertical list of match cards.
 - A match card: two rows (photo thumb, name), winner in bold with a ✓, loser dimmed and
@@ -95,21 +110,22 @@ it is unreadable on a phone. Instead:
 - Tapping a match opens a detail sheet: both cars full-size, round, result.
 
 **`Racers`** — grid of cards, 2-up: car photo, name, `2–0` record, and status
-(`Racing` / `1 loss` / `Out — 5th`). Tap for a detail sheet with that racer's match history.
-The viewer's own card is first and has an `Edit` affordance (change name / add or replace
-photo) — name edits only allowed before the roster locks.
+(`Racing` / `1 loss` / `Out — top 12`). Tap for a detail sheet with that racer's match
+history. The viewer's own card is first and has an `Edit` affordance (change name / add or
+replace photo) — name edits only allowed before the roster locks.
 
 ### 3.2 Director view — `/director` (mobile)
 
-Password screen first (§6). One password, hard-coded, no username.
+Password screen first (§7). One password, hard-coded, no username.
 
 **Registration phase:**
 - Live roster list: photo, name, joined-at. Swipe or tap to remove a racer (mis-entries,
   duplicates). Inline rename.
-- Racer count, big and obvious.
+- Racer count, big and obvious. A **Show join QR** button, always reachable.
 - **`Lock roster & start race`** — confirm sheet first, stating what's about to happen:
-  *"11 racers → 16-slot bracket, 5 byes. Registration closes. This can't be undone without
-  a full reset."*
+  *"30 racers → 32-slot bracket, 2 byes. Registration closes."* The sheet also carries a
+  **review-names nudge**: self-registration plus drinking produces names you may not want
+  six feet tall on a TV with kids in the room, and this is the last moment it's actionable.
 
 **Racing phase** — this is the screen that matters. The director is standing at a track
 holding a phone, so it has to work with one thumb and no reading.
@@ -118,37 +134,108 @@ holding a phone, so it has to work with one thumb and no reading.
   the background, name across it. Tapping one means *this car won*.
 - Tap → confirmation sheet (`Maya wins?` / `Cancel` / `Confirm`) — one guard against a
   fat-finger, no more. On confirm: record, advance, auto-select the next ready match.
-- Persistent **`Undo last result`** button. Undo is a first-class feature, not a nicety —
-  the director *will* tap the wrong car at some point.
+- **1-second lockout on the tap targets after a confirm.** Two 40%-viewport buttons plus
+  impaired motor control means a double-tap will otherwise blow straight through the next
+  match's confirm sheet.
+- **Multi-level undo**, not one-deep. `results_log` is already an append-only stack and
+  undo is the exact inverse of the edge walk, so popping LIFO repeatedly *is* multi-level
+  undo — it's nearly free, and the director will not always notice the mistake immediately.
 - Below the fold: **Up next** queue. Any ready match is tappable to make it current, for
-  when a racer has wandered off and you want to run a different heat.
+  when a racer has wandered off and you want to run a different heat. Once the consolation
+  bracket exists, its matches appear in the same queue — that is the whole of "mix it in at
+  the director's discretion."
+- **`Start consolation bracket`** appears once ≥8 racers are eliminated (§4.6).
+- Tapping a racer anywhere in the director view offers **Re-link** — a QR carrying that
+  racer's existing token, for someone who cleared their browser or switched phones (§3.4).
 - A collapsed link to the full bracket.
 
-**Complete phase:** podium — 1st, 2nd, 3rd with photos, plus a `Reset event` button
-(double-confirm, wipes everything back to registration).
+**Complete phase:** podium — 1st, 2nd, 3rd with photos, then two exits:
+- **`Archive & start next year`** — the normal path. Freezes this year (§5) and returns to
+  registration.
+- **`Reset event`** — for a mis-start. Double-confirm, and it **refuses outright while an
+  unarchived complete event exists**, so it can't eat a year.
 
 ### 3.3 Big screen — `/display`
 
-Landscape, zero interaction, designed to be glanced at from 15 feet.
+Landscape, glanceable from 15 feet, and — new — **drivable with a TV remote**. It is not
+required to show the whole bracket at once; a 32-slot double elim is 62 matches and forcing
+them all on screen makes every one of them unreadable. Culling is what buys back the room
+for car photos.
 
-- **Top banner (~25% height): NOW RACING.** Two cars, photos as large as the row allows,
+**Phases:**
+- **Registration:** a giant **join QR**, the event name, the racer count, and the roster
+  filling in live. The TV is idle during registration anyway, and this is what solves
+  onboarding for a room of people who won't type a URL.
+- **Racing:** banner + bracket + on-deck strip (below).
+- **Complete:** podium, then the final bracket.
+
+**Racing layout:**
+- **Top banner (~28% height): NOW RACING.** Two cars, photos as large as the row allows,
   names in a very large weight, `VS` between. When a result lands, the winner's half flashes
   and a ✓ stamps on — then after ~3s the banner swaps to the next match. This animation is
   the thing that makes a room look up.
-- **Body: the entire bracket, no scrolling.** Winners bracket on top, losers bracket below,
-  grand final on the right. This is the one place the classic connector-line tree belongs —
-  draw the elbow connectors (SVG or CSS borders).
-- **Auto-fit, don't guess at breakpoints.** Render the bracket at its natural pixel size
-  into a wrapper, measure it, then apply
-  `transform: scale(min(vw / w, vh / h)); transform-origin: top left`
-  and re-measure on resize. This is what makes it work on an unknown TV at an unknown
-  resolution, which is the actual situation.
-- Show car photo thumbs in the match cards when the bracket size is ≤16; drop to name-only
-  above that, or the cards get too small to read anyway.
+- **Body: the bracket, auto-framed** (below).
+- **Foot strip:** `ON DECK` — the next two or three matches — plus a small join QR, because
+  people arrive late.
+
+**Auto-framing.** The display keeps a *focus round* (the one containing the current match)
+and renders every round at one of three densities:
+
+| Density | Shown | Applied to |
+|---|---|---|
+| `full` | photo + name per slot | focus round and its immediate neighbours |
+| `compact` | name only, smaller | two rounds out |
+| `collapsed` | thin strip: round code + `✓n` | fully-decided rounds further back, and future rounds with no filled slots |
+
+Then measure the composed bracket and scale it to fit
+(`transform: scale(min(vw/w, vh/h)); transform-origin: top left`), re-measuring on resize.
+Because culling already did most of the work, the scale rarely drops far below 1 — which is
+exactly what keeps photos legible. Focus advances automatically as the race progresses.
+
+**Track connectors — the signature.** Connectors are not generic elbows: they are drawn as
+**Hot Wheels track**, in orange, with the raised-rail cross-section. Draw each edge as an
+SVG path stroked **twice** — a wide stroke in the rail colour, then the same path stroked
+narrower in the darker bed colour. The 2px of rail colour left showing on each side reads as
+the raised rails, with no path-offsetting maths. Winner edges are full orange; loser edges
+are dimmer.
+
+When a result lands, the winner's photo chip **travels along the connector** into their next
+match — `offset-path: path(...)` with the same `d`, animating `offset-distance` 0→100%.
+Under `prefers-reduced-motion`, the chip appears at the destination instead.
+
+**TV remote control.** Smart-TV browsers map the D-pad to arrow keys and OK to Enter; that
+is the realistic input model, so the entire view must be operable with six keys. Default
+behaviour is **auto-pilot** — zero interaction, follows the action. Any keypress raises an
+on-screen control bar showing the mapping, which auto-hides after 6s.
+
+| Key | Action |
+|---|---|
+| ↑ / ↓ | zoom in / out (0.6×–2.0×, overrides auto-fit) |
+| ← / → | pan when zoomed in; otherwise step the focus round back / forward |
+| Enter / OK | cycle mode: `AUTO → WINNERS → LOSERS → CONSOLATION → EVERYTHING` |
+| Esc / Backspace | back to `AUTO` and auto-fit |
+| `+` `-` `0` `f` | same as above, for anyone driving from a keyboard |
+
 - Completed matches: winner bold, loser dimmed and struck. The current match pulses.
 - Request a `navigator.wakeLock` so the TV doesn't sleep, and re-request it on
   `visibilitychange` (browsers drop the lock when the tab is backgrounded).
 - No auth. Anyone who can reach the URL can watch — that's the point.
+
+### 3.4 QR codes
+
+Two QR types with **very different exposure rules**, and collapsing them into one component
+that takes a URL is how they'd get confused later:
+
+- **Join QR** — the bare app URL, no identity in it. Safe anywhere, and should be
+  *everywhere*: huge on the display during registration, small in the display's foot strip
+  during racing, behind a `Share` button in the racer view so anyone already in can flash it
+  at a friend, and always available in the director view.
+- **Re-link QR** — `?t=<token>`, which **is** a racer's identity. Only ever rendered on the
+  director's phone and shown to one person. Anyone who scans it becomes that racer, so it
+  must never appear on the big screen.
+
+Scanning the join QR after the roster locks lands on a "registration closed" screen that
+still shows the bracket — spectators are a legitimate audience.
 
 ---
 
@@ -173,8 +260,9 @@ Let `N` = racer count, `B` = 2^⌈log₂ N⌉ (bracket size), `R` = log₂ B (wi
     winner takes it.
 - Total matches: `2B − 2`, plus 1 if the reset is played.
 
-Worked example, `B = 16` (`R = 4`): WB `8, 4, 2, 1`; LB `L1:4, L2:4, L3:2, L4:2, L5:1, L6:1`;
-`L2←W2`, `L4←W3`, `L6←W4`. 15 + 14 + GF = 30 = 2·16 − 2. ✓
+Worked example, `B = 32` (`R = 5`) — the actual event: WB `16, 8, 4, 2, 1` = 31;
+LB `L1:8, L2:8, L3:4, L4:4, L5:2, L6:2, L7:1, L8:1` = 30; `L2←W2`, `L4←W3`, `L6←W4`,
+`L8←W5`. 31 + 30 + GF = 62 = 2·32 − 2. ✓
 
 ### 4.2 Seeding and byes
 
@@ -219,9 +307,9 @@ W1, L1, then for j = 2..R:  W(j), L(2j−2), and L(2j−1) if 2j−1 ≤ 2R−2
 finally: GF (and GFR if needed)
 ```
 
-For `B=16`: `W1, L1, W2, L2, L3, W3, L4, L5, W4, L6, GF`. Within a round, order by slot.
-Every dependency is satisfied by construction. The director can override the current match
-at any time, so this is a default, not a constraint.
+For `B=32`: `W1, L1, W2, L2, L3, W3, L4, L5, W4, L6, L7, W5, L8, GF`. Within a round, order
+by slot. Every dependency is satisfied by construction. The director can override the
+current match at any time, so this is a default, not a constraint.
 
 ### 4.5 Placements
 
@@ -229,7 +317,31 @@ at any time, so this is a default, not a constraint.
 - 2nd: grand final loser.
 - 3rd: loser of the final losers-bracket round (`L(2R−2)`) — eliminated by the LB champion.
 
-Lower placements aren't worth computing; show `Out` and the round they went out in.
+Below the podium, report a **placement band** rather than a bare `Out`. In double
+elimination everyone knocked out in the same losers round ties for the same range, so the
+band falls straight out of counting how many racers are still alive when that round
+resolves: `Out — top 12 of 30`. Derive it from the live alive-count rather than a static
+table and byes handle themselves. At 8 racers this genuinely wouldn't be worth computing;
+at 30, with a third of the field out early, it's the cheapest thing that gives an eliminated
+racer something to look at.
+
+### 4.6 Consolation bracket
+
+A **single-elimination** side bracket for people already knocked out — a third chance, on
+top of the second chance the losers bracket already is. It exists because a 62-heat double
+elim leaves ~28 people idle during its sparse final stretch.
+
+- **Single elim, always.** 16 racers is 15 heats; double elim for a side event would be 30,
+  on top of an event already at its time budget.
+- **Director-triggered, auto-proposed, editable.** The button appears once ≥8 racers are
+  eliminated. The app proposes eliminated racers (most-recently-out first, capped at 16) and
+  the director toggles people in or out before locking it. A rigid "top 16 losers" rule
+  fights reality: people go home, and other people wander up wanting in.
+- Built with the **same machinery** — `bracket = 'C'` rows in `matches`, the same seeding
+  order, the same bye fixpoint, the same `edges`. Only the loser edges are omitted.
+- **Scheduling is free.** Consolation matches land in the same ready-queue the director
+  already picks from, which is the entirety of "mix it into the last part of the race."
+- Its champion is shown alongside the podium, clearly labelled as the consolation winner.
 
 ---
 
@@ -239,9 +351,11 @@ Lower placements aren't worth computing; show `Out` and the round they went out 
 CREATE TABLE event (
   id             INTEGER PRIMARY KEY CHECK (id = 1),
   name           TEXT    NOT NULL DEFAULT 'Hot Wheels Race',
+  year           INTEGER NOT NULL,
   phase          TEXT    NOT NULL DEFAULT 'registration',  -- registration | racing | complete
   bracket_size   INTEGER,
-  current_match  INTEGER REFERENCES matches(id)
+  current_match  INTEGER REFERENCES matches(id),
+  consolation    INTEGER NOT NULL DEFAULT 0   -- 1 once the consolation bracket is built
 );
 
 CREATE TABLE racers (
@@ -249,15 +363,15 @@ CREATE TABLE racers (
   name        TEXT    NOT NULL,
   name_key    TEXT    NOT NULL UNIQUE,   -- lower(trim(name)), for dupe rejection
   token       TEXT    NOT NULL UNIQUE,   -- crypto.randomUUID(), lives in localStorage
-  photo       TEXT,                      -- 'data/photos/<id>.jpg', nullable
-  thumb       TEXT,                      -- 'data/photos/<id>-t.jpg', nullable
+  photo       TEXT,                      -- 'data/photos/<year>/<id>.jpg', nullable
+  thumb       TEXT,                      -- 'data/photos/<year>/<id>-t.jpg', nullable
   seed        INTEGER,                   -- assigned at lock
   created_at  INTEGER NOT NULL
 );
 
 CREATE TABLE matches (
   id           INTEGER PRIMARY KEY,
-  bracket      TEXT    NOT NULL,         -- 'W' | 'L' | 'GF' | 'GFR'
+  bracket      TEXT    NOT NULL,         -- 'W' | 'L' | 'GF' | 'GFR' | 'C'
   round        INTEGER NOT NULL,
   slot         INTEGER NOT NULL,         -- 0-based within round
   a_racer      INTEGER REFERENCES racers(id),
@@ -278,7 +392,7 @@ CREATE TABLE edges (
   PRIMARY KEY (from_match, outcome)
 );
 
-CREATE TABLE results_log (              -- the undo stack
+CREATE TABLE results_log (              -- the undo stack; pop LIFO for multi-level undo
   id          INTEGER PRIMARY KEY,
   match_id    INTEGER NOT NULL REFERENCES matches(id),
   winner      INTEGER NOT NULL REFERENCES racers(id),
@@ -289,10 +403,38 @@ CREATE TABLE sessions (                 -- director sessions; in SQLite so a mid
   token       TEXT PRIMARY KEY,         -- server restart doesn't lock the director out
   created_at  INTEGER NOT NULL
 );
+
+CREATE TABLE archives (                 -- one row per finished year
+  year           INTEGER PRIMARY KEY,
+  name           TEXT    NOT NULL,
+  archived_at    INTEGER NOT NULL,
+  racer_count    INTEGER NOT NULL,
+  champion       TEXT,                  -- denormalised so the index page needs no blob
+  runner_up      TEXT,
+  third          TEXT,
+  consolation_champion TEXT,
+  schema_version INTEGER NOT NULL,
+  state          TEXT    NOT NULL       -- the frozen /api/state JSON
+);
 ```
 
 `BYE` is represented as `racer_id = 0` (a reserved sentinel row), not `NULL` — `NULL` means
 "not yet determined," and conflating the two is a bug factory.
+
+**Why archive as a frozen blob rather than a full multi-event schema.** The client's only
+input is a `{ event, racers, matches, edges }` payload — it's what `/api/state` returns and
+what SSE pushes. So an archived year *is* that payload, and the same React bracket
+components render it with zero duplicate code, while the live race-day path — the code that
+must not break in front of a room of people — stays exactly as simple as it is today.
+Archives are immutable, so a live bug can't corrupt last year and vice versa. `schema_version`
+is what lets a future reader handle an old archive instead of rendering garbage.
+
+The trigger to revisit this and go to a real `event_id`-everywhere schema is **cross-year
+queries** — "every match Emma has ever raced," lifetime standings. A JSON scan is the wrong
+tool for that. Until someone asks, this is the cheaper correct answer.
+
+Racer identity deliberately does **not** persist across years. Kids' names are stable enough
+to match on for a hall-of-fame line; their cars aren't, and accounts are out of scope.
 
 ---
 
@@ -309,17 +451,28 @@ PATCH /api/me              {name}                  → { racer }            (tok
 POST  /api/director/login  {password}              → sets HttpOnly cookie
 POST  /api/director/lock                           → shuffle, build bracket, phase=racing
 POST  /api/director/result {matchId, winnerId}
-POST  /api/director/undo
+POST  /api/director/undo                           → pops results_log, LIFO
 POST  /api/director/current {matchId}
 DELETE /api/director/racer/:id                     → registration phase only
-POST  /api/director/reset                          → wipe back to registration
+POST  /api/director/consolation {racerIds}         → build the 'C' bracket
+POST  /api/director/archive                        → freeze year, back to registration
+POST  /api/director/reset                          → wipe; refuses if unarchived+complete
+
+GET   /api/archives                                → list, without the state blob
+GET   /api/archives/:year                          → the frozen state payload
 ```
 
 Racer identity is the token, sent as an `X-Racer-Token` header. Director auth is a
-`HttpOnly; SameSite=Strict` cookie holding a random session token.
+`HttpOnly; SameSite=Strict` cookie holding a random session token, with a **12-hour TTL** —
+an event runs a few hours and getting logged out at heat 40 is infuriating.
+
+**`/api/director/result` must reject a match already in state `done`.** Multiple director
+devices are supported and useful (one person at the track tapping winners, another
+marshalling racers), and without this guard two people tapping the same heat double-advances
+the bracket. This is the desync failure mode that matters.
 
 **SSE:** one global channel. Push the whole state payload on every mutation rather than a
-delta plus a refetch — 32 racers and 62 matches is a few KB, and it removes an entire class
+delta plus a refetch — 30 racers and 62 matches is a few KB, and it removes an entire class
 of "client got a nudge but raced the refetch" bugs. Send a heartbeat comment every 20s so
 proxies don't reap the connection, and make sure the nginx route sets
 `proxy_buffering off;` — buffered SSE just silently doesn't arrive.
@@ -334,7 +487,7 @@ export const DIRECTOR_PASSWORD = "hotwheels";  // ← change me
 ```
 
 One `const`, top of a tiny config file, no env var, no hashing. This gates *entering race
-results at a kids' race*; treating it as a real credential would be theater. It is worth
+results at a backyard race*; treating it as a real credential would be theater. It is worth
 saying plainly what this is not: anyone who reads the public repo can read the password.
 That is an accepted tradeoff for this event — but **don't reuse a real password here**, and
 if the event ever matters more than this one does, move it to an env var.
@@ -349,48 +502,93 @@ Compare with a timing-safe equality check anyway (`crypto.timingSafeEqual`) — 
 - **Resize client-side** before upload, via canvas: a `full` at max 800px on the long edge
   and a `thumb` at max 200px, both JPEG q0.82. Upload both blobs in one multipart POST.
   A raw phone photo is 3–5 MB; this makes it ~80 KB and ~10 KB, which matters when a big
-  screen is loading 32 of them and when 20 people are on the same wifi.
-- Server writes `data/photos/<racerId>.jpg` and `<racerId>-t.jpg`, serves them under
-  `/race-tracker/photos/`, and appends `?v=<mtime>` to bust caches on re-upload.
-- No photo → render a generated placeholder (first initial on a color derived from the
+  screen is loading 30 of them and when 30 people are on the same wifi.
+- Server writes **`data/photos/<year>/<racerId>.jpg`** and `<racerId>-t.jpg`, serves them
+  under `/race-tracker/photos/`, and appends `?v=<mtime>` to bust caches on re-upload.
+- **The year in that path is not optional.** Racer ids restart at 1 each year, so a flat
+  `data/photos/` means next year's registration silently overwrites this year's cars. With
+  the year in the path each archive is also self-contained — one directory plus one row.
+- No photo → render a generated placeholder (first initial on a colour derived from the
   racer id). The bracket must never have a ragged hole where a photo isn't.
 - Cap the upload at 2 MB server-side and reject non-image content types.
+- **Served from local disk, never from object storage.** ~30 racers × ~90 KB is ~2.7 MB for
+  the whole event, so there's no bandwidth case to weigh against the cost — and the cost is
+  a second origin on the public internet in the critical path, which turns a flaky uplink
+  into a bracket full of broken images. S3 is for the archive (§9), not for race day.
 
 ---
 
-## 9. Build order
+## 9. Archive and backup
+
+On **`Archive & start next year`**: build the current `/api/state` payload, write it to
+`archives` with the denormalised podium, then clear `racers` / `matches` / `edges` /
+`results_log` and return `event` to `registration` with `year + 1`.
+
+Then, **off the critical path**, push `data/photos/<year>/` and the archive JSON to S3 under
+`race-tracker/<year>/`. If it fails, the event is unaffected and it can be retried — this
+runs after the race is over, by definition.
+
+`data/` is gitignored and lives on one Mac's disk. Under a single-event design losing it
+cost an afternoon; now it costs every year ever run, and the SQLite data matters more than
+the photos do.
+
+---
+
+## 10. Visual design
+
+Ground the identity in the **actual object** — a Hot Wheels track set — rather than the
+brand logo or the default "dark sports app with a neon accent."
+
+- **Palette** is taken from the physical materials: track orange with its lighter raised
+  rails, a warm dark garage-floor ground (a neutral biased toward the accent, not a pure
+  near-black), and a cold blue reserved for the losers bracket so the two halves of the
+  bracket are distinguishable at 15 feet.
+- **Type does functional work.** A heavy condensed display face (Big Shoulders Display)
+  fits long names into narrow bracket cards; a sturdy grotesque (Archivo) carries UI text;
+  a technical mono (IBM Plex Mono) sets round codes, records, seeds, and counts. Self-hosted
+  woff2 — no CDN, so nothing silently falls back on race day when the wifi is bad.
+- **Committed dark, single theme.** The TV demands it, it's an evening event, and all three
+  views are in the same room at the same time — consistency across them *is* the design.
+  Contrast is set high enough that the director's phone still works in daylight.
+- **The signature is the track** (§3.3): bracket connectors drawn as orange track with
+  raised rails, and the winner's photo travelling along one when a result lands. Boldness
+  is spent there; everything around it stays quiet.
+
+---
+
+## 11. Build order
 
 1. `server.ts` skeleton + SQLite schema + `/api/state` + SSE. Vite scaffold, three routes.
 2. Registration: racer view name entry, token, roster. Director login + roster management.
 3. **Bracket generation** (§4) with a standalone test script — verify at N = 4, 5, 8, 11, 16,
-   17, 32 that match counts equal `2B − 2`, that every non-bye racer appears, and that byes
-   resolve to a valid ready state. Get this right before building any UI on top of it.
+   26, 30, 32 that match counts equal `2B − 2`, that every non-bye racer appears, that byes
+   resolve to a valid ready state, and that a random playthrough terminates with exactly one
+   champion. Get this right before building any UI on top of it.
 4. Director racing screen: tap-to-win, advance, undo.
 5. Racer `Now` tab, then `Bracket`, then `Racers`.
-6. `/display` big screen + auto-fit scaling.
-7. Photos end to end.
-8. Deploy: launchd user agent `com.jim.race-tracker` on **58013** (`bun` lives at
-   `/Users/doug/.bun/bin/bun`, *not* Homebrew's), nginx route
-   `/race-tracker/` → `127.0.0.1:58013` with `proxy_buffering off`, apple-touch-icon via
-   `tools/gen-icon.ts`.
+6. `/display` big screen + auto-framing + remote control.
+7. Photos and QR end to end.
+8. Consolation bracket (§4.6) — **last**, because it is strictly additive and the main
+   bracket is the part that cannot fail.
+9. Archive + `/history` + S3 backup.
+10. Deploy: launchd user agent `com.jim.race-tracker` on **58013** (`bun` lives at
+    `/Users/doug/.bun/bin/bun`, *not* Homebrew's), nginx route
+    `/race-tracker/` → `127.0.0.1:58013` with `proxy_buffering off`, apple-touch-icon via
+    `tools/gen-icon.ts`.
 
 **Test the whole thing with two phones and a TV before race day.** A double-elim bracket
-that desyncs mid-event in front of a room of kids is the failure mode that matters, and it
+that desyncs mid-event in front of a room of people is the failure mode that matters, and it
 won't show up on localhost.
 
 ---
 
-## 10. Open questions
+## 12. Open questions
 
-- **How many racers?** Changes almost nothing structurally, but drives the big-screen
-  photo threshold. Assume ≤32 until told otherwise.
+- **Can `cli-agent` write to S3?** Its identity and `s3 ls` are confirmed; `PutObject` and
+  bucket creation are **not** yet verified. If denied, that's an IAM policy limit, not a
+  creds problem. Blocks §9's backup step only — the archive itself is local and unaffected.
 - **Is the race director also racing?** If so, they need both views open — works fine, just
-  worth knowing.
-- **Consolation for early exits?** Double elim knocks a third of the field out fast. Not
-  designing for it; flagging it because it's a real experience problem at a kids' event.
-- **Does this need to survive more than one day?** Current design has exactly one event and
-  a `reset` button. Multi-event would be a real schema change — worth knowing before build,
-  cheap now, expensive later.
+  worth knowing. Multiple director devices are supported either way.
 
 ---
 

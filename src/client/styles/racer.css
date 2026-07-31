@@ -1,0 +1,345 @@
+/* Racer view — mobile first. Prefix: .rc- */
+
+.rc {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100dvh;
+}
+
+.rc-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: calc(var(--safe-top) + var(--s-3)) var(--s-4) var(--s-3);
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--ground);
+}
+
+.rc-count {
+  margin-top: 2px;
+  color: var(--ink-dim);
+}
+
+.rc-share {
+  min-height: 40px;
+  padding: 0 var(--s-3);
+  font-size: var(--t-sm);
+}
+
+.rc-body {
+  padding: var(--s-4);
+  padding-bottom: var(--s-6);
+}
+
+.rc-nav {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--line);
+  background: var(--ground-deep);
+  padding-bottom: var(--safe-bottom);
+}
+
+.rc-nav-btn {
+  padding: var(--s-3) 0;
+  font-family: var(--display);
+  font-size: var(--t-md);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+  border-top: 3px solid transparent;
+}
+
+.rc-nav-on {
+  color: var(--ink);
+  border-top-color: var(--track);
+}
+
+/* --- join -------------------------------------------------------------------- */
+
+.rc-join {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  min-height: 100dvh;
+  padding: calc(var(--safe-top) + var(--s-6)) var(--s-5) var(--s-6);
+  justify-content: center;
+}
+
+.rc-join-title {
+  font-size: var(--t-3xl);
+  color: var(--ink);
+}
+
+.rc-join-sub {
+  margin-bottom: var(--s-3);
+  color: var(--ink-dim);
+}
+
+/* --- now --------------------------------------------------------------------- */
+
+.rc-now {
+  padding: var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.rc-now-mine {
+  border-color: var(--track);
+  box-shadow: 0 0 0 2px var(--track), 0 0 32px rgb(232 83 28 / 26%);
+}
+
+.rc-now-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-bottom: var(--s-4);
+}
+
+.rc-now-cars {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.rc-car {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.rc-car-name {
+  font-size: var(--t-lg);
+  overflow-wrap: anywhere;
+}
+
+.rc-car-mine .rc-car-name {
+  color: var(--track-rail);
+}
+
+.rc-vs {
+  font-family: var(--display);
+  font-size: var(--t-lg);
+  font-weight: 800;
+  color: var(--ink-faint);
+}
+
+.rc-thats-you {
+  margin-top: var(--s-4);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--line);
+  font-family: var(--display);
+  font-size: var(--t-lg);
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--track-rail);
+}
+
+.rc-status {
+  padding: var(--s-4);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border-left: 3px solid var(--line);
+}
+
+.rc-status-up-next {
+  border-left-color: var(--track);
+  background: linear-gradient(90deg, rgb(232 83 28 / 16%), var(--surface) 60%);
+}
+
+.rc-status-won {
+  border-left-color: var(--gold);
+}
+
+.rc-status-out {
+  border-left-color: var(--ink-faint);
+}
+
+.rc-status-line {
+  font-family: var(--display);
+  font-size: var(--t-xl);
+  font-weight: 800;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.rc-status-detail {
+  margin-top: var(--s-2);
+  color: var(--ink-dim);
+  font-size: var(--t-sm);
+}
+
+.rc-section-head {
+  margin-bottom: var(--s-2);
+}
+
+.rc-ondeck {
+  gap: var(--s-2);
+}
+
+.rc-wait {
+  display: grid;
+  justify-items: center;
+  gap: var(--s-2);
+  padding: var(--s-7) var(--s-4);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.rc-wait-count {
+  font-family: var(--display);
+  font-size: var(--t-4xl);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--track-rail);
+  font-variant-numeric: tabular-nums;
+}
+
+.rc-wait-note {
+  color: var(--ink-dim);
+  text-align: center;
+}
+
+.rc-photo {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+}
+
+.rc-photo-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.rc-photo-name {
+  font-size: var(--t-md);
+}
+
+.rc-photo-hint {
+  font-size: var(--t-sm);
+  color: var(--ink-dim);
+}
+
+.rc-photo-btn {
+  min-height: 40px;
+  padding: 0 var(--s-3);
+  font-size: var(--t-sm);
+  cursor: pointer;
+}
+
+/* --- bracket ----------------------------------------------------------------- */
+
+.rc-bracket {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+.rc-seg {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--r-md);
+  background: var(--ground-deep);
+  border: 1px solid var(--line-soft);
+}
+
+.rc-seg-btn {
+  flex: 1;
+  padding: var(--s-2) var(--s-1);
+  border-radius: var(--r-sm);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--ink-faint);
+}
+
+.rc-seg-on {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.rc-mypath {
+  align-self: flex-start;
+  cursor: pointer;
+}
+
+.rc-columns {
+  display: flex;
+  gap: var(--s-3);
+  padding-bottom: var(--s-3);
+  scroll-snap-type: x mandatory;
+}
+
+.rc-column {
+  flex: none;
+  width: min(76vw, 300px);
+  scroll-snap-align: start;
+}
+
+.rc-column-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: var(--s-2) 0;
+  margin-bottom: var(--s-2);
+  background: var(--ground);
+  font-size: var(--t-md);
+  color: var(--ink-dim);
+}
+
+.rc-column-body {
+  gap: var(--s-2);
+}
+
+.rc-detail {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+/* --- racers ------------------------------------------------------------------ */
+
+.rc-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--s-3);
+}
+
+.rc-racer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-2);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--line-soft);
+  text-align: left;
+}
+
+.rc-racer-me {
+  border-color: var(--track);
+}
+
+.rc-racer-name {
+  font-size: var(--t-md);
+  overflow-wrap: anywhere;
+}
+
+.rc-racer-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
