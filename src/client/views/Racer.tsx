@@ -590,7 +590,7 @@ function RulesTab({ state, meId }: { state: StatePayload; meId: number }) {
       </section>
 
       <p className="rc-rules-aside">
-        If the term means anything to you: it's a <strong>double-elimination</strong> bracket.
+        Technically, it's a <strong>double-elimination</strong> bracket.
       </p>
 
       <section className="rc-rules-block">
