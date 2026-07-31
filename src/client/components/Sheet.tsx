@@ -11,25 +11,20 @@ type Props = {
 const DISMISS_PX = 110;
 
 /**
- * Bottom sheet: slides up from the edge, and can be thrown back down.
+ * Bottom sheet: slides up from the edge, and can be thrown back down by the grip.
  *
- * The drag is deliberately split. The header carries `touch-action: none`, so
- * dragging from the grip always dismisses — that path is guaranteed on every
- * browser. The body only engages a dismiss when it's already scrolled to the
- * top, so a pull-down inside a scrollable list (the racer picker) scrolls
- * rather than closing the sheet out from under you.
+ * Dismissing is handle-only on purpose. Body drags were tried and felt wrong:
+ * any pull-down inside the sheet has to decide, mid-gesture, whether it's a
+ * scroll or a dismiss, and getting that wrong either closes the sheet out from
+ * under a scroll or swallows the scroll entirely. The header is sticky, so the
+ * grip is always in reach and the body is free to just scroll.
  */
 export function Sheet({ open, title, onClose, children }: Props) {
   const panel = useRef<HTMLDivElement>(null);
   const [offset, setOffset] = useState(0);
   const [dragging, setDragging] = useState(false);
 
-  const drag = useRef<{
-    startY: number;
-    startScroll: number;
-    pointerId: number;
-    active: boolean;
-  } | null>(null);
+  const drag = useRef<{ startY: number; pointerId: number; active: boolean } | null>(null);
 
   const reset = useCallback(() => {
     drag.current = null;
@@ -67,16 +62,11 @@ export function Sheet({ open, title, onClose, children }: Props) {
     }
 
     const down = (event: PointerEvent) => {
-      // A drag starting on the grip is always a dismiss; elsewhere it depends on
-      // whether the content is already at the top.
-      const fromHeader = (event.target as Element | null)?.closest(".sheet-head") !== null;
-
-      drag.current = {
-        startY: event.clientY,
-        startScroll: fromHeader ? 0 : element.scrollTop,
-        pointerId: event.pointerId,
-        active: false,
-      };
+      // Only the grip starts a dismiss. Anywhere else is the body's to scroll.
+      if ((event.target as Element | null)?.closest(".sheet-head") === null) {
+        return;
+      }
+      drag.current = { startY: event.clientY, pointerId: event.pointerId, active: false };
     };
 
     const move = (event: PointerEvent) => {
@@ -88,17 +78,12 @@ export function Sheet({ open, title, onClose, children }: Props) {
       const dy = event.clientY - state.startY;
 
       if (!state.active) {
-        if (dy > 6 && state.startScroll <= 0 && element.scrollTop <= 0) {
-          state.active = true;
-          setDragging(true);
-          element.setPointerCapture(event.pointerId);
-        } else if (Math.abs(dy) > 6) {
-          // They're scrolling, not dismissing. Stay out of the way.
-          drag.current = null;
-          return;
-        } else {
+        if (dy <= 6) {
           return;
         }
+        state.active = true;
+        setDragging(true);
+        element.setPointerCapture(event.pointerId);
       }
 
       if (event.cancelable) {
