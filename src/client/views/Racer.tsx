@@ -561,37 +561,32 @@ function PhotoCard({ racer }: { racer: NonNullable<ReturnType<typeof racerById>>
 function RulesTab({ state, meId }: { state: StatePayload; meId: number }) {
   const me = racerById(state, meId);
   const losses = me?.losses ?? 0;
-  const lives = Math.max(0, 2 - losses);
   const out = me?.status === "out";
 
-  // The headline is a floor, not a countdown: two races is the minimum anyone
-  // gets, but a racer who keeps winning in the losers bracket races many more.
-  // The pips track losses to spare, which is the thing that actually runs out.
-  const headline = out ? "You're out" : losses === 0 ? "You get two races" : "One loss left";
-
-  const sub = out
+  // The bars count losses taken, not chances remaining — they start empty and
+  // fill, in the losers-bracket blue, which is the colour that already means
+  // "you've dropped a race" everywhere else in the app.
+  const tally = out
     ? `You finished ${me?.placement ?? "—"} of ${state.event.racerCount}.`
     : losses === 0
-      ? "At least two. It takes two losses to knock you out."
-      : "Win and you keep racing. Lose and you're done.";
-
-  const pipLabel =
-    lives === 2 ? "Two losses to spare" : lives === 1 ? "One loss to spare" : "No losses to spare";
+      ? "None yet."
+      : "One more and you're done.";
 
   return (
     <div className="rc-rules">
       <section className="rc-lives">
-        <h1 className="rc-lives-head">{headline}</h1>
-        <div className="rc-pips" role="img" aria-label={pipLabel}>
-          <span className={`rc-pip ${lives >= 1 ? "" : "rc-pip-spent"}`} />
-          <span className={`rc-pip ${lives >= 2 ? "" : "rc-pip-spent"}`} />
-        </div>
-        <p className="rc-lives-sub">{sub}</p>
-      </section>
+        <h1 className="rc-lives-head">Win and you get to keep racing.</h1>
+        <p className="rc-lives-second">Lose twice and you're out.</p>
 
-      <p className="rc-rules-lead">
-        Lose a race and you keep racing. Lose twice and you're done. That's the whole format.
-      </p>
+        <div className="rc-pips-block">
+          <p className="eyebrow">Losses</p>
+          <div className="rc-pips" role="img" aria-label={`${losses} of 2 losses`}>
+            <span className={`rc-pip ${losses >= 1 ? "rc-pip-taken" : ""}`} />
+            <span className={`rc-pip ${losses >= 2 ? "rc-pip-taken" : ""}`} />
+          </div>
+          <p className="rc-lives-sub">{tally}</p>
+        </div>
+      </section>
 
       <p className="rc-rules-aside">
         If the term means anything to you: it's a <strong>double-elimination</strong> bracket.
