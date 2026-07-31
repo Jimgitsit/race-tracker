@@ -36,6 +36,11 @@ stays inspectable.
 - **Display fit maths measures `clientHeight`**, which includes padding — so `.disp-canvas`
   must stay padding-free or the bracket clips at the bottom. Padding goes inside the scaled
   content.
+- **Fit measures `.disp-tree`, never `.disp-scale`.** The wrapper also holds the connector
+  SVG, which is sized *from* that measurement — measure the wrapper and the size becomes its
+  own input. It ratchets (the SVG props up `scrollHeight`), the measured height can never
+  shrink, and fit stays pinned at whatever the tallest layout ever needed. This shipped: a
+  single-bracket filter rendered at half the scale it should have.
 - **The big screen also renders on a phone** (spectators can flip to it), so it must survive
   portrait. Two rules keep it honest: clamp against **`vmin`, not `vh`** (identical on any
   landscape viewport, so the TV never changes), and use **`minmax(0, …)` grid tracks, never a

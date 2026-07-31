@@ -34,6 +34,11 @@ const FIT: View = { scale: null, x: 0, y: 0 };
 const CHROME_IDLE_MS = 2500;
 const ZOOM_STEP = 1.15;
 
+/** Follow mode's zoom, as a multiple of fit, and where it parks the live heat
+    across the frame — a third in, so the bracket ahead stays visible. */
+const FOLLOW_ZOOM = 4;
+const FOLLOW_BIAS = 0.33;
+
 function clamp(value: number, low: number, high: number): number {
   return Math.min(high, Math.max(low, value));
 }
@@ -184,7 +189,9 @@ function Racing({ state }: { state: StatePayload }) {
   const [detail, setDetail] = useState<Detail>("auto");
   const [view, setView] = useState<View>(FIT);
   const [focus, setFocus] = useState<number | null>(null);
+  const [follow, setFollow] = useState(false);
   const [fit, setFit] = useState(1);
+  const [dismissed, setDismissed] = useState<number | null>(null);
   const [chrome, setChrome] = useState(false);
   const idle = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const clock = useNow();
@@ -232,7 +239,12 @@ function Racing({ state }: { state: StatePayload }) {
     setDetail("auto");
     setView(FIT);
     setFocus(null);
+    setFollow(false);
   }, []);
+
+  /** Any hand on the controls drops follow. Auto-framing that fights the person
+      driving is worse than no auto-framing. */
+  const manual = useCallback(() => setFollow(false), []);
 
   /** Changing what's on screen invalidates a column index, so hand focus back to
       the live heat rather than landing on whatever now sits in that position. */
@@ -240,16 +252,19 @@ function Racing({ state }: { state: StatePayload }) {
     setFilter(key);
     setFocus(null);
     setView(FIT);
+    setFollow(false);
   }, []);
 
   const zoomBy = useCallback(
-    (steps: number) =>
+    (steps: number) => {
+      setFollow(false);
       setView((v) => {
         const next = (v.scale ?? fit) * ZOOM_STEP ** steps;
         // Zooming back out through fit returns to fit proper, which also recentres.
         // There is nothing below it to see — the whole bracket is already on screen.
         return next <= fit ? FIT : { ...v, scale: Math.min(next, zoomCeiling(fit)) };
-      }),
+      });
+    },
     [fit],
   );
 
@@ -272,6 +287,7 @@ function Racing({ state }: { state: StatePayload }) {
           if (view.scale === null) {
             setFocus(clamp(focusIndex - 1, 0, columns.length - 1));
           } else {
+            manual();
             setView((v) => ({ ...v, x: v.x + 120 }));
           }
           break;
@@ -279,8 +295,12 @@ function Racing({ state }: { state: StatePayload }) {
           if (view.scale === null) {
             setFocus(clamp(focusIndex + 1, 0, columns.length - 1));
           } else {
+            manual();
             setView((v) => ({ ...v, x: v.x - 120 }));
           }
+          break;
+        case "a":
+          setFollow((f) => !f);
           break;
         case "Enter":
           setFilter((f) => filters[(filters.findIndex((x) => x.key === f) + 1) % filters.length].key);
@@ -291,6 +311,7 @@ function Racing({ state }: { state: StatePayload }) {
           setDetail((d) => (d === "all" ? "auto" : "all"));
           break;
         case "f":
+          manual();
           setView(FIT);
           break;
         case "Escape":
@@ -308,7 +329,10 @@ function Racing({ state }: { state: StatePayload }) {
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [view.scale, filters, columns.length, focusIndex, zoomBy, reset, wake]);
+  }, [view.scale, filters, columns.length, focusIndex, zoomBy, reset, manual, wake]);
+
+  const latest = state.announcements[0] ?? null;
+  const announcement = latest !== null && latest.id !== dismissed ? latest : null;
 
   const onDeck = state.queue
     .filter((id) => id !== state.event.currentMatch)
@@ -331,11 +355,12 @@ function Racing({ state }: { state: StatePayload }) {
           detail={detail}
           view={view}
           focusIndex={focusIndex}
+          follow={follow}
           flash={flash}
           onView={setView}
           onFocus={setFocus}
           onFit={setFit}
-          onWake={wake}
+          onManual={manual}
         />
 
         <Controls
@@ -343,12 +368,17 @@ function Racing({ state }: { state: StatePayload }) {
           filters={filters}
           filter={filter}
           detail={detail}
+          follow={follow}
           scale={view.scale}
           fit={fit}
           onFilter={pickFilter}
           onDetail={() => setDetail((d) => (d === "all" ? "auto" : "all"))}
+          onFollow={() => setFollow((f) => !f)}
           onZoom={zoomBy}
-          onFit={() => setView(FIT)}
+          onFit={() => {
+            manual();
+            setView(FIT);
+          }}
         />
       </div>
 
@@ -368,13 +398,23 @@ function Racing({ state }: { state: StatePayload }) {
           )}
         </div>
 
-        {state.announcements.length > 0 ? (
-          <p className="disp-announce" key={state.announcements[0].id}>
+        {/* Dismissal is local to this screen and keyed on the id, so clearing a
+            stale message here neither touches what racers see on their phones nor
+            swallows the next one. The × only appears with the rest of the chrome —
+            it is for whoever is driving, not for the room. */}
+        {announcement !== null ? (
+          <p className="disp-announce" key={announcement.id}>
             <span className="disp-announce-tag">Director</span>
-            <span className="disp-announce-body">{state.announcements[0].body}</span>
-            <span className="disp-announce-when">
-              {timeAgo(state.announcements[0].at, clock)}
-            </span>
+            <span className="disp-announce-body">{announcement.body}</span>
+            <span className="disp-announce-when">{timeAgo(announcement.at, clock)}</span>
+            <button
+              type="button"
+              className={`disp-announce-x ${chrome ? "" : "disp-announce-x-off"}`}
+              onClick={() => setDismissed(announcement.id)}
+              aria-label="Dismiss this message"
+            >
+              ×
+            </button>
           </p>
         ) : null}
 
@@ -448,8 +488,15 @@ function BannerCar({
   lost: boolean;
 }) {
   // Photo nearest the centre on both sides, so the pair reads as one head-to-head
-  // rather than two things pinned to opposite edges of the screen.
-  const photo = <Avatar racer={racer} size="xl" full key="photo" />;
+  // rather than two things pinned to opposite edges of the screen. The stamp and
+  // the ring both belong to the photo, not to the block — same as the racer view,
+  // where green on the photo means "this car won" and nothing else does.
+  const photo = (
+    <div className="disp-banner-photo" key="photo">
+      <Avatar racer={racer} size="xl" full />
+      {won ? <span className="disp-stamp">Winner!</span> : null}
+    </div>
+  );
   const name = (
     <p className="disp-banner-name racer-name" key="name">
       {racer?.name ?? "TBD"}
@@ -461,7 +508,6 @@ function BannerCar({
       className={`disp-banner-car disp-banner-${side} ${won ? "is-won" : ""} ${lost ? "is-lost" : ""}`}
     >
       {side === "left" ? [name, photo] : [photo, name]}
-      {won ? <span className="disp-stamp">✓</span> : null}
     </div>
   );
 }
@@ -476,10 +522,12 @@ function Controls({
   filters,
   filter,
   detail,
+  follow,
   scale,
   fit,
   onFilter,
   onDetail,
+  onFollow,
   onZoom,
   onFit,
 }: {
@@ -487,10 +535,12 @@ function Controls({
   filters: { key: Filter; label: string }[];
   filter: Filter;
   detail: Detail;
+  follow: boolean;
   scale: number | null;
   fit: number;
   onFilter: (key: Filter) => void;
   onDetail: () => void;
+  onFollow: () => void;
   onZoom: (steps: number) => void;
   onFit: () => void;
 }) {
@@ -511,14 +561,24 @@ function Controls({
 
       <span className="disp-ctl-rule" />
 
-      <button
-        type="button"
-        className={`disp-ctl-btn ${detail === "all" ? "is-on" : ""}`}
-        onClick={onDetail}
-        title="Draw every round at the same size instead of collapsing what's settled"
-      >
-        All rounds
-      </button>
+      <div className="disp-ctl-set">
+        <button
+          type="button"
+          className={`disp-ctl-btn ${detail === "all" ? "is-on" : ""}`}
+          onClick={onDetail}
+          title="Draw every round at the same size instead of collapsing what's settled"
+        >
+          All rounds
+        </button>
+        <button
+          type="button"
+          className={`disp-ctl-btn ${follow ? "is-on" : ""}`}
+          onClick={onFollow}
+          title="Zoom in on the current heat and track it as the race moves"
+        >
+          Follow
+        </button>
+      </div>
 
       <span className="disp-ctl-rule" />
 
@@ -534,7 +594,7 @@ function Controls({
         </button>
       </div>
 
-      <span className="disp-ctl-hint">scroll to zoom · drag to pan · click a round</span>
+      <span className="disp-ctl-hint">drag to pan · click a round</span>
     </div>
   );
 }
@@ -562,25 +622,28 @@ function BracketCanvas({
   detail,
   view,
   focusIndex,
+  follow,
   flash,
   onView,
   onFocus,
   onFit,
-  onWake,
+  onManual,
 }: {
   state: StatePayload;
   columns: RoundColumn[];
   detail: Detail;
   view: View;
   focusIndex: number;
+  follow: boolean;
   flash: number | null;
   onView: (view: View) => void;
   onFocus: (index: number) => void;
   onFit: (fit: number) => void;
-  onWake: () => void;
+  onManual: () => void;
 }) {
   const viewport = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLDivElement>(null);
+  const tree = useRef<HTMLDivElement>(null);
   const boxes = useRef<Map<number, HTMLElement>>(new Map());
   const drag = useRef<{ id: number; x: number; y: number; ox: number; oy: number } | null>(null);
   const dragged = useRef(false);
@@ -629,8 +692,9 @@ function BracketCanvas({
   // the wrapper does not affect — so connectors stay correct at any zoom.
   useLayoutEffect(() => {
     const root = canvas.current;
+    const content = tree.current;
     const frame = viewport.current;
-    if (!root || !frame) {
+    if (!root || !content || !frame) {
       return;
     }
 
@@ -675,8 +739,14 @@ function BracketCanvas({
 
       setPaths(next);
 
-      const w = root.scrollWidth;
-      const h = root.scrollHeight;
+      // Measure the tree, never the wrapper. The wrapper also contains the
+      // connector SVG, which is sized from *this* measurement — so measuring the
+      // wrapper makes the size its own input. It ratchets: once the SVG is tall,
+      // it props up the wrapper's scrollHeight and the measured height can never
+      // shrink again, pinning the fit scale at whatever the tallest layout ever
+      // needed. Collapsing rounds then bought space that fit never spent.
+      const w = content.offsetWidth;
+      const h = content.offsetHeight;
       setSize({ w, h });
       setFrame({ w: frame.clientWidth, h: frame.clientHeight });
 
@@ -689,7 +759,7 @@ function BracketCanvas({
 
     const observer = new ResizeObserver(measure);
     observer.observe(frame);
-    observer.observe(root);
+    observer.observe(content);
 
     return () => observer.disconnect();
   }, [state, columns, densities]);
@@ -715,56 +785,55 @@ function BracketCanvas({
   // can never throw the whole bracket off screen.
   const contentW = size.w * scale;
   const contentH = size.h * scale;
-  const offsetX = contentW <= frame.w ? (frame.w - contentW) / 2 : clamp(view.x, frame.w - contentW, 0);
-  const offsetY = contentH <= frame.h ? (frame.h - contentH) / 2 : clamp(view.y, frame.h - contentH, 0);
+
+  // A little headroom past the edges. Without it the clamp refuses to show any
+  // background at all, and follow mode cannot honour its bias for a heat in the
+  // first or last round — the live heat would drift between a third in and hard
+  // against the edge depending on the round, which is exactly the predictability
+  // follow mode exists to provide. Bounded, so the bracket can't be flung away.
+  const slackX = frame.w * FOLLOW_BIAS;
+  const slackY = frame.h * FOLLOW_BIAS;
+  const offsetX =
+    contentW <= frame.w
+      ? (frame.w - contentW) / 2
+      : clamp(view.x, frame.w - contentW - slackX, slackX);
+  const offsetY =
+    contentH <= frame.h
+      ? (frame.h - contentH) / 2
+      : clamp(view.y, frame.h - contentH - slackY, slackY);
   const pannable = contentW > frame.w + 1 || contentH > frame.h + 1;
 
-  // React registers wheel on its root as passive, so preventDefault() from an
-  // onWheel prop is ignored and the page scrolls out from under the zoom. It has
-  // to be a native listener asking for passive: false.
+  /**
+   * Follow mode: sit on the live heat at a readable zoom and track it as the race
+   * moves. Left of centre rather than dead centre, because the bracket flows left
+   * to right — the interesting half of the screen is the half that hasn't happened
+   * yet. Runs on layout, not on a timer, so it re-aims when a round collapses or
+   * the window changes shape as well as when the heat advances.
+   */
   useEffect(() => {
-    const el = viewport.current;
-    if (!el) {
+    if (!follow || size.w === 0 || frame.w === 0) {
       return;
     }
 
-    const onWheel = (event: WheelEvent) => {
-      event.preventDefault();
-      onWake();
+    const box = state.event.currentMatch === null ? null : boxes.current.get(state.event.currentMatch);
+    if (!box) {
+      return;
+    }
 
-      const next = clamp(
-        scale * ZOOM_STEP ** (event.deltaY > 0 ? -1 : 1),
-        fit,
-        zoomCeiling(fit),
-      );
-
-      if (next === scale) {
-        return;
-      }
-      if (next <= fit) {
-        onView(FIT);
-        return;
-      }
-
-      // Hold whatever sits under the pointer still, so zooming reads as moving
-      // towards the thing you're looking at rather than towards the centre.
-      const rect = el.getBoundingClientRect();
-      const px = event.clientX - rect.left;
-      const py = event.clientY - rect.top;
-      const ratio = next / scale;
-
-      onView({ scale: next, x: px - (px - offsetX) * ratio, y: py - (py - offsetY) * ratio });
-    };
-
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
-  }, [scale, fit, offsetX, offsetY, onView, onWake]);
+    const next = Math.min(fit * FOLLOW_ZOOM, zoomCeiling(fit));
+    onView({
+      scale: next,
+      x: frame.w * FOLLOW_BIAS - (box.offsetLeft + box.offsetWidth / 2) * next,
+      y: frame.h / 2 - (box.offsetTop + box.offsetHeight / 2) * next,
+    });
+  }, [follow, state.event.currentMatch, fit, size, frame, densities, onView]);
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     dragged.current = false;
     if (event.button !== 0 || !pannable) {
       return;
     }
+    onManual();
     viewport.current?.setPointerCapture(event.pointerId);
     drag.current = { id: event.pointerId, x: event.clientX, y: event.clientY, ox: offsetX, oy: offsetY };
     setGrabbing(true);
@@ -829,7 +898,7 @@ function BracketCanvas({
           ))}
         </svg>
 
-        <div className="disp-tree">
+        <div className="disp-tree" ref={tree}>
           {ordered.map(({ column, density, startsGroup, index }) => (
             <Column
               key={column.key}

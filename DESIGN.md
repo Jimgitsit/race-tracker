@@ -209,12 +209,18 @@ for car photos.
 
 **Racing layout:**
 - **Top banner (~28% height): NOW RACING.** Two cars, photos as large as the row allows,
-  names in a very large weight, `VS` between. When a result lands, the winner's half flashes
-  and a ✓ stamps on — then after ~3s the banner swaps to the next match. This animation is
-  the thing that makes a room look up.
+  names in a very large weight, `VS` between. When a result lands the banner runs **the same
+  celebration as the racer view** (§3.1): a green ring on the winner's photo, their name in
+  green, **WINNER!** landing on the photo oversized-and-transparent then scaling down onto
+  it, and the loser dimmed and struck. It holds ~3s, then the banner swaps to the next match.
+  This animation is the thing that makes a room look up — and it is the *same* animation on
+  the phone in your hand and on the screen across the room, on purpose.
 - **Body: the bracket, auto-framed** (below).
 - **Foot strip:** `ON DECK` — the next two or three matches — plus a small join QR, because
-  people arrive late.
+  people arrive late. The latest director message sits here with an **×**; dismissal is local
+  to this screen and keyed on the message id, so clearing a stale one neither touches what
+  racers see on their phones nor swallows the next one. The × fades in with the toolbar — it
+  is for whoever is driving, not for the room.
 
 **Auto-framing.** The display keeps a *focus round* (the one containing the current match)
 and renders every round at one of three densities:
@@ -258,21 +264,43 @@ brackets and differed only in density — the part that made the control unlearn
 |---|---|---|
 | **Bracket** | All · Winners · Losers · Consolation | which brackets are on screen (Consolation only appears once one exists) |
 | **All rounds** | off / on | off = collapse what's settled (the density table above); on = draw every round the same size |
+| **Follow** | off / on | zoom to 4× fit and park the live heat a third across, re-aiming as the race moves |
 
 | Gesture | Action |
 |---|---|
-| Scroll / pinch | zoom, anchored on the pointer — the thing you're looking at stays put |
 | Drag | pan, only once the bracket outgrows the frame |
 | Click a round | make it the focus round; a collapsed round is the most useful target on the screen |
 | Double-click | back to fit |
 | ↑ / ↓ / `+` / `-` | zoom in / out |
 | ← / → | pan when zoomed; step the focus round when fitted |
-| Enter | cycle the bracket filter · `d` toggle all-rounds · `f` fit · Esc reset |
+| Enter | cycle the bracket filter · `d` all-rounds · `a` follow · `f` fit · Esc reset |
+
+**The wheel deliberately does nothing.** Scroll-to-zoom was tried and removed: on a trackpad
+it fires constantly by accident, and this screen is in front of a room.
 
 Zoom is bounded **relative to fit**, never absolutely: fit for the full 62-match bracket is
 around a third of life size, so an absolute floor would mean pressing zoom-out made the
 bracket bigger. Floor is fit itself (there is nothing below it to see) and zooming back out
 through it returns to fit proper, which recentres.
+
+**Follow mode** sits on the live heat at 4× fit, a third of the way across rather than dead
+centre — the bracket flows left to right, so the interesting half of the screen is the half
+that hasn't happened yet. It re-aims on layout, not on a timer, so a collapsing round or a
+resized window moves it too. Any hand on the controls (a drag, a zoom, a filter) drops it:
+auto-framing that fights the person driving is worse than none.
+
+The pan clamp carries **a third of a frame of slack** past each edge. Without it the clamp
+refuses to show any background at all, and follow cannot honour its bias for a heat in the
+first or last round — the live heat would drift between a third in and hard against the edge
+depending on the round, destroying the one thing follow mode is for.
+
+**Measure the tree, never the wrapper.** The fit maths reads `.disp-tree`, because
+`.disp-scale` also contains the connector SVG — which is sized *from that measurement*. Read
+the wrapper and the size becomes its own input: it ratchets, the SVG props up the wrapper's
+`scrollHeight`, and the measured height can never shrink again. Fit then stays pinned at
+whatever the tallest layout ever needed, so collapsing a round buys space that fit never
+spends. This shipped for a while; "All rounds" was 25% smaller than it should have been and
+a single-bracket filter nearly half.
 
 - Completed matches: winner bold, loser dimmed and struck. The current match pulses.
 - Request a `navigator.wakeLock` so the TV doesn't sleep, and re-request it on

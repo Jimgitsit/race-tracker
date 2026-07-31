@@ -147,6 +147,11 @@
   text-align: left;
 }
 
+.disp-banner-photo {
+  position: relative;
+  flex: none;
+}
+
 .disp-banner-car .avatar {
   width: clamp(90px, 13vmin, 190px);
   height: clamp(90px, 13vmin, 190px);
@@ -160,8 +165,13 @@
   overflow-wrap: anywhere;
 }
 
+.is-won .disp-banner-photo {
+  border-radius: var(--r-md);
+  box-shadow: 0 0 0 4px var(--win), 0 0 44px rgb(99 194 87 / 45%);
+}
+
 .is-won .disp-banner-name {
-  color: var(--track-rail);
+  color: var(--win);
 }
 
 .is-lost {
@@ -172,21 +182,33 @@
   text-decoration: line-through;
 }
 
+/*
+ * The same landing as the racer view's .rc-car-stamp: oversized and transparent,
+ * scaling down onto the photo rather than punching up out of it. It fills forwards
+ * and holds for the three seconds afterwards, because the point is that someone
+ * who looks up a second late still sees who won.
+ */
 .disp-stamp {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0.4);
-  font-size: 7rem;
-  color: var(--win);
-  text-shadow: 0 0 24px rgb(0 0 0 / 80%);
-  animation: stamp 420ms cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--display);
+  font-size: clamp(1.4rem, 3.4vmin, 2.8rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 2px 6px rgb(0 0 0 / 90%), 0 0 30px rgb(0 0 0 / 85%);
+  animation: disp-stamp 420ms cubic-bezier(0.2, 0.85, 0.3, 1) both;
   pointer-events: none;
 }
 
-@keyframes stamp {
-  to {
-    transform: translate(-50%, -50%) scale(1);
+@keyframes disp-stamp {
+  from {
+    opacity: 0;
+    transform: scale(2.4);
   }
 }
 
@@ -910,4 +932,30 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ink-faint);
+}
+
+/* Rides with the toolbar rather than the message: dismissing is an operator job,
+   and a × parked in the footer all evening is chrome the room doesn't need. */
+.disp-announce-x {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin-right: -6px;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: var(--ink-dim);
+  transition: opacity 200ms ease, background 120ms ease, color 120ms ease;
+}
+
+.disp-announce-x:hover {
+  background: rgb(255 255 255 / 10%);
+  color: var(--ink);
+}
+
+.disp-announce-x-off {
+  opacity: 0;
+  pointer-events: none;
 }
