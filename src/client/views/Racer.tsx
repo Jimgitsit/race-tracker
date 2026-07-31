@@ -743,9 +743,7 @@ function NowCard({
   const decided = result && match.winner !== null;
 
   return (
-    <section
-      className={`rc-now ${mine ? "rc-now-mine" : ""} ${decided ? "rc-now-result" : ""}`}
-    >
+    <section className={`rc-now ${mine ? "rc-now-mine" : ""}`}>
       <div className="rc-now-head">
         <p className="eyebrow">{decided ? "Result" : "Now racing"}</p>
         <p className="code">{match.label}</p>

@@ -92,8 +92,9 @@ URL stays typeable (`jimmcgowen.com/race-tracker/display`). All in-app links mus
 - **When a result lands, the card holds it for 3 seconds before moving on.** The winner's
   photo gets a green ring and **`WINNER!`** scales down onto it from oversized; the loser
   dims and strikes through; then the card fades to the next heat. Everyone in the room is
-  looking at their phone, so the moment of winning belongs there too, not only on the TV. A
-  result outranks "this one's yours" — the ring goes green, so the accents don't fight.
+  looking at their phone, so the moment of winning belongs there too, not only on the TV.
+  Green stays **on the photo only** — the card keeps its own border, so "this heat is yours"
+  and "this car won" remain two separate statements rather than one ring changing meaning.
   Driven by the same `useResultFlash` the big screen uses, and byes are `state: "bye"`, never
   `"done"`, so a bye cascading off the back of the result can't be mistaken for it.
 - Below: **On deck** — the next two matches, compact.

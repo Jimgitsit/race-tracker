@@ -119,17 +119,6 @@
   box-shadow: 0 0 0 2px var(--track), 0 0 32px rgb(232 83 28 / 26%);
 }
 
-.rc-now-result {
-  border-color: var(--win);
-}
-
-/* A result outranks "this one's yours". Without this the orange ring stays lit
-   under a green border and a green photo ring, and three accents fight over the
-   same three seconds. */
-.rc-now-mine.rc-now-result {
-  box-shadow: 0 0 0 2px var(--win), 0 0 32px rgb(99 194 87 / 26%);
-}
-
 .rc-now-head {
   display: flex;
   align-items: baseline;
