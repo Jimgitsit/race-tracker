@@ -14,6 +14,7 @@ import {
 } from "../lib/derive.ts";
 import { alertsEnabled, canVibrate, disableAlerts, enableAlerts } from "../lib/alerts.ts";
 import { useMessages, useRaceAlerts, type Message } from "../lib/useAlerts.ts";
+import { useResultFlash } from "../lib/useRace.ts";
 import { clockTime, timeAgo, useNow } from "../lib/time.ts";
 import { Avatar } from "../components/Avatar.tsx";
 import { MatchCard } from "../components/MatchCard.tsx";
@@ -427,6 +428,14 @@ function NowTab({
   const me = racerById(state, meId);
   const status = statusFor(state, me);
   const current = matchById(state, state.event.currentMatch);
+
+  // A result holds the card for three seconds before the next heat takes it, so
+  // whoever just won gets their moment on every phone in the room — not only on
+  // the big screen.
+  const flash = useResultFlash(state);
+  const flashed = matchById(state, flash);
+  const headline = flashed ?? current;
+
   const onDeck = state.queue
     .filter((id) => id !== state.event.currentMatch)
     .slice(0, 2)
@@ -464,7 +473,17 @@ function NowTab({
     <div className="stack">
       {messageSlot}
 
-      {current ? <NowCard state={state} match={current} meId={meId} /> : null}
+      {headline ? (
+        // Keyed on the match, so swapping to the next heat re-mounts the card and
+        // it fades in rather than the names simply changing underneath you.
+        <NowCard
+          key={headline.id}
+          state={state}
+          match={headline}
+          meId={meId}
+          result={flashed !== null}
+        />
+      ) : null}
 
       {status && !racingNow ? (
         <section className={`rc-status rc-status-${status.tone}`}>
@@ -710,29 +729,46 @@ function NowCard({
   state,
   match,
   meId,
+  result = false,
 }: {
   state: StatePayload;
   match: PublicMatch;
   meId: number | null;
+  /** Holding this heat's result rather than showing a race in progress. */
+  result?: boolean;
 }) {
   const a = racerById(state, match.a);
   const b = racerById(state, match.b);
   const mine = meId !== null && (match.a === meId || match.b === meId);
+  const decided = result && match.winner !== null;
 
   return (
-    <section className={`rc-now ${mine ? "rc-now-mine" : ""}`}>
+    <section
+      className={`rc-now ${mine ? "rc-now-mine" : ""} ${decided ? "rc-now-result" : ""}`}
+    >
       <div className="rc-now-head">
-        <p className="eyebrow">Now racing</p>
+        <p className="eyebrow">{decided ? "Result" : "Now racing"}</p>
         <p className="code">{match.label}</p>
       </div>
 
       <div className="rc-now-cars">
-        <RacerBlock racer={a} highlight={mine && match.a === meId} />
+        <RacerBlock
+          racer={a}
+          highlight={mine && match.a === meId}
+          won={decided && match.winner === match.a}
+          lost={decided && match.winner !== match.a}
+        />
         <p className="rc-vs">VS</p>
-        <RacerBlock racer={b} highlight={mine && match.b === meId} />
+        <RacerBlock
+          racer={b}
+          highlight={mine && match.b === meId}
+          won={decided && match.winner === match.b}
+          lost={decided && match.winner !== match.b}
+        />
       </div>
 
-      {mine ? <p className="rc-thats-you">That's you — get to the track</p> : null}
+      {/* "Get to the track" stops being true the moment the heat is decided. */}
+      {mine && !decided ? <p className="rc-thats-you">That's you — get to the track</p> : null}
     </section>
   );
 }
@@ -740,13 +776,31 @@ function NowCard({
 function RacerBlock({
   racer,
   highlight,
+  won = false,
+  lost = false,
 }: {
   racer: ReturnType<typeof racerById>;
   highlight: boolean;
+  won?: boolean;
+  lost?: boolean;
 }) {
+  const classes = ["rc-car"];
+  if (highlight) {
+    classes.push("rc-car-mine");
+  }
+  if (won) {
+    classes.push("rc-car-won");
+  }
+  if (lost) {
+    classes.push("rc-car-lost");
+  }
+
   return (
-    <div className={`rc-car ${highlight ? "rc-car-mine" : ""}`}>
-      <Avatar racer={racer} size="xl" full />
+    <div className={classes.join(" ")}>
+      <div className="rc-car-photo">
+        <Avatar racer={racer} size="xl" full />
+        {won ? <span className="rc-car-stamp">Winner!</span> : null}
+      </div>
       <p className="rc-car-name racer-name">{racer?.name ?? "TBD"}</p>
     </div>
   );

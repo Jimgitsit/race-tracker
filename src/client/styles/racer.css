@@ -103,11 +103,31 @@
   border-radius: var(--r-lg);
   background: var(--surface);
   border: 1px solid var(--line);
+  /* Keyed on the match in React, so this runs when one heat gives way to the
+     next — the names never just change underneath you. */
+  animation: rc-now-in 240ms ease both;
+}
+
+@keyframes rc-now-in {
+  from {
+    opacity: 0;
+  }
 }
 
 .rc-now-mine {
   border-color: var(--track);
   box-shadow: 0 0 0 2px var(--track), 0 0 32px rgb(232 83 28 / 26%);
+}
+
+.rc-now-result {
+  border-color: var(--win);
+}
+
+/* A result outranks "this one's yours". Without this the orange ring stays lit
+   under a green border and a green photo ring, and three accents fight over the
+   same three seconds. */
+.rc-now-mine.rc-now-result {
+  box-shadow: 0 0 0 2px var(--win), 0 0 32px rgb(99 194 87 / 26%);
 }
 
 .rc-now-head {
@@ -130,6 +150,11 @@
   flex-direction: column;
   gap: var(--s-2);
   min-width: 0;
+  transition: opacity 240ms ease;
+}
+
+.rc-car-photo {
+  position: relative;
 }
 
 .rc-car-name {
@@ -139,6 +164,63 @@
 
 .rc-car-mine .rc-car-name {
   color: var(--track-rail);
+}
+
+/* --- result ------------------------------------------------------------------ */
+
+.rc-car-won .rc-car-photo {
+  border-radius: var(--r-md);
+  box-shadow: 0 0 0 3px var(--win), 0 0 28px rgb(99 194 87 / 40%);
+}
+
+.rc-car-won .rc-car-name {
+  color: var(--win);
+  font-weight: 800;
+}
+
+.rc-car-lost {
+  opacity: 0.4;
+}
+
+.rc-car-lost .rc-car-name {
+  text-decoration: line-through;
+}
+
+/*
+ * Lands on the photo: starts oversized and transparent, then scales down onto it.
+ * It has to stay put for the three seconds afterwards, so the animation fills
+ * forwards rather than fading straight back out — the whole point is that someone
+ * glancing over a second later still sees who won.
+ */
+.rc-car-stamp {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--display);
+  font-size: var(--t-2xl);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 2px 4px rgb(0 0 0 / 90%), 0 0 26px rgb(0 0 0 / 80%);
+  animation: rc-stamp 420ms cubic-bezier(0.2, 0.85, 0.3, 1) both;
+  pointer-events: none;
+}
+
+@keyframes rc-stamp {
+  from {
+    opacity: 0;
+    transform: scale(2.4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rc-now,
+  .rc-car-stamp {
+    animation-duration: 1ms;
+  }
 }
 
 .rc-vs {

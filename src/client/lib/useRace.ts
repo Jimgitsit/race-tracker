@@ -28,7 +28,15 @@ export function useRace(): { state: StatePayload | null; connected: boolean } {
   return { state, connected };
 }
 
-/** Fires when a match's result lands, so a view can celebrate it. */
+/** How long a result holds the screen before the next heat takes over. */
+export const FLASH_MS = 3000;
+
+/**
+ * Fires when a match's result lands, so a view can celebrate it.
+ *
+ * A bye is `state: "bye"`, never `"done"`, so a bye cascading through the losers
+ * bracket off the back of this result can't be mistaken for the race just run.
+ */
 export function useResultFlash(state: StatePayload | null): number | null {
   const [flash, setFlash] = useState<number | null>(null);
   const seen = useRef<Set<number> | null>(null);
@@ -50,14 +58,23 @@ export function useResultFlash(state: StatePayload | null): number | null {
     const fresh = [...done].find((id) => !seen.current!.has(id));
     seen.current = done;
 
-    if (fresh === undefined) {
+    if (fresh !== undefined) {
+      setFlash(fresh);
+    }
+  }, [state]);
+
+  // The countdown is keyed on the flash, not on `state`. Sharing one effect meant
+  // any unrelated push mid-flash — a message, the director picking the next heat —
+  // cleared the timer and then returned early without re-arming it, leaving the
+  // result on screen for good.
+  useEffect(() => {
+    if (flash === null) {
       return;
     }
 
-    setFlash(fresh);
-    const timer = setTimeout(() => setFlash(null), 3200);
+    const timer = setTimeout(() => setFlash(null), FLASH_MS);
     return () => clearTimeout(timer);
-  }, [state]);
+  }, [flash]);
 
   return flash;
 }
