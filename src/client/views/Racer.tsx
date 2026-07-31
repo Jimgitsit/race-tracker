@@ -17,7 +17,14 @@ import { MatchCard } from "../components/MatchCard.tsx";
 import { JoinQR } from "../components/QR.tsx";
 import { Sheet } from "../components/Sheet.tsx";
 
-type Tab = "now" | "bracket" | "racers";
+type Tab = "now" | "bracket" | "racers" | "rules";
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: "now", label: "Now" },
+  { id: "bracket", label: "Bracket" },
+  { id: "racers", label: "Racers" },
+  { id: "rules", label: "Rules" },
+];
 
 const ID_KEY = "race-tracker.id";
 
@@ -196,21 +203,22 @@ function Main({ state, meId }: { state: StatePayload; meId: number }) {
       </header>
 
       <main className="rc-body">
-        {tab === "now" ? <NowTab state={state} meId={meId} /> : null}
+        {tab === "now" ? <NowTab state={state} meId={meId} onExplain={() => setTab("rules")} /> : null}
         {tab === "bracket" ? <BracketTab state={state} meId={meId} /> : null}
         {tab === "racers" ? <RacersTab state={state} meId={meId} /> : null}
+        {tab === "rules" ? <RulesTab state={state} meId={meId} /> : null}
       </main>
 
       <nav className="rc-nav">
-        {(["now", "bracket", "racers"] as Tab[]).map((name) => (
+        {TABS.map(({ id, label }) => (
           <button
-            key={name}
+            key={id}
             type="button"
-            className={`rc-nav-btn ${tab === name ? "rc-nav-on" : ""}`}
-            onClick={() => setTab(name)}
-            aria-current={tab === name}
+            className={`rc-nav-btn ${tab === id ? "rc-nav-on" : ""}`}
+            onClick={() => setTab(id)}
+            aria-current={tab === id}
           >
-            {name === "now" ? "Now" : name === "bracket" ? "Bracket" : "Racers"}
+            {label}
           </button>
         ))}
       </nav>
@@ -242,7 +250,15 @@ function ShareButton() {
 // Now
 // ---------------------------------------------------------------------------------
 
-function NowTab({ state, meId }: { state: StatePayload; meId: number }) {
+function NowTab({
+  state,
+  meId,
+  onExplain,
+}: {
+  state: StatePayload;
+  meId: number;
+  onExplain: () => void;
+}) {
   const me = racerById(state, meId);
   const status = statusFor(state, me);
   const current = matchById(state, state.event.currentMatch);
@@ -279,6 +295,12 @@ function NowTab({ state, meId }: { state: StatePayload; meId: number }) {
           {status.detail ? <p className="rc-status-detail">{status.detail}</p> : null}
         </section>
       ) : null}
+
+      <button type="button" className="rc-explain" onClick={onExplain}>
+        {me && me.losses === 1 && me.status !== "out"
+          ? "You lost one — you're still in. Here's how →"
+          : "New here? How the racing works →"}
+      </button>
 
       {onDeck.length > 0 ? (
         <section>
@@ -388,6 +410,117 @@ function PhotoCard({ racer }: { racer: NonNullable<ReturnType<typeof racerById>>
         />
       </label>
     </section>
+  );
+}
+
+// ---------------------------------------------------------------------------------
+// Rules
+// ---------------------------------------------------------------------------------
+
+/**
+ * Written to be understood by someone who has had a few, standing next to a
+ * track, on a phone. Short sentences, one idea each, and the viewer's own state
+ * up top — "you have one life left" lands where "double elimination" does not.
+ */
+function RulesTab({ state, meId }: { state: StatePayload; meId: number }) {
+  const me = racerById(state, meId);
+  const losses = me?.losses ?? 0;
+  const lives = Math.max(0, 2 - losses);
+  const out = me?.status === "out";
+
+  const headline = out
+    ? "You're out"
+    : lives === 2
+      ? "You get two lives"
+      : "One life left";
+
+  const sub = out
+    ? `You finished ${me?.placement ?? "—"} of ${state.event.racerCount}.`
+    : lives === 2
+      ? "Both still yours."
+      : "Lose again and you're done.";
+
+  return (
+    <div className="rc-rules">
+      <section className="rc-lives">
+        <h1 className="rc-lives-head">{headline}</h1>
+        <div className="rc-pips" role="img" aria-label={`${lives} of 2 lives left`}>
+          <span className={`rc-pip ${lives >= 1 ? "" : "rc-pip-spent"}`} />
+          <span className={`rc-pip ${lives >= 2 ? "" : "rc-pip-spent"}`} />
+        </div>
+        <p className="rc-lives-sub">{sub}</p>
+      </section>
+
+      <p className="rc-rules-lead">
+        Lose a race and you keep racing. Lose twice and you're done. That's the whole format.
+      </p>
+
+      <section className="rc-rules-block">
+        <h2 className="rc-rules-h">How it goes</h2>
+        <ol className="rc-steps">
+          <li>Everyone starts in the Winners bracket.</li>
+          <li>
+            Lose once and you drop to the Losers bracket. <strong>You're still in.</strong>
+          </li>
+          <li>Lose in the Losers bracket and you're out. We'll show you where you finished.</li>
+        </ol>
+        <p className="rc-rules-note">
+          So everyone races at least twice. Nobody drives home after one heat.
+        </p>
+      </section>
+
+      <section className="rc-rules-block">
+        <h2 className="rc-rules-h">How it ends</h2>
+        <p>
+          The last racer standing in each bracket races for the win. One of them has never
+          lost; the other has lost once.
+        </p>
+        <p>
+          If the one who already lost wins that race, they're level — one loss each — so they
+          run it one more time to settle it.
+        </p>
+      </section>
+
+      {state.event.consolation ? (
+        <section className="rc-rules-block">
+          <h2 className="rc-rules-h">Consolation bracket</h2>
+          <p>
+            Knocked out of the main race and still here? You've been put in a second one. Same
+            idea, except there you only get one life.
+          </p>
+        </section>
+      ) : null}
+
+      <section className="rc-rules-block">
+        <h2 className="rc-rules-h">Reading the screen</h2>
+        <ul className="rc-key">
+          <li>
+            <span className="rc-key-swatch rc-key-w" /> Winners bracket
+          </li>
+          <li>
+            <span className="rc-key-swatch rc-key-l" /> Losers bracket
+          </li>
+          <li>
+            <span className="rc-key-mark">✓</span> won that race
+          </li>
+          <li>
+            <span className="rc-key-mark rc-key-struck">Name</span> lost that race
+          </li>
+        </ul>
+      </section>
+
+      <section className="rc-rules-block">
+        <h2 className="rc-rules-h">What you actually have to do</h2>
+        <ul className="rc-do">
+          <li>
+            Keep the <strong>Now</strong> tab open. It says who you're racing and when you're
+            up.
+          </li>
+          <li>Stay near the track. Wander off and they'll run someone else's heat first.</li>
+          <li>That's it. Someone else is keeping score.</li>
+        </ul>
+      </section>
+    </div>
   );
 }
 
