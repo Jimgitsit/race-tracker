@@ -40,6 +40,14 @@ stays inspectable.
   portrait. Two rules keep it honest: clamp against **`vmin`, not `vh`** (identical on any
   landscape viewport, so the TV never changes), and use **`minmax(0, …)` grid tracks, never a
   bare `1fr`** — `1fr` floors at min-content and the banner blows past the screen width.
+- **The big screen runs on a laptop in Chrome, HDMI'd to the TV — not in the TV's browser.**
+  That was tried on an LG and abandoned: Vite 6 defaults to `build.target:
+  baseline-widely-available` (Chrome 107+) and webOS browsers are well behind it, so the
+  bundle doesn't run at all, before any question of layout. Don't spend effort making
+  `/display` work in a TV browser, and don't downlevel the build target for one.
+- **A React `onWheel` prop cannot `preventDefault()`.** React registers wheel on its root as
+  passive, so the page scrolls out from under you. The canvas zoom is a native
+  `addEventListener("wheel", …, { passive: false })` for exactly this reason.
 - **Two QR types, different exposure rules.** The join QR is a bare URL and is safe anywhere.
   The re-link QR carries a racer's token and must never reach the big screen. They're
   separate components on purpose.

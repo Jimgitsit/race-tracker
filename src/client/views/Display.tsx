@@ -7,11 +7,46 @@ import { timeAgo, useNow } from "../lib/time.ts";
 import { Avatar } from "../components/Avatar.tsx";
 import { JoinQR } from "../components/QR.tsx";
 
-type Mode = "AUTO" | "MAIN" | "LOSERS" | "CONSOLATION" | "EVERYTHING";
+/**
+ * Which brackets are drawn. Orthogonal to detail — the two used to be one five-way
+ * "mode" in which AUTO and EVERYTHING showed the *same* brackets and differed only
+ * in density, which is the part nobody could hold in their head.
+ */
+type Filter = "all" | "main" | "losers" | "consolation";
+/** How much of each round is drawn: collapse what's settled, or show all of it. */
+type Detail = "auto" | "all";
 type Density = "full" | "compact" | "collapsed";
 
-const MODES: Mode[] = ["AUTO", "MAIN", "LOSERS", "CONSOLATION", "EVERYTHING"];
-const CONTROL_TIMEOUT_MS = 6000;
+/** Pan offset plus scale, where a null scale means "whatever fits". */
+type View = { scale: number | null; x: number; y: number };
+
+const FILTERS: { key: Filter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "main", label: "Winners" },
+  { key: "losers", label: "Losers" },
+  { key: "consolation", label: "Consolation" },
+];
+
+const FIT: View = { scale: null, x: 0, y: 0 };
+
+/** Long enough to cross the screen to a button, short enough that the room never
+    notices the chrome was there. */
+const CHROME_IDLE_MS = 2500;
+const ZOOM_STEP = 1.15;
+
+function clamp(value: number, low: number, high: number): number {
+  return Math.min(high, Math.max(low, value));
+}
+
+/**
+ * Zoom is bounded relative to fit, never absolutely. Fit for the full 62-match
+ * bracket is around a third of life size, so an absolute floor of 0.4 would mean
+ * pressing zoom-out made the bracket bigger. Generous on a big bracket, sane on a
+ * small one: five times fit, but never so far in that one card fills the screen.
+ */
+function zoomCeiling(fit: number): number {
+  return Math.max(fit, Math.min(fit * 5, 3));
+}
 
 export function DisplayView({
   state,
@@ -145,70 +180,123 @@ function Registration({ state }: { state: StatePayload }) {
 
 function Racing({ state }: { state: StatePayload }) {
   const flash = useResultFlash(state);
-  const [mode, setMode] = useState<Mode>("AUTO");
-  const [zoom, setZoom] = useState<number | null>(null);
-  const [focusNudge, setFocusNudge] = useState(0);
-  const [pan, setPan] = useState(0);
-  const [controlsUntil, setControlsUntil] = useState(0);
-  const [now, setNow] = useState(() => Date.now());
+  const [filter, setFilter] = useState<Filter>("all");
+  const [detail, setDetail] = useState<Detail>("auto");
+  const [view, setView] = useState<View>(FIT);
+  const [focus, setFocus] = useState<number | null>(null);
+  const [fit, setFit] = useState(1);
+  const [chrome, setChrome] = useState(false);
+  const idle = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const clock = useNow();
 
   const current = matchById(state, state.event.currentMatch);
   const flashed = matchById(state, flash);
   const banner = flashed ?? current;
 
-  const showControls = now < controlsUntil;
+  const filters = useMemo(
+    () => FILTERS.filter((f) => f.key !== "consolation" || state.event.consolation),
+    [state.event.consolation],
+  );
 
-  useEffect(() => {
-    if (!showControls) {
-      return;
-    }
-    const timer = setTimeout(() => setNow(Date.now()), controlsUntil - now + 50);
-    return () => clearTimeout(timer);
-  }, [showControls, controlsUntil, now]);
+  const columns = useMemo(
+    () => roundsOf(state, bracketsFor(filter, state.event.consolation)),
+    [state, filter],
+  );
+
+  /** Where the detail sits when nothing has been clicked: on the live heat. */
+  const liveColumn = useMemo(() => {
+    const found = columns.findIndex((c) => c.matches.some((m) => m.id === state.event.currentMatch));
+    return found === -1 ? 0 : found;
+  }, [columns, state.event.currentMatch]);
+
+  const focusIndex = clamp(focus ?? liveColumn, 0, Math.max(0, columns.length - 1));
 
   const wake = useCallback(() => {
-    setNow(Date.now());
-    setControlsUntil(Date.now() + CONTROL_TIMEOUT_MS);
+    setChrome(true);
+    clearTimeout(idle.current);
+    idle.current = setTimeout(() => setChrome(false), CHROME_IDLE_MS);
   }, []);
 
-  // Smart-TV browsers map the D-pad to arrows and OK to Enter; six keys is the
-  // whole vocabulary this has to work with.
+  useEffect(() => () => clearTimeout(idle.current), []);
+
+  // Any mouse movement reveals the chrome, listened for on the window rather than
+  // on the canvas: the toolbar floats over the footer, so a canvas-only listener
+  // would hide it exactly as the pointer arrived at it.
+  useEffect(() => {
+    window.addEventListener("pointermove", wake);
+    return () => window.removeEventListener("pointermove", wake);
+  }, [wake]);
+
+  const reset = useCallback(() => {
+    setFilter("all");
+    setDetail("auto");
+    setView(FIT);
+    setFocus(null);
+  }, []);
+
+  /** Changing what's on screen invalidates a column index, so hand focus back to
+      the live heat rather than landing on whatever now sits in that position. */
+  const pickFilter = useCallback((key: Filter) => {
+    setFilter(key);
+    setFocus(null);
+    setView(FIT);
+  }, []);
+
+  const zoomBy = useCallback(
+    (steps: number) =>
+      setView((v) => {
+        const next = (v.scale ?? fit) * ZOOM_STEP ** steps;
+        // Zooming back out through fit returns to fit proper, which also recentres.
+        // There is nothing below it to see — the whole bracket is already on screen.
+        return next <= fit ? FIT : { ...v, scale: Math.min(next, zoomCeiling(fit)) };
+      }),
+    [fit],
+  );
+
+  // A laptop keyboard is right there, and the arrows still drive it from a remote
+  // if this ever goes back on a TV. Left/Right does mean two things, but only one
+  // of them is ever available: at fit the bracket cannot pan, because it fits.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       switch (event.key) {
         case "ArrowUp":
         case "+":
-          setZoom((z) => Math.min(2, (z ?? 1) + 0.15));
+        case "=":
+          zoomBy(1);
           break;
         case "ArrowDown":
         case "-":
-          setZoom((z) => Math.max(0.6, (z ?? 1) - 0.15));
+          zoomBy(-1);
           break;
         case "ArrowLeft":
-          if (zoom === null) {
-            setFocusNudge((n) => n - 1);
+          if (view.scale === null) {
+            setFocus(clamp(focusIndex - 1, 0, columns.length - 1));
           } else {
-            setPan((p) => p + 120);
+            setView((v) => ({ ...v, x: v.x + 120 }));
           }
           break;
         case "ArrowRight":
-          if (zoom === null) {
-            setFocusNudge((n) => n + 1);
+          if (view.scale === null) {
+            setFocus(clamp(focusIndex + 1, 0, columns.length - 1));
           } else {
-            setPan((p) => p - 120);
+            setView((v) => ({ ...v, x: v.x - 120 }));
           }
           break;
         case "Enter":
-          setMode((m) => MODES[(MODES.indexOf(m) + 1) % MODES.length]);
+          setFilter((f) => filters[(filters.findIndex((x) => x.key === f) + 1) % filters.length].key);
+          setFocus(null);
+          setView(FIT);
+          break;
+        case "d":
+          setDetail((d) => (d === "all" ? "auto" : "all"));
+          break;
+        case "f":
+          setView(FIT);
           break;
         case "Escape":
         case "Backspace":
         case "0":
-          setMode("AUTO");
-          setZoom(null);
-          setPan(0);
-          setFocusNudge(0);
+          reset();
           break;
         default:
           return;
@@ -220,7 +308,7 @@ function Racing({ state }: { state: StatePayload }) {
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [zoom, wake]);
+  }, [view.scale, filters, columns.length, focusIndex, zoomBy, reset, wake]);
 
   const onDeck = state.queue
     .filter((id) => id !== state.event.currentMatch)
@@ -229,17 +317,40 @@ function Racing({ state }: { state: StatePayload }) {
     .filter((m): m is PublicMatch => m !== null);
 
   return (
-    <main className="disp disp-racing">
+    <main className={`disp disp-racing ${chrome ? "" : "disp-racing-idle"}`}>
       <Banner state={state} match={banner} flashed={flashed !== null} />
 
-      <BracketCanvas
-        state={state}
-        mode={mode}
-        zoom={zoom}
-        pan={pan}
-        focusNudge={focusNudge}
-        flash={flash}
-      />
+      {/* The toolbar is a sibling of the canvas, not a fixed overlay: floating it
+          over the whole screen put it on top of the on-deck strip, which is the
+          one thing the director is most likely to want while reaching for it.
+          Being a sibling also keeps its clicks out of the canvas's drag handlers. */}
+      <div className="disp-stage">
+        <BracketCanvas
+          state={state}
+          columns={columns}
+          detail={detail}
+          view={view}
+          focusIndex={focusIndex}
+          flash={flash}
+          onView={setView}
+          onFocus={setFocus}
+          onFit={setFit}
+          onWake={wake}
+        />
+
+        <Controls
+          shown={chrome}
+          filters={filters}
+          filter={filter}
+          detail={detail}
+          scale={view.scale}
+          fit={fit}
+          onFilter={pickFilter}
+          onDetail={() => setDetail((d) => (d === "all" ? "auto" : "all"))}
+          onZoom={zoomBy}
+          onFit={() => setView(FIT)}
+        />
+      </div>
 
       <footer className="disp-foot">
         <div className="disp-ondeck">
@@ -275,7 +386,6 @@ function Racing({ state }: { state: StatePayload }) {
         </div>
       </footer>
 
-      {showControls ? <ControlBar mode={mode} zoom={zoom} /> : null}
     </main>
   );
 }
@@ -356,14 +466,75 @@ function BannerCar({
   );
 }
 
-function ControlBar({ mode, zoom }: { mode: Mode; zoom: number | null }) {
+/**
+ * Kept mounted rather than conditionally rendered so it can fade rather than pop,
+ * and stays out of the way until the pointer moves — this is a display first and
+ * an operator surface second.
+ */
+function Controls({
+  shown,
+  filters,
+  filter,
+  detail,
+  scale,
+  fit,
+  onFilter,
+  onDetail,
+  onZoom,
+  onFit,
+}: {
+  shown: boolean;
+  filters: { key: Filter; label: string }[];
+  filter: Filter;
+  detail: Detail;
+  scale: number | null;
+  fit: number;
+  onFilter: (key: Filter) => void;
+  onDetail: () => void;
+  onZoom: (steps: number) => void;
+  onFit: () => void;
+}) {
   return (
-    <div className="disp-controls">
-      <span className="disp-control-mode">{mode}</span>
-      <span className="disp-control-key">▲▼ zoom {zoom === null ? "fit" : `${Math.round(zoom * 100)}%`}</span>
-      <span className="disp-control-key">◀▶ {zoom === null ? "round" : "pan"}</span>
-      <span className="disp-control-key">OK mode</span>
-      <span className="disp-control-key">BACK reset</span>
+    <div className={`disp-controls ${shown ? "" : "disp-controls-off"}`}>
+      <div className="disp-ctl-set">
+        {filters.map((entry) => (
+          <button
+            type="button"
+            key={entry.key}
+            className={`disp-ctl-btn ${filter === entry.key ? "is-on" : ""}`}
+            onClick={() => onFilter(entry.key)}
+          >
+            {entry.label}
+          </button>
+        ))}
+      </div>
+
+      <span className="disp-ctl-rule" />
+
+      <button
+        type="button"
+        className={`disp-ctl-btn ${detail === "all" ? "is-on" : ""}`}
+        onClick={onDetail}
+        title="Draw every round at the same size instead of collapsing what's settled"
+      >
+        All rounds
+      </button>
+
+      <span className="disp-ctl-rule" />
+
+      <div className="disp-ctl-set">
+        <button type="button" className="disp-ctl-btn disp-ctl-step" onClick={() => onZoom(-1)}>
+          −
+        </button>
+        <button type="button" className="disp-ctl-btn disp-ctl-zoom" onClick={onFit}>
+          {scale === null ? "Fit" : `${Math.round((scale / fit) * 100)}%`}
+        </button>
+        <button type="button" className="disp-ctl-btn disp-ctl-step" onClick={() => onZoom(1)}>
+          +
+        </button>
+      </div>
+
+      <span className="disp-ctl-hint">scroll to zoom · drag to pan · click a round</span>
     </div>
   );
 }
@@ -372,13 +543,13 @@ function ControlBar({ mode, zoom }: { mode: Mode; zoom: number | null }) {
 // The bracket, drawn as track
 // ---------------------------------------------------------------------------------
 
-function bracketsFor(mode: Mode, hasConsolation: boolean): string[] {
-  switch (mode) {
-    case "MAIN":
+function bracketsFor(filter: Filter, hasConsolation: boolean): string[] {
+  switch (filter) {
+    case "main":
       return ["W", "GF", "GFR"];
-    case "LOSERS":
+    case "losers":
       return ["L"];
-    case "CONSOLATION":
+    case "consolation":
       return hasConsolation ? ["C"] : ["W", "GF", "GFR"];
     default:
       return hasConsolation ? ["W", "L", "GF", "GFR", "C"] : ["W", "L", "GF", "GFR"];
@@ -387,44 +558,42 @@ function bracketsFor(mode: Mode, hasConsolation: boolean): string[] {
 
 function BracketCanvas({
   state,
-  mode,
-  zoom,
-  pan,
-  focusNudge,
+  columns,
+  detail,
+  view,
+  focusIndex,
   flash,
+  onView,
+  onFocus,
+  onFit,
+  onWake,
 }: {
   state: StatePayload;
-  mode: Mode;
-  zoom: number | null;
-  pan: number;
-  focusNudge: number;
+  columns: RoundColumn[];
+  detail: Detail;
+  view: View;
+  focusIndex: number;
   flash: number | null;
+  onView: (view: View) => void;
+  onFocus: (index: number) => void;
+  onFit: (fit: number) => void;
+  onWake: () => void;
 }) {
   const viewport = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLDivElement>(null);
   const boxes = useRef<Map<number, HTMLElement>>(new Map());
+  const drag = useRef<{ id: number; x: number; y: number; ox: number; oy: number } | null>(null);
+  const dragged = useRef(false);
 
   const [fit, setFit] = useState(1);
+  const [grabbing, setGrabbing] = useState(false);
   const [paths, setPaths] = useState<{ id: string; d: string; kind: string }[]>([]);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [frame, setFrame] = useState({ w: 0, h: 0 });
 
-  const columns = useMemo(
-    () => roundsOf(state, bracketsFor(mode, state.event.consolation)),
-    [state, mode],
-  );
-
-  const focusIndex = useMemo(() => {
-    const found = columns.findIndex((column) =>
-      column.matches.some((m) => m.id === state.event.currentMatch),
-    );
-    const base = found === -1 ? 0 : found;
-    return Math.max(0, Math.min(columns.length - 1, base + focusNudge));
-  }, [columns, state.event.currentMatch, focusNudge]);
-
   const densities = useMemo(
-    () => columns.map((column, index) => densityOf(column, index, focusIndex, mode)),
-    [columns, focusIndex, mode],
+    () => columns.map((column, index) => densityOf(column, index, focusIndex, detail)),
+    [columns, focusIndex, detail],
   );
 
   /**
@@ -523,9 +692,13 @@ function BracketCanvas({
     observer.observe(root);
 
     return () => observer.disconnect();
-  }, [state, columns, densities, mode]);
+  }, [state, columns, densities]);
 
-  const scale = zoom ?? fit;
+  useEffect(() => {
+    onFit(fit);
+  }, [fit, onFit]);
+
+  const scale = view.scale ?? fit;
   const travel = useMemo(() => {
     if (flash === null) {
       return null;
@@ -537,14 +710,110 @@ function BracketCanvas({
   }, [flash, paths, state]);
 
   // transform-origin is top-left, so centre it by hand rather than letting the
-  // bracket hug one corner with dead screen either side.
-  const offsetX = pan + Math.max(0, (frame.w - size.w * scale) / 2);
-  const offsetY = Math.max(0, (frame.h - size.h * scale) / 2);
+  // bracket hug one corner with dead screen either side. Once it outgrows the
+  // frame the pan takes over, clamped to the overflow so a flick of the mouse
+  // can never throw the whole bracket off screen.
+  const contentW = size.w * scale;
+  const contentH = size.h * scale;
+  const offsetX = contentW <= frame.w ? (frame.w - contentW) / 2 : clamp(view.x, frame.w - contentW, 0);
+  const offsetY = contentH <= frame.h ? (frame.h - contentH) / 2 : clamp(view.y, frame.h - contentH, 0);
+  const pannable = contentW > frame.w + 1 || contentH > frame.h + 1;
+
+  // React registers wheel on its root as passive, so preventDefault() from an
+  // onWheel prop is ignored and the page scrolls out from under the zoom. It has
+  // to be a native listener asking for passive: false.
+  useEffect(() => {
+    const el = viewport.current;
+    if (!el) {
+      return;
+    }
+
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      onWake();
+
+      const next = clamp(
+        scale * ZOOM_STEP ** (event.deltaY > 0 ? -1 : 1),
+        fit,
+        zoomCeiling(fit),
+      );
+
+      if (next === scale) {
+        return;
+      }
+      if (next <= fit) {
+        onView(FIT);
+        return;
+      }
+
+      // Hold whatever sits under the pointer still, so zooming reads as moving
+      // towards the thing you're looking at rather than towards the centre.
+      const rect = el.getBoundingClientRect();
+      const px = event.clientX - rect.left;
+      const py = event.clientY - rect.top;
+      const ratio = next / scale;
+
+      onView({ scale: next, x: px - (px - offsetX) * ratio, y: py - (py - offsetY) * ratio });
+    };
+
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [scale, fit, offsetX, offsetY, onView, onWake]);
+
+  const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    dragged.current = false;
+    if (event.button !== 0 || !pannable) {
+      return;
+    }
+    viewport.current?.setPointerCapture(event.pointerId);
+    drag.current = { id: event.pointerId, x: event.clientX, y: event.clientY, ox: offsetX, oy: offsetY };
+    setGrabbing(true);
+  };
+
+  const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const held = drag.current;
+    if (!held || held.id !== event.pointerId) {
+      return;
+    }
+
+    const dx = event.clientX - held.x;
+    const dy = event.clientY - held.y;
+
+    // A few pixels of slop, so a click that wobbles still counts as a click.
+    if (!dragged.current && Math.abs(dx) < 4 && Math.abs(dy) < 4) {
+      return;
+    }
+
+    dragged.current = true;
+    onView({ scale, x: held.ox + dx, y: held.oy + dy });
+  };
+
+  const endDrag = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (drag.current?.id !== event.pointerId) {
+      return;
+    }
+    viewport.current?.releasePointerCapture(event.pointerId);
+    drag.current = null;
+    setGrabbing(false);
+  };
+
+  const classes = ["disp-canvas"];
+  if (pannable) {
+    classes.push(grabbing ? "disp-canvas-grabbing" : "disp-canvas-pan");
+  }
 
   return (
-    <div className="disp-canvas" ref={viewport}>
+    <div
+      className={classes.join(" ")}
+      ref={viewport}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+      onDoubleClick={() => onView(FIT)}
+    >
       <div
-        className="disp-scale"
+        className={`disp-scale ${grabbing ? "disp-scale-held" : ""}`}
         ref={canvas}
         style={{ transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale})` }}
       >
@@ -561,7 +830,7 @@ function BracketCanvas({
         </svg>
 
         <div className="disp-tree">
-          {ordered.map(({ column, density, startsGroup }) => (
+          {ordered.map(({ column, density, startsGroup, index }) => (
             <Column
               key={column.key}
               state={state}
@@ -569,6 +838,13 @@ function BracketCanvas({
               density={density}
               startsGroup={startsGroup}
               currentId={state.event.currentMatch}
+              onPick={() => {
+                // The click that ends a drag is still a click. Ignore it, or
+                // panning across the bracket would re-focus wherever you let go.
+                if (!dragged.current) {
+                  onFocus(index);
+                }
+              }}
               register={(id, el) => {
                 if (el) {
                   boxes.current.set(id, el);
@@ -613,8 +889,8 @@ function elbow(x1: number, y1: number, x2: number, y2: number): string {
   ].join(" ");
 }
 
-function densityOf(column: RoundColumn, index: number, focus: number, mode: Mode): Density {
-  if (mode === "EVERYTHING") {
+function densityOf(column: RoundColumn, index: number, focus: number, detail: Detail): Density {
+  if (detail === "all") {
     return "compact";
   }
 
@@ -646,6 +922,7 @@ function Column({
   density,
   startsGroup,
   currentId,
+  onPick,
   register,
 }: {
   state: StatePayload;
@@ -653,6 +930,7 @@ function Column({
   density: Density;
   startsGroup: boolean;
   currentId: number | null;
+  onPick: () => void;
   register: (id: number, el: HTMLElement | null) => void;
 }) {
   const group = startsGroup ? " disp-col-group" : "";
@@ -660,7 +938,7 @@ function Column({
   if (density === "collapsed") {
     const done = column.matches.filter((m) => m.winner !== null).length;
     return (
-      <section className={`disp-col disp-col-collapsed${group}`}>
+      <section className={`disp-col disp-col-collapsed${group}`} onClick={onPick}>
         <span className="disp-col-code">{column.short}</span>
         <span className="disp-col-tally code">
           {done > 0 ? `✓${done}` : `${column.matches.length}`}
@@ -670,7 +948,7 @@ function Column({
   }
 
   return (
-    <section className={`disp-col disp-col-${density}${group}`}>
+    <section className={`disp-col disp-col-${density}${group}`} onClick={onPick}>
       <h2 className="disp-col-head">{column.label}</h2>
       <div className="disp-col-body">
         {column.matches.map((match) => (

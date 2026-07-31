@@ -19,6 +19,19 @@
   justify-content: center;
 }
 
+/* The director is a phone layout, and this is the same phone layout on a laptop —
+   there is no second column of work to put beside it. Stretched full width it
+   just moves the two tap targets a foot apart. Cap it at a column and centre it;
+   a phone is narrower than the cap, so nothing there changes. */
+@media (min-width: 760px) {
+  .dir,
+  .dir-login {
+    max-width: 720px;
+    margin-inline: auto;
+    border-inline: 1px solid var(--line-soft);
+  }
+}
+
 .dir-login-title {
   font-size: var(--t-3xl);
 }

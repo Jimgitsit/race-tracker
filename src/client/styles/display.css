@@ -219,6 +219,16 @@
 
 /* --- bracket canvas ----------------------------------------------------------- */
 
+/* The canvas row, plus the toolbar that floats at the bottom of it. A single
+   minmax(0, 1fr) track so the canvas fills the row exactly — the fit maths reads
+   this element's height, so it must not be sized by its content. */
+.disp-stage {
+  position: relative;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
+}
+
 /* No padding here: the fit maths measures against clientHeight, which includes
    padding, so any padding on the frame gets double-counted and clips the bottom
    of the bracket. Breathing room lives inside the scaled content instead. */
@@ -228,11 +238,34 @@
   min-height: 0;
 }
 
+/* touch-action only where a drag is the intent — zoomed in. There is no page to
+   scroll behind it (.disp is a fixed-height, overflow-hidden screen), so nothing
+   is lost, and a finger dragging the bracket stops fighting the browser. */
+.disp-canvas-pan,
+.disp-canvas-grabbing {
+  touch-action: none;
+}
+
+.disp-canvas-pan {
+  cursor: grab;
+}
+
+.disp-canvas-grabbing {
+  cursor: grabbing;
+}
+
 .disp-scale {
   position: relative;
   transform-origin: top left;
   width: max-content;
   transition: transform 260ms cubic-bezier(0.3, 0.8, 0.3, 1);
+}
+
+/* The eased transition is what makes a zoom or a round change feel deliberate.
+   Under the hand it is pure lag — the bracket trails the pointer by a quarter of
+   a second — so a held drag turns it off. */
+.disp-scale-held {
+  transition: none;
 }
 
 .disp-track {
@@ -317,10 +350,13 @@
   border-left: 1px solid var(--line-soft);
 }
 
+/* Clicking a round is the whole navigation model, so every column is a target —
+   including a collapsed one, which is the most useful click on the screen. */
 .disp-col {
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
+  cursor: pointer;
 }
 
 .disp-col-head {
@@ -649,36 +685,113 @@
   }
 }
 
+/* --- operator toolbar ---------------------------------------------------------- */
+
 .disp-controls {
-  position: fixed;
-  bottom: var(--s-6);
+  position: absolute;
+  bottom: var(--s-4);
   left: 50%;
-  transform: translateX(-50%);
   z-index: 40;
   display: flex;
   align-items: center;
-  gap: var(--s-5);
-  padding: var(--s-3) var(--s-5);
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3);
   border-radius: 999px;
   background: rgb(15 11 8 / 94%);
   border: 1px solid var(--track);
   box-shadow: var(--shadow-lg);
-  animation: fade-in 160ms ease;
+  backdrop-filter: blur(8px);
+  transform: translateX(-50%);
+  transition: opacity 200ms ease, transform 200ms ease;
 }
 
-.disp-control-mode {
-  font-family: var(--display);
-  font-size: 1.3rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  color: var(--track-rail);
+/* Faded rather than unmounted, so it doesn't pop in and out of the room's view.
+   pointer-events off as well, or an invisible bar still eats clicks meant for the
+   bracket underneath it. */
+.disp-controls-off {
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
+  pointer-events: none;
 }
 
-.disp-control-key {
-  font-family: var(--mono);
+/* The pointer is chrome too. Once the toolbar goes, an arrow parked in the middle
+   of the bracket is the only thing on screen that isn't the race. */
+.disp-racing-idle {
+  cursor: none;
+}
+
+.disp-racing-idle .disp-canvas {
+  cursor: none;
+}
+
+.disp-ctl-set {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 5%);
+}
+
+.disp-ctl-btn {
+  min-height: 34px;
+  padding: 0 var(--s-3);
+  border-radius: 999px;
+  font-family: var(--body);
   font-size: 0.85rem;
-  letter-spacing: 0.06em;
+  font-weight: 600;
   color: var(--ink-dim);
+  white-space: nowrap;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.disp-ctl-btn:hover {
+  background: rgb(255 255 255 / 8%);
+  color: var(--ink);
+}
+
+.disp-ctl-btn.is-on {
+  background: var(--track);
+  color: #fff;
+}
+
+.disp-ctl-step {
+  min-width: 34px;
+  padding: 0;
+  font-size: 1.1rem;
+}
+
+/* Fixed width so stepping through 115% → 132% → 152% doesn't shuffle the buttons
+   either side of it. */
+.disp-ctl-zoom {
+  min-width: 62px;
+  padding: 0;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.disp-ctl-rule {
+  width: 1px;
+  height: 22px;
+  background: var(--line);
+}
+
+.disp-ctl-hint {
+  padding-right: var(--s-2);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+/* No mouse, no toolbar worth the width. A phone that flipped to the big screen
+   gets the bracket and the back button, nothing else. */
+@media (hover: none) {
+  .disp-controls {
+    display: none;
+  }
 }
 
 /* --- finished ------------------------------------------------------------------ */

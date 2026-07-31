@@ -22,7 +22,7 @@ hours on **one track**. It happens **every year**, and past years must be kept.
   been knocked out, and interleave with the late main-bracket heats.
 - Racer view (mobile): who's racing now, the bracket, the roster.
 - Director view (mobile, password-gated): who's up, tap the winner, undo.
-- Big-screen view: the bracket, auto-updating, drivable with a **TV remote**.
+- Big-screen view: the bracket, auto-updating, driven from a **laptop HDMI'd to the TV**.
 - **QR codes everywhere** for joining, because 30 tipsy adults will not type a URL.
 - **Yearly archive**: a finished race is frozen and viewable forever at `/history`.
 
@@ -66,7 +66,12 @@ ships `Bun.S3Client`, so this is a few lines and no SDK.
 ## 3. Views
 
 Everything is **mobile-first** except `/display`, which is **big-screen only** (assume
-landscape 1080p+, viewed from across the room, driven by a TV remote if at all).
+landscape 1080p+, viewed from across the room, driven by a mouse if at all).
+
+`/director` is a phone layout that stays a phone layout on a laptop: capped at a 720px
+column and centred above 760px wide. There is no second column of work to put beside it, and
+stretched full width it only moves the two tap targets further apart. The director will be
+on a phone; the laptop is the backup, and the same layout has to serve both.
 
 Routing is path-based with a catch-all → `index.html` fallback in `server.ts`, so the TV
 URL stays typeable (`jimmcgowen.com/race-tracker/display`). All in-app links must be
@@ -236,18 +241,38 @@ When a result lands, the winner's photo chip **travels along the connector** int
 match — `offset-path: path(...)` with the same `d`, animating `offset-distance` 0→100%.
 Under `prefers-reduced-motion`, the chip appears at the destination instead.
 
-**TV remote control.** Smart-TV browsers map the D-pad to arrow keys and OK to Enter; that
-is the realistic input model, so the entire view must be operable with six keys. Default
-behaviour is **auto-pilot** — zero interaction, follows the action. Any keypress raises an
-on-screen control bar showing the mapping, which auto-hides after 6s.
+**Driving it.** The big screen is a **laptop in Chrome, fullscreen, HDMI'd to the TV** — the
+TV's own browser was tried and is not viable (it is far behind the Vite build target, so the
+bundle does not run at all, before any question of layout). That makes a mouse the primary
+input and the keyboard a fallback, rather than six D-pad keys being the whole vocabulary.
 
-| Key | Action |
+Default behaviour is still **auto-pilot** — zero interaction, follows the action. The
+toolbar and the mouse cursor both fade in on pointer movement and back out after 2.5s idle,
+because this is a display first and an operator surface second.
+
+Two settings, deliberately **orthogonal**, replacing the old five-way `AUTO → WINNERS →
+LOSERS → CONSOLATION → EVERYTHING` cycle in which `AUTO` and `EVERYTHING` showed the same
+brackets and differed only in density — the part that made the control unlearnable:
+
+| Control | Values | What it changes |
+|---|---|---|
+| **Bracket** | All · Winners · Losers · Consolation | which brackets are on screen (Consolation only appears once one exists) |
+| **All rounds** | off / on | off = collapse what's settled (the density table above); on = draw every round the same size |
+
+| Gesture | Action |
 |---|---|
-| ↑ / ↓ | zoom in / out (0.6×–2.0×, overrides auto-fit) |
-| ← / → | pan when zoomed in; otherwise step the focus round back / forward |
-| Enter / OK | cycle mode: `AUTO → WINNERS → LOSERS → CONSOLATION → EVERYTHING` |
-| Esc / Backspace | back to `AUTO` and auto-fit |
-| `+` `-` `0` `f` | same as above, for anyone driving from a keyboard |
+| Scroll / pinch | zoom, anchored on the pointer — the thing you're looking at stays put |
+| Drag | pan, only once the bracket outgrows the frame |
+| Click a round | make it the focus round; a collapsed round is the most useful target on the screen |
+| Double-click | back to fit |
+| ↑ / ↓ / `+` / `-` | zoom in / out |
+| ← / → | pan when zoomed; step the focus round when fitted |
+| Enter | cycle the bracket filter · `d` toggle all-rounds · `f` fit · Esc reset |
+
+Zoom is bounded **relative to fit**, never absolutely: fit for the full 62-match bracket is
+around a third of life size, so an absolute floor would mean pressing zoom-out made the
+bracket bigger. Floor is fit itself (there is nothing below it to see) and zooming back out
+through it returns to fit proper, which recentres.
 
 - Completed matches: winner bold, loser dimmed and struck. The current match pulses.
 - Request a `navigator.wakeLock` so the TV doesn't sleep, and re-request it on
