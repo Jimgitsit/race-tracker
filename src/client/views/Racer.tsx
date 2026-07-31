@@ -690,7 +690,10 @@ function BracketTab({ state, meId }: { state: StatePayload; meId: number }) {
 
   return (
     <div className="rc-bracket">
-      <div className="rc-seg" role="tablist">
+      <p className="eyebrow rc-seg-label" id="rc-seg-label">
+        Bracket
+      </p>
+      <div className="rc-seg" role="tablist" aria-labelledby="rc-seg-label">
         {groups.map((g) => (
           <button
             key={g.key}

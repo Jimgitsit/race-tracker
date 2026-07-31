@@ -251,6 +251,14 @@
   gap: var(--s-3);
 }
 
+.rc-bracket .rc-seg-label + .rc-seg {
+  margin-top: calc(var(--s-3) * -1 + var(--s-1));
+}
+
+.rc-seg-label {
+  color: var(--ink-dim);
+}
+
 .rc-seg {
   display: flex;
   gap: 2px;
