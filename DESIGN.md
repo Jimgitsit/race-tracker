@@ -289,12 +289,17 @@ that hasn't happened yet. It re-aims on layout, not on a timer, so a collapsing 
 resized window moves it too. Any hand on the controls (a drag, a zoom, a filter) drops it:
 auto-framing that fights the person driving is worse than none.
 
-**It holds through a result.** What follow aims at deliberately *lags* the live heat by
-`FLASH_MS`. `currentMatch` advances the instant the director saves — the start of the
-celebration, not the end — so aiming straight at it panned the screen out from under the
-winner's chip while that chip was still travelling its connector. Lagging keeps the finished
-heat framed for the whole animation and lands the move on the same beat as the banner
-swapping, so the screen turns its attention once rather than twice.
+**It holds through a result, and only through a result.** What follow aims at *lags* the
+live heat by `FLASH_MS` — `currentMatch` advances the instant the director saves, which is
+the start of the celebration and not the end, so aiming straight at it panned the screen out
+from under the winner's chip while that chip was still travelling its connector. Lagging
+keeps the finished heat framed for the whole animation and lands the move on the same beat
+as the banner swapping, so the screen turns its attention once rather than twice.
+
+The test for "is there anything to wait for" is **whether the heat we are framed on has
+reached `done`**, not merely that `currentMatch` moved. When the director swaps the matchup
+by hand the old heat is still `ready`, nothing is animating, and pausing on a heat they have
+deliberately moved off is only slow.
 
 The lag lives in the *target*, not in a guard that reads the flash. Effects run
 child-before-parent, and the flash is set in an effect up in `Racing`: on the render where

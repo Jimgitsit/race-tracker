@@ -817,24 +817,31 @@ function BracketCanvas({
    * guard could apply. The target is the thing that has to lag, not the reaction.
    */
   const [target, setTarget] = useState<number | null>(null);
+  const live = state.event.currentMatch;
 
+  // Wait only when the heat we are framed on has actually *finished* — that is a
+  // result being celebrated, and there is something on screen worth watching. If
+  // it is still ready then the director swapped the matchup by hand, which has no
+  // animation attached, and pausing on the heat they just moved off is only slow.
+  const finished =
+    target !== null && state.matches.find((m) => m.id === target)?.state === "done";
+  const celebrating = follow && target !== null && live !== target && finished;
+
+  // Deps are all primitives, so an unrelated push — a message, a photo upload —
+  // leaves them untouched and cannot restart the timer half way through a hold.
   useEffect(() => {
-    const live = state.event.currentMatch;
-
-    // Not following, or nothing aimed at yet: track live so switching follow on
-    // lands immediately instead of looking dead for three seconds.
-    if (!follow || target === null) {
-      setTarget(live);
+    if (live === target) {
       return;
     }
 
-    if (live === target) {
+    if (!celebrating) {
+      setTarget(live);
       return;
     }
 
     const timer = setTimeout(() => setTarget(live), FLASH_MS);
     return () => clearTimeout(timer);
-  }, [follow, state.event.currentMatch, target]);
+  }, [live, target, celebrating]);
 
   /**
    * Aim. Left of centre rather than dead centre, because the bracket flows left to
