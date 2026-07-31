@@ -14,6 +14,7 @@ import {
 } from "../lib/derive.ts";
 import { alertsEnabled, canVibrate, disableAlerts, enableAlerts } from "../lib/alerts.ts";
 import { useMessages, useRaceAlerts, type Message } from "../lib/useAlerts.ts";
+import { clockTime, timeAgo, useNow } from "../lib/time.ts";
 import { Avatar } from "../components/Avatar.tsx";
 import { MatchCard } from "../components/MatchCard.tsx";
 import { JoinQR } from "../components/QR.tsx";
@@ -344,6 +345,7 @@ function NowTab({
  */
 function MessageList({ messages }: { messages: Message[] }) {
   const [open, setOpen] = useState(false);
+  const now = useNow();
 
   if (messages.length === 0) {
     return null;
@@ -354,8 +356,9 @@ function MessageList({ messages }: { messages: Message[] }) {
   return (
     <>
       <section className={`rc-msg ${latest.direct ? "rc-msg-direct" : ""}`}>
-        <p className="eyebrow">
-          {latest.direct ? "Message for you" : "From the race director"}
+        <p className="eyebrow rc-msg-head">
+          <span>{latest.direct ? "Message for you" : "From the race director"}</span>
+          <span className="rc-msg-when">{timeAgo(latest.at, now)}</span>
         </p>
         <p className="rc-msg-body">{latest.body}</p>
         {older.length > 0 ? (
@@ -369,12 +372,12 @@ function MessageList({ messages }: { messages: Message[] }) {
         <div className="stack">
           {messages.map((message) => (
             <div className="rc-msg-old" key={message.id}>
-              <p className="eyebrow">
-                {message.direct ? "For you" : "Everyone"} ·{" "}
-                {new Date(message.at).toLocaleTimeString([], {
-                  hour: "numeric",
-                  minute: "2-digit",
-                })}
+              <p className="eyebrow rc-msg-head">
+                <span>{message.direct ? "For you" : "Everyone"}</span>
+                {/* Clock time in the log, where the question is when it was said. */}
+                <span className="rc-msg-when">
+                  {clockTime(message.at)} · {timeAgo(message.at, now)}
+                </span>
               </p>
               <p>{message.body}</p>
             </div>

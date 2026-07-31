@@ -3,6 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { joinUrl, type PublicMatch, type StatePayload } from "../lib/api.ts";
 import { matchById, racerById, roundsOf, type RoundColumn } from "../lib/derive.ts";
 import { useResultFlash } from "../lib/useRace.ts";
+import { timeAgo, useNow } from "../lib/time.ts";
 import { Avatar } from "../components/Avatar.tsx";
 import { JoinQR } from "../components/QR.tsx";
 
@@ -120,6 +121,7 @@ function Racing({ state }: { state: StatePayload }) {
   const [pan, setPan] = useState(0);
   const [controlsUntil, setControlsUntil] = useState(0);
   const [now, setNow] = useState(() => Date.now());
+  const clock = useNow();
 
   const current = matchById(state, state.event.currentMatch);
   const flashed = matchById(state, flash);
@@ -228,7 +230,10 @@ function Racing({ state }: { state: StatePayload }) {
         {state.announcements.length > 0 ? (
           <p className="disp-announce" key={state.announcements[0].id}>
             <span className="disp-announce-tag">Director</span>
-            {state.announcements[0].body}
+            <span className="disp-announce-body">{state.announcements[0].body}</span>
+            <span className="disp-announce-when">
+              {timeAgo(state.announcements[0].at, clock)}
+            </span>
           </p>
         ) : null}
 

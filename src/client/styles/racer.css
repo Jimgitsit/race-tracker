@@ -584,3 +584,17 @@
   padding: 0 var(--s-4);
   font-size: var(--t-sm);
 }
+
+.rc-msg-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+
+.rc-msg-when {
+  flex: none;
+  color: var(--ink-faint);
+  text-transform: none;
+  letter-spacing: 0.04em;
+}
