@@ -208,7 +208,15 @@ for car photos.
 - **Complete:** podium, then the final bracket.
 
 **Racing layout:**
-- **Top banner (~28% height): NOW RACING.** Two cars, photos as large as the row allows,
+- **Top band (~22% height).** `ON DECK` in the left corner, the head-to-head in the middle,
+  the join QR in the right corner. Both cars cluster toward the centre — the left one is
+  `justify-content: flex-end`, the right one `flex-start` — so the outer corners were dead
+  screen. Putting the next heats there means what's coming next and what's running now are
+  one glance apart rather than at opposite edges of the room. On deck **stacks** rather than
+  running along a strip: the corner is tall and narrow, so the band's full height is
+  available and almost none of its width. A hairline separates the pairs — with only a gap,
+  three of them read as one long sentence of names.
+- **NOW RACING**, the middle of that band. Two cars, photos as large as the row allows,
   names in a very large weight, `VS` between. When a result lands the banner runs **the same
   celebration as the racer view** (§3.1): a green ring on the winner's photo, their name in
   green, **WINNER!** landing on the photo oversized-and-transparent then scaling down onto
@@ -216,12 +224,17 @@ for car photos.
   This animation is the thing that makes a room look up — and it is the *same* animation on
   the phone in your hand and on the screen across the room, on purpose.
 - **Body: the bracket, auto-framed** (below).
-- **Foot strip:** `ON DECK` — the next two or three matches — plus a small join QR, because
-  people arrive late. The latest director message sits here with an **×**; dismissal is local
-  to this screen, persisted, and stored as a **high-water mark** rather than an exact id — so
-  a message deleted server-side can't resurface one already closed, while anything newer
-  still gets through. It neither touches what racers see on their phones nor swallows the
-  next message. The × fades in with the toolbar — it is for whoever is driving, not the room.
+- **Foot strip:** the latest director message and the heat count, nothing else — everything
+  that used to live here moved to the top band, and the height it gave back went to the
+  bracket. The message carries an **×**; dismissal is local to this screen, persisted, and
+  stored as a **high-water mark** rather than an exact id — so a message deleted server-side
+  can't resurface one already closed, while anything newer still gets through. It neither
+  touches what racers see on their phones nor swallows the next message. The × fades in with
+  the toolbar — it is for whoever is driving, not the room.
+
+On a phone both outer corners go entirely: there is no width to spare beside the two cars,
+and neither earns it there — nobody scans the QR on the phone in their hand, and on deck is
+one tap away on the racer view they just came from.
 
 **Auto-framing.** The display keeps a *focus round* (the one containing the current match)
 and renders every round at one of three densities:

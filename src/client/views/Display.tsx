@@ -391,7 +391,34 @@ function Racing({ state }: { state: StatePayload }) {
 
   return (
     <main className={`disp disp-racing ${chrome ? "" : "disp-racing-idle"}`}>
-      <Banner state={state} match={banner} flashed={flashed !== null} />
+      {/* On deck and the join QR live in the top band's outer corners, either side
+          of the head-to-head. Both cars cluster toward the middle, so those corners
+          were dead screen — and it puts what's coming next in the same glance as
+          what's running now, rather than at the opposite edge of the room. */}
+      <header className="disp-top">
+        <div className="disp-ondeck">
+          <span className="disp-eyebrow">On deck</span>
+          {onDeck.length === 0 ? (
+            <span className="disp-ondeck-empty">—</span>
+          ) : (
+            <div className="disp-ondeck-list">
+              {onDeck.map((match) => (
+                <span className="disp-ondeck-item" key={match.id}>
+                  {racerById(state, match.a)?.name ?? "TBD"}
+                  <span className="disp-ondeck-vs">vs</span>
+                  {racerById(state, match.b)?.name ?? "TBD"}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <Banner state={state} match={banner} flashed={flashed !== null} />
+
+        <div className="disp-top-qr">
+          <JoinQR url={joinUrl()} size={92} label="" />
+        </div>
+      </header>
 
       {/* The toolbar is a sibling of the canvas, not a fixed overlay: floating it
           over the whole screen put it on top of the on-deck strip, which is the
@@ -431,21 +458,6 @@ function Racing({ state }: { state: StatePayload }) {
       </div>
 
       <footer className="disp-foot">
-        <div className="disp-ondeck">
-          <span className="disp-eyebrow">On deck</span>
-          {onDeck.length === 0 ? (
-            <span className="disp-ondeck-empty">—</span>
-          ) : (
-            onDeck.map((match) => (
-              <span className="disp-ondeck-item" key={match.id}>
-                {racerById(state, match.a)?.name ?? "TBD"}
-                <span className="disp-ondeck-vs">vs</span>
-                {racerById(state, match.b)?.name ?? "TBD"}
-              </span>
-            ))
-          )}
-        </div>
-
         {/* Dismissal is local to this screen and keyed on the id, so clearing a
             stale message here neither touches what racers see on their phones nor
             swallows the next one. The × only appears with the rest of the chrome —
@@ -466,14 +478,10 @@ function Racing({ state }: { state: StatePayload }) {
           </p>
         ) : null}
 
-        <div className="disp-foot-right">
-          <span className="code disp-progress">
-            {state.event.heatsDone}/{state.event.heatsTotal}
-          </span>
-          <JoinQR url={joinUrl()} size={92} label="" />
-        </div>
+        <span className="code disp-progress">
+          {state.event.heatsDone}/{state.event.heatsTotal}
+        </span>
       </footer>
-
     </main>
   );
 }

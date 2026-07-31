@@ -106,14 +106,27 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
+/* The top band: on deck, the head-to-head, the join QR. The outer tracks are
+   `auto` so they take only what they need and the head-to-head keeps the middle;
+   minmax(0, …) on the middle for the usual reason — a bare 1fr floors at
+   min-content and a long racer name would push the QR off the screen. */
+.disp-top {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-5);
+  padding: var(--s-3) var(--s-5);
+  border-bottom: 4px solid var(--track);
+  background: linear-gradient(180deg, rgb(232 83 28 / 10%), transparent);
+  min-width: 0;
+  min-height: 0;
+}
+
 .disp-banner {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: var(--s-6);
-  padding: var(--s-4) var(--s-6);
-  border-bottom: 4px solid var(--track);
-  background: linear-gradient(180deg, rgb(232 83 28 / 10%), transparent);
   min-width: 0;
   min-height: 0;
 }
@@ -511,24 +524,41 @@
   background: var(--ground-deep);
 }
 
+/* Stacked, not a row. Three pairs laid end to end is a wide strip, and the corner
+   it now sits in is tall and narrow — the band's whole height is available and
+   almost none of its width. */
 .disp-ondeck {
   display: flex;
-  align-items: center;
-  gap: var(--s-5);
+  flex-direction: column;
+  gap: var(--s-2);
   min-width: 0;
+  min-height: 0;
   overflow: hidden;
+}
+
+.disp-ondeck-list {
+  display: flex;
+  flex-direction: column;
 }
 
 .disp-ondeck-item {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: var(--s-2);
+  padding-block: 5px;
   font-family: var(--display);
-  font-size: 1.4rem;
+  font-size: 1.25rem;
   font-weight: 700;
   text-transform: uppercase;
   color: var(--ink-dim);
   white-space: nowrap;
+}
+
+/* Between the pairs only, never above the first — otherwise the list reads as
+   hanging off the "On deck" label rather than starting under it. Run together
+   with nothing but a gap, three pairs read as one long sentence of names. */
+.disp-ondeck-item + .disp-ondeck-item {
+  border-top: 1px solid var(--line);
 }
 
 .disp-ondeck-vs {
@@ -541,10 +571,9 @@
   color: var(--ink-faint);
 }
 
-.disp-foot-right {
+.disp-top-qr {
   display: flex;
   align-items: center;
-  gap: var(--s-4);
 }
 
 .disp-progress {
@@ -552,7 +581,7 @@
   color: var(--ink-dim);
 }
 
-.disp-foot-right .qr-url,
+.disp-top-qr .qr-url,
 .disp-join-left .qr-url {
   display: none;
 }
@@ -579,10 +608,22 @@
     letter-spacing: 0.16em;
   }
 
-  .disp-banner {
+  .disp-top {
     gap: var(--s-3);
     padding: var(--s-2) var(--s-3);
     border-bottom-width: 2px;
+  }
+
+  .disp-banner {
+    gap: var(--s-3);
+  }
+
+  /* Both corners go on a phone. There is no width to spare beside the two cars,
+     and neither earns it here: nobody scans the QR on the phone in their hand,
+     and on deck is one tap away on the racer view they just came from. */
+  .disp-ondeck,
+  .disp-top-qr {
+    display: none;
   }
 
   .disp-banner-car {
@@ -619,21 +660,10 @@
     padding: var(--s-1) var(--s-3);
   }
 
-  /* Both strips shrink from the same basis, so neither can pin the footer wider
-     than the screen and push the other one off it. */
-  .disp-ondeck {
-    flex: 1 1 0;
-    gap: var(--s-3);
-  }
-
-  .disp-ondeck-item {
-    font-size: 0.85rem;
-  }
-
-  /* Twice the on-deck strip's share: on-deck truncates to fewer heats and still
-     reads, but a message cut to one word says nothing at all. */
+  /* The footer is down to the message and the heat count, so the message takes
+     whatever is left rather than sharing against a strip that is no longer here. */
   .disp-announce {
-    flex: 2 1 0;
+    flex: 1 1 0;
     padding: var(--s-1) var(--s-2);
     border-left-width: 2px;
     font-size: 0.8rem;
@@ -649,12 +679,6 @@
 
   .disp-progress {
     font-size: 0.7rem;
-  }
-
-  /* A QR is an invitation to someone across the room. Nobody scans the phone
-     they are holding. */
-  .disp-foot-right .qr-shell {
-    display: none;
   }
 }
 
