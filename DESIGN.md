@@ -289,6 +289,19 @@ that hasn't happened yet. It re-aims on layout, not on a timer, so a collapsing 
 resized window moves it too. Any hand on the controls (a drag, a zoom, a filter) drops it:
 auto-framing that fights the person driving is worse than none.
 
+**It holds through a result.** What follow aims at deliberately *lags* the live heat by
+`FLASH_MS`. `currentMatch` advances the instant the director saves — the start of the
+celebration, not the end — so aiming straight at it panned the screen out from under the
+winner's chip while that chip was still travelling its connector. Lagging keeps the finished
+heat framed for the whole animation and lands the move on the same beat as the banner
+swapping, so the screen turns its attention once rather than twice.
+
+The lag lives in the *target*, not in a guard that reads the flash. Effects run
+child-before-parent, and the flash is set in an effect up in `Racing`: on the render where
+the result lands, the canvas still sees the previous value and would re-aim before any guard
+could fire. Anything downstream of the flash has this ordering problem — move the delay into
+the state being watched, never into the reaction.
+
 The pan clamp carries **a third of a frame of slack** past each edge. Without it the clamp
 refuses to show any background at all, and follow cannot honour its bias for a heat in the
 first or last round — the live heat would drift between a third in and hard against the edge

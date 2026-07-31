@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 
 import { joinUrl, type PublicMatch, type StatePayload } from "../lib/api.ts";
 import { matchById, racerById, roundsOf, sourceLabel, type RoundColumn } from "../lib/derive.ts";
-import { useResultFlash } from "../lib/useRace.ts";
+import { FLASH_MS, useResultFlash } from "../lib/useRace.ts";
 import { timeAgo, useNow } from "../lib/time.ts";
 import { Avatar } from "../components/Avatar.tsx";
 import { JoinQR } from "../components/QR.tsx";
@@ -804,18 +804,51 @@ function BracketCanvas({
   const pannable = contentW > frame.w + 1 || contentH > frame.h + 1;
 
   /**
-   * Follow mode: sit on the live heat at a readable zoom and track it as the race
-   * moves. Left of centre rather than dead centre, because the bracket flows left
-   * to right — the interesting half of the screen is the half that hasn't happened
-   * yet. Runs on layout, not on a timer, so it re-aims when a round collapses or
-   * the window changes shape as well as when the heat advances.
+   * What follow mode is pointed at. It deliberately *lags* the live heat by the
+   * length of a result: `currentMatch` advances the instant the director saves,
+   * which is the start of the celebration and not the end, so aiming straight at
+   * it panned the screen out from under the winner's chip while that chip was
+   * still travelling its connector. Lagging lands the move on the same beat as the
+   * banner swapping to the next heat, and the whole screen turns at once.
+   *
+   * A timer rather than a read of `flash`, because effects run child-before-parent:
+   * the flash is set in an effect up in Racing, so on the render where the result
+   * arrives this component still sees the old value and would re-aim before any
+   * guard could apply. The target is the thing that has to lag, not the reaction.
    */
+  const [target, setTarget] = useState<number | null>(null);
+
   useEffect(() => {
-    if (!follow || size.w === 0 || frame.w === 0) {
+    const live = state.event.currentMatch;
+
+    // Not following, or nothing aimed at yet: track live so switching follow on
+    // lands immediately instead of looking dead for three seconds.
+    if (!follow || target === null) {
+      setTarget(live);
       return;
     }
 
-    const box = state.event.currentMatch === null ? null : boxes.current.get(state.event.currentMatch);
+    if (live === target) {
+      return;
+    }
+
+    const timer = setTimeout(() => setTarget(live), FLASH_MS);
+    return () => clearTimeout(timer);
+  }, [follow, state.event.currentMatch, target]);
+
+  /**
+   * Aim. Left of centre rather than dead centre, because the bracket flows left to
+   * right — the interesting half of the screen is the half that hasn't happened
+   * yet. Runs on layout rather than a timer, so a collapsing round or a resized
+   * window re-aims too, which also keeps the finished heat framed while it is
+   * being celebrated.
+   */
+  useEffect(() => {
+    if (!follow || target === null || size.w === 0 || frame.w === 0) {
+      return;
+    }
+
+    const box = boxes.current.get(target);
     if (!box) {
       return;
     }
@@ -826,7 +859,7 @@ function BracketCanvas({
       x: frame.w * FOLLOW_BIAS - (box.offsetLeft + box.offsetWidth / 2) * next,
       y: frame.h / 2 - (box.offsetTop + box.offsetHeight / 2) * next,
     });
-  }, [follow, state.event.currentMatch, fit, size, frame, densities, onView]);
+  }, [follow, target, fit, size, frame, densities, onView]);
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     dragged.current = false;

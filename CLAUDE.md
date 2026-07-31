@@ -53,6 +53,11 @@ stays inspectable.
 - **A React `onWheel` prop cannot `preventDefault()`.** React registers wheel on its root as
   passive, so the page scrolls out from under you. The canvas zoom is a native
   `addEventListener("wheel", …, { passive: false })` for exactly this reason.
+- **`useResultFlash` is always one render late in a child.** Effects run child-before-parent,
+  and the flash is set in an effect in `Racing` — so on the render where a result lands,
+  `BracketCanvas` still sees the old value. A guard like `if (flash !== null) return;` in a
+  child cannot work. Put the delay in the state being watched (follow mode lags its *target*
+  by `FLASH_MS`), never in the reaction.
 - **`background: linear-gradient(…, var(--surface) 60%)` is a card-killer.** `background` is
   the shorthand, so it resets `background-color` and the tinted end composites onto the page
   instead of the card. Always `linear-gradient(…, transparent 60%), var(--surface)`. Four
@@ -64,6 +69,24 @@ stays inspectable.
   The re-link QR carries a racer's token and must never reach the big screen. They're
   separate components on purpose.
 - **nginx needs `proxy_buffering off`** for `/race-tracker/`, or SSE silently never arrives.
+
+## Testing against the running event
+
+**The event at `jimmcgowen.com/race-tracker/` may be a race in progress.** Check
+`heatsDone` before assuming otherwise, and never write to it to test a UI change.
+
+- **`undoLast()` deletes the newest `results_log` row, whatever it is** — not the row you
+  wrote. If a result lands between your POST and your undo, you delete *theirs*. This has
+  happened: a real heat was wiped mid-event and had to be re-recorded. A 409 from
+  `/result` ("that heat has already been recorded") means someone beat you to it —
+  **stop, do not undo.**
+- **Drive the UI from the client instead.** Wrap `window.EventSource` via
+  `Page.addScriptToEvaluateOnNewDocument`, keep the last payload, and push a doctored copy
+  to synthesise a result, a phase change or a full bracket. Set a freeze flag in the wrapper
+  so real pushes can't overwrite the fixture mid-measurement. The server never hears from
+  you. Working example: the flash/follow tests in this session.
+- Uploaded photos and messages are equally live — `messages` rows written by a test show up
+  on every racer's phone.
 
 ## Deviating from the doc
 
