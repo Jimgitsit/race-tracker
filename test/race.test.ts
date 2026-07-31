@@ -16,6 +16,7 @@ import {
   consolationCandidates,
   listArchives,
   lockRoster,
+  racerByToken,
   recordResult,
   registerRacer,
   removeRacer,
@@ -88,6 +89,32 @@ describe("registration", () => {
     registerRacer("Temporary");
     removeRacer(snapshot().racers.find((r) => r.name === "Temporary")!.id);
     expect(snapshot().event.racerCount).toBe(FIELD);
+  });
+});
+
+describe("token identity", () => {
+  // Every token-authenticated endpoint goes through this — /api/me, the rename,
+  // and the photo upload. It shipped broken once because the SQL had two
+  // placeholders and bound one value, which the type parameter happily hid.
+  test("resolves a real racer and refuses anything else", () => {
+    const { token, racer } = registerRacer("Token Holder");
+
+    const found = racerByToken(token);
+    expect(found).not.toBeNull();
+    expect(found!.id).toBe(racer.id);
+    expect(found!.name).toBe("Token Holder");
+
+    expect(racerByToken("not-a-real-token")).toBeNull();
+    expect(racerByToken(null)).toBeNull();
+    expect(racerByToken("")).toBeNull();
+
+    removeRacer(racer.id);
+    expect(racerByToken(token)).toBeNull();
+  });
+
+  test("the bye sentinel is not reachable by token", () => {
+    // Its row exists so that a bye is never NULL, but it must never authenticate.
+    expect(racerByToken(" bye-token")).toBeNull();
   });
 });
 

@@ -438,8 +438,8 @@ export function racerByToken(token: string | null): RacerRow | null {
   }
   return (
     db()
-      .query<RacerRow, [string]>("SELECT * FROM racers WHERE token = ? AND id != ?")
-      .get(token) ?? null
+      .query<RacerRow, [string, number]>("SELECT * FROM racers WHERE token = ? AND id != ?")
+      .get(token, BYE_ID) ?? null
   );
 }
 
