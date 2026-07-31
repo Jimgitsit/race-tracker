@@ -13,6 +13,7 @@ import { matchById, racerById, recordOf } from "../lib/derive.ts";
 import { Avatar } from "../components/Avatar.tsx";
 import { MatchCard } from "../components/MatchCard.tsx";
 import { JoinQR, RelinkQR } from "../components/QR.tsx";
+import { ShareLink } from "../components/ShareLink.tsx";
 import { Sheet } from "../components/Sheet.tsx";
 
 /** One guard against a fat-finger, then the tap targets go dead for a beat. */
@@ -308,7 +309,14 @@ function Roster({ state }: { state: StatePayload }) {
       </Sheet>
 
       <Sheet open={showQR} title="Scan to join" onClose={() => setShowQR(false)}>
-        <JoinQR url={joinUrl()} size={280} label="Anyone can scan this" />
+        <div className="stack">
+          <JoinQR url={joinUrl()} size={260} label="Anyone can scan this" />
+          <ShareLink
+            url={joinUrl()}
+            title={state.event.name}
+            text={`Get your car in the ${state.event.name}.`}
+          />
+        </div>
       </Sheet>
 
       <Sheet

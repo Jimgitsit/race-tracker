@@ -18,6 +18,7 @@ import { clockTime, timeAgo, useNow } from "../lib/time.ts";
 import { Avatar } from "../components/Avatar.tsx";
 import { MatchCard } from "../components/MatchCard.tsx";
 import { JoinQR } from "../components/QR.tsx";
+import { ShareLink } from "../components/ShareLink.tsx";
 import { Sheet } from "../components/Sheet.tsx";
 
 type Tab = "now" | "bracket" | "racers" | "rules";
@@ -205,7 +206,7 @@ function Main({ state, meId }: { state: StatePayload; meId: number }) {
               : `Heat ${state.event.heatsDone} of ${state.event.heatsTotal}`}
           </p>
         </div>
-        <ShareButton />
+        <ShareButton state={state} />
       </header>
 
       <main className="rc-body">
@@ -241,19 +242,39 @@ function Main({ state, meId }: { state: StatePayload; meId: number }) {
   );
 }
 
-function ShareButton() {
+function ShareButton({ state }: { state: StatePayload }) {
   const [open, setOpen] = useState(false);
+
+  // Once the roster locks the code stops being an invitation and starts being
+  // how a spectator gets in — the screen it lands on already handles that.
+  const racing = state.event.phase !== "registration";
 
   return (
     <>
       <button type="button" className="btn btn-ghost rc-share" onClick={() => setOpen(true)}>
-        Invite
+        {racing ? "Share" : "Invite"}
       </button>
-      <Sheet open={open} title="Get someone else racing" onClose={() => setOpen(false)}>
-        <JoinQR url={joinUrl()} size={260} label="Point a phone camera at this" />
-        <button className="btn btn-block" onClick={() => setOpen(false)} type="button">
-          Done
-        </button>
+      <Sheet
+        open={open}
+        title={racing ? "Share the race" : "Get someone else racing"}
+        onClose={() => setOpen(false)}
+      >
+        <div className="stack">
+          <JoinQR
+            url={joinUrl()}
+            size={240}
+            label={racing ? "Scan to follow along" : "Point a phone camera at this"}
+          />
+          <ShareLink
+            url={joinUrl()}
+            title={state.event.name}
+            text={
+              racing
+                ? `Watch the ${state.event.name} bracket live.`
+                : `Get your car in the ${state.event.name}.`
+            }
+          />
+        </div>
       </Sheet>
     </>
   );
