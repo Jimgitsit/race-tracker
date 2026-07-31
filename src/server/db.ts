@@ -69,6 +69,15 @@ CREATE TABLE IF NOT EXISTS consolation_entrants (
   racer  INTEGER NOT NULL REFERENCES racers(id)
 );
 
+-- Director announcements. racer IS NULL means everyone; a set racer is a direct
+-- message and must never reach the public state payload.
+CREATE TABLE IF NOT EXISTS messages (
+  id          INTEGER PRIMARY KEY,
+  racer       INTEGER REFERENCES racers(id),
+  body        TEXT    NOT NULL,
+  created_at  INTEGER NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS archives (
   year                 INTEGER PRIMARY KEY,
   name                 TEXT    NOT NULL,
@@ -84,6 +93,7 @@ CREATE TABLE IF NOT EXISTS archives (
 
 CREATE INDEX IF NOT EXISTS idx_matches_order ON matches (order_index);
 CREATE INDEX IF NOT EXISTS idx_results_log_id ON results_log (id);
+CREATE INDEX IF NOT EXISTS idx_messages_racer ON messages (racer, id);
 `;
 
 /**
@@ -187,6 +197,13 @@ export type ResultRow = {
   id: number;
   match_id: number;
   winner: number;
+  created_at: number;
+};
+
+export type MessageRow = {
+  id: number;
+  racer: number | null;
+  body: string;
   created_at: number;
 };
 

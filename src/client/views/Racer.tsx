@@ -12,6 +12,8 @@ import {
   statusChip,
   statusFor,
 } from "../lib/derive.ts";
+import { alertsEnabled, canVibrate, disableAlerts, enableAlerts } from "../lib/alerts.ts";
+import { useMessages, useRaceAlerts, type Message } from "../lib/useAlerts.ts";
 import { Avatar } from "../components/Avatar.tsx";
 import { MatchCard } from "../components/MatchCard.tsx";
 import { JoinQR } from "../components/QR.tsx";
@@ -187,6 +189,9 @@ function TrackRule() {
 function Main({ state, meId }: { state: StatePayload; meId: number }) {
   const [tab, setTab] = useState<Tab>("now");
   const me = racerById(state, meId);
+  const messages = useMessages(state, meId);
+
+  useRaceAlerts(state, meId, messages);
 
   return (
     <div className="rc">
@@ -203,7 +208,14 @@ function Main({ state, meId }: { state: StatePayload; meId: number }) {
       </header>
 
       <main className="rc-body">
-        {tab === "now" ? <NowTab state={state} meId={meId} onExplain={() => setTab("rules")} /> : null}
+        {tab === "now" ? (
+          <NowTab
+            state={state}
+            meId={meId}
+            messages={messages}
+            onExplain={() => setTab("rules")}
+          />
+        ) : null}
         {tab === "bracket" ? <BracketTab state={state} meId={meId} /> : null}
         {tab === "racers" ? <RacersTab state={state} meId={meId} /> : null}
         {tab === "rules" ? <RulesTab state={state} meId={meId} /> : null}
@@ -253,10 +265,12 @@ function ShareButton() {
 function NowTab({
   state,
   meId,
+  messages,
   onExplain,
 }: {
   state: StatePayload;
   meId: number;
+  messages: Message[];
   onExplain: () => void;
 }) {
   const me = racerById(state, meId);
@@ -276,6 +290,8 @@ function NowTab({
           <p className="rc-wait-count">{state.event.racerCount}</p>
           <p className="rc-wait-note">Waiting for the race director to start.</p>
         </section>
+        <MessageList messages={messages} />
+        <AlertsCard />
         {me ? <PhotoCard racer={me} /> : null}
       </div>
     );
@@ -287,6 +303,8 @@ function NowTab({
 
   return (
     <div className="stack">
+      <MessageList messages={messages} />
+
       {current ? <NowCard state={state} match={current} meId={meId} /> : null}
 
       {status && !racingNow ? (
@@ -313,8 +331,122 @@ function NowTab({
         </section>
       ) : null}
 
+      <AlertsCard />
+
       {me ? <PhotoCard racer={me} /> : null}
     </div>
+  );
+}
+
+/**
+ * Newest message only, with older ones behind a tap. A drunk person reading a
+ * thread is not a thing that happens.
+ */
+function MessageList({ messages }: { messages: Message[] }) {
+  const [open, setOpen] = useState(false);
+
+  if (messages.length === 0) {
+    return null;
+  }
+
+  const [latest, ...older] = messages;
+
+  return (
+    <>
+      <section className={`rc-msg ${latest.direct ? "rc-msg-direct" : ""}`}>
+        <p className="eyebrow">
+          {latest.direct ? "Message for you" : "From the race director"}
+        </p>
+        <p className="rc-msg-body">{latest.body}</p>
+        {older.length > 0 ? (
+          <button type="button" className="rc-msg-more" onClick={() => setOpen(true)}>
+            {older.length} earlier {older.length === 1 ? "message" : "messages"}
+          </button>
+        ) : null}
+      </section>
+
+      <Sheet open={open} title="Messages" onClose={() => setOpen(false)}>
+        <div className="stack">
+          {messages.map((message) => (
+            <div className="rc-msg-old" key={message.id}>
+              <p className="eyebrow">
+                {message.direct ? "For you" : "Everyone"} ·{" "}
+                {new Date(message.at).toLocaleTimeString([], {
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
+              </p>
+              <p>{message.body}</p>
+            </div>
+          ))}
+        </div>
+      </Sheet>
+    </>
+  );
+}
+
+/**
+ * Opting in has to happen inside a real tap: that gesture is what unlocks audio
+ * for the rest of the session. The copy is deliberately specific about what each
+ * phone will actually do, because promising a buzz an iPhone can't deliver is
+ * worse than promising nothing.
+ */
+function AlertsCard() {
+  const [on, setOn] = useState(alertsEnabled);
+  const [busy, setBusy] = useState(false);
+
+  const enable = async () => {
+    setBusy(true);
+    try {
+      await enableAlerts();
+      setOn(true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (on) {
+    return (
+      <section className="rc-alerts rc-alerts-on">
+        <div className="rc-alerts-text">
+          <p className="rc-alerts-head">Alerts are on</p>
+          <p className="rc-alerts-sub">
+            {canVibrate()
+              ? "You'll hear a chime and feel a buzz when you're up."
+              : "You'll hear a chime when you're up. This phone can't vibrate from a web page."}
+          </p>
+        </div>
+        <button
+          type="button"
+          className="btn btn-ghost rc-alerts-btn"
+          onClick={() => {
+            disableAlerts();
+            setOn(false);
+          }}
+        >
+          Turn off
+        </button>
+      </section>
+    );
+  }
+
+  return (
+    <section className="rc-alerts">
+      <div className="rc-alerts-text">
+        <p className="rc-alerts-head">Get alerted when you're up</p>
+        <p className="rc-alerts-sub">
+          Keep this page open and your phone will chime when it's your turn. Volume up.
+        </p>
+      </div>
+      <button
+        type="button"
+        className="btn btn-primary rc-alerts-btn"
+        onClick={enable}
+        disabled={busy}
+      >
+        {busy ? "…" : "Turn on"}
+      </button>
+    </section>
   );
 }
 

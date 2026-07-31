@@ -515,3 +515,72 @@
   padding-left: var(--s-4);
   border-left: 2px solid var(--line);
 }
+
+/* --- messages + alerts -------------------------------------------------------- */
+
+.rc-msg {
+  padding: var(--s-4);
+  border-radius: var(--r-md);
+  background: linear-gradient(90deg, rgb(232 83 28 / 18%), var(--surface) 70%);
+  border: 1px solid var(--track-deep);
+  border-left: 4px solid var(--track);
+}
+
+.rc-msg-direct {
+  background: linear-gradient(90deg, rgb(62 143 196 / 18%), var(--surface) 70%);
+  border-color: var(--cold-deep);
+  border-left-color: var(--cold);
+}
+
+.rc-msg-body {
+  margin-top: var(--s-1);
+  font-size: var(--t-lg);
+  line-height: 1.25;
+}
+
+.rc-msg-more {
+  margin-top: var(--s-2);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--ink-dim);
+}
+
+.rc-msg-old {
+  padding-bottom: var(--s-3);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.rc-alerts {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.rc-alerts-on {
+  border-color: var(--track-deep);
+}
+
+.rc-alerts-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.rc-alerts-head {
+  font-weight: 700;
+}
+
+.rc-alerts-sub {
+  font-size: var(--t-sm);
+  color: var(--ink-dim);
+}
+
+.rc-alerts-btn {
+  flex: none;
+  min-height: 44px;
+  padding: 0 var(--s-4);
+  font-size: var(--t-sm);
+}

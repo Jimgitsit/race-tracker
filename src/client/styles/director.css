@@ -303,3 +303,90 @@
   font-size: var(--t-xl);
   overflow-wrap: anywhere;
 }
+
+/* --- messaging ---------------------------------------------------------------- */
+
+.dir-head-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.dir-foot-three {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.dir-foot-three .btn {
+  padding: 0 var(--s-2);
+  font-size: var(--t-sm);
+}
+
+.dir-to {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.dir-to-btn {
+  padding: var(--s-2) var(--s-4);
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  font-weight: 700;
+  color: var(--ink-dim);
+}
+
+.dir-to-or {
+  font-size: var(--t-sm);
+  color: var(--ink-faint);
+}
+
+.dir-to-on {
+  background: var(--track);
+  border-color: var(--track-rail);
+  color: #fff;
+}
+
+.dir-to-list {
+  display: flex;
+  gap: var(--s-2);
+  overflow-x: auto;
+  padding-bottom: var(--s-2);
+  list-style: none;
+}
+
+.dir-to-racer {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-1) var(--s-2) var(--s-1) var(--s-1);
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  white-space: nowrap;
+  color: var(--ink-dim);
+}
+
+.dir-to-name {
+  font-size: var(--t-sm);
+}
+
+.dir-presets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.dir-preset {
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-sm);
+  border: 1px dashed var(--line);
+  font-size: var(--t-sm);
+  text-align: left;
+  color: var(--ink-dim);
+}
+
+.dir-compose {
+  min-height: 90px;
+  padding: var(--s-3) var(--s-4);
+  resize: none;
+  line-height: 1.35;
+}

@@ -598,3 +598,26 @@
 .disp-consolation strong {
   color: var(--cold-rail);
 }
+
+.disp-announce {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-width: 0;
+  padding: var(--s-2) var(--s-4);
+  border-radius: var(--r-md);
+  background: rgb(232 83 28 / 16%);
+  border-left: 4px solid var(--track);
+  font-size: 1.25rem;
+  font-weight: 600;
+  animation: fade-in 400ms ease;
+}
+
+.disp-announce-tag {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--track-rail);
+}

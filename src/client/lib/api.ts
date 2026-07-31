@@ -63,6 +63,8 @@ export const api = {
   state: () => request<StatePayload>("state"),
 
   me: () => request<{ id: number; name: string }>("me"),
+  messages: () =>
+    request<{ id: number; body: string; at: number; direct: boolean }[]>("me/messages"),
   register: (name: string) => post<{ token: string; racer: { id: number; name: string } }>("register", { name }),
   rename: (name: string) => request("me", { method: "PATCH", body: JSON.stringify({ name }) }),
 
@@ -79,6 +81,8 @@ export const api = {
     lock: () => post("director/lock"),
     result: (matchId: number, winnerId: number) => post("director/result", { matchId, winnerId }),
     undo: () => post("director/undo"),
+    message: (body: string, racerId: number | null) =>
+      post<{ id: number }>("director/message", { body, racerId }),
     setCurrent: (matchId: number) => post("director/current", { matchId }),
     removeRacer: (id: number) => request(`director/racer/${id}`, { method: "DELETE" }),
     racerToken: (id: number) => request<{ token: string }>(`director/racer/${id}/token`),

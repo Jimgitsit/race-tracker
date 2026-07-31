@@ -97,12 +97,135 @@ function Login({ onIn }: { onIn: () => void }) {
 }
 
 // ---------------------------------------------------------------------------------
+// Messaging
+// ---------------------------------------------------------------------------------
+
+/** One tap each, because the director is holding a phone next to a track. */
+const PRESETS = [
+  "You're up — get to the track!",
+  "Where are you? You're holding up the race.",
+  "Taking a short break. Back in 10.",
+  "Last call to add a photo of your car.",
+];
+
+function MessageSheet({
+  state,
+  open,
+  onClose,
+  presetTo,
+}: {
+  state: StatePayload;
+  open: boolean;
+  onClose: () => void;
+  presetTo?: number | null;
+}) {
+  const [to, setTo] = useState<number | null>(presetTo ?? null);
+  const [body, setBody] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setTo(presetTo ?? null);
+      setBody("");
+      setError(null);
+      setSent(false);
+    }
+  }, [open, presetTo]);
+
+  const send = async () => {
+    setBusy(true);
+    setError(null);
+
+    try {
+      await api.director.message(body, to);
+      setSent(true);
+      setBody("");
+      setTimeout(onClose, 700);
+    } catch (problem) {
+      setError(problem instanceof ApiError ? problem.message : "Couldn't send that.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const target = to === null ? null : racerById(state, to);
+
+  return (
+    <Sheet open={open} title="Send a message" onClose={onClose}>
+      <div className="stack">
+        <div className="dir-to">
+          <button
+            type="button"
+            className={`dir-to-btn ${to === null ? "dir-to-on" : ""}`}
+            onClick={() => setTo(null)}
+          >
+            Everyone
+          </button>
+          <span className="dir-to-or">or one racer:</span>
+        </div>
+
+        <ul className="dir-to-list">
+          {state.racers.map((racer) => (
+            <li key={racer.id}>
+              <button
+                type="button"
+                className={`dir-to-racer ${to === racer.id ? "dir-to-on" : ""}`}
+                onClick={() => setTo(racer.id)}
+              >
+                <Avatar racer={racer} size="sm" />
+                <span className="dir-to-name racer-name">{racer.name}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        <div className="dir-presets">
+          {PRESETS.map((preset) => (
+            <button
+              key={preset}
+              type="button"
+              className="dir-preset"
+              onClick={() => setBody(preset)}
+            >
+              {preset}
+            </button>
+          ))}
+        </div>
+
+        <textarea
+          className="field dir-compose"
+          value={body}
+          onChange={(event) => setBody(event.target.value)}
+          placeholder={to === null ? "Message to everyone…" : `Message to ${target?.name}…`}
+          maxLength={140}
+          rows={3}
+        />
+
+        {error ? <p className="error-msg">{error}</p> : null}
+
+        <button
+          type="button"
+          className="btn btn-primary btn-lg btn-block"
+          disabled={busy || sent || !body.trim()}
+          onClick={send}
+        >
+          {sent ? "Sent" : busy ? "Sending…" : to === null ? "Send to everyone" : `Send to ${target?.name}`}
+        </button>
+      </div>
+    </Sheet>
+  );
+}
+
+// ---------------------------------------------------------------------------------
 // Registration
 // ---------------------------------------------------------------------------------
 
 function Roster({ state }: { state: StatePayload }) {
   const [confirming, setConfirming] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [showMessage, setShowMessage] = useState(false);
   const [relink, setRelink] = useState<PublicRacer | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -127,9 +250,18 @@ function Roster({ state }: { state: StatePayload }) {
           <p className="dir-count tabular">{count}</p>
           <p className="dir-count-label">{count === 1 ? "racer" : "racers"}</p>
         </div>
-        <button type="button" className="btn btn-ghost" onClick={() => setShowQR(true)}>
-          Join QR
-        </button>
+        <div className="dir-head-actions">
+          <button type="button" className="btn btn-ghost dir-mini" onClick={() => setShowQR(true)}>
+            Join QR
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost dir-mini"
+            onClick={() => setShowMessage(true)}
+          >
+            Message
+          </button>
+        </div>
       </header>
 
       <main className="dir-roster">
@@ -185,6 +317,8 @@ function Roster({ state }: { state: StatePayload }) {
       >
         {relink ? <RelinkSheet racer={relink} /> : null}
       </Sheet>
+
+      <MessageSheet state={state} open={showMessage} onClose={() => setShowMessage(false)} />
     </>
   );
 }
@@ -265,6 +399,7 @@ function Racing({ state }: { state: StatePayload }) {
   const [error, setError] = useState<string | null>(null);
   const [showQueue, setShowQueue] = useState(false);
   const [showConsolation, setShowConsolation] = useState(false);
+  const [showMessage, setShowMessage] = useState(false);
 
   const current = matchById(state, state.event.currentMatch);
   const a = racerById(state, current?.a ?? null);
@@ -336,7 +471,7 @@ function Racing({ state }: { state: StatePayload }) {
 
       <footer className="dir-racing-foot">
         {error ? <p className="error-msg">{error}</p> : null}
-        <div className="dir-foot-row">
+        <div className="dir-foot-row dir-foot-three">
           <button
             type="button"
             className="btn btn-ghost"
@@ -344,6 +479,9 @@ function Racing({ state }: { state: StatePayload }) {
             disabled={!state.canUndo}
           >
             Undo last
+          </button>
+          <button type="button" className="btn btn-ghost" onClick={() => setShowMessage(true)}>
+            Message
           </button>
           <button type="button" className="btn btn-ghost" onClick={() => setShowQueue(true)}>
             Up next ({upNext.length})
@@ -405,6 +543,8 @@ function Racing({ state }: { state: StatePayload }) {
       >
         <ConsolationPicker onDone={() => setShowConsolation(false)} />
       </Sheet>
+
+      <MessageSheet state={state} open={showMessage} onClose={() => setShowMessage(false)} />
     </>
   );
 }

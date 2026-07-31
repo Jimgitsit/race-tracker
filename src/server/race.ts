@@ -38,6 +38,7 @@ import {
   type EdgeRow,
   type EventRow,
   type MatchRow,
+  type MessageRow,
   type RacerRow,
   type ResultRow,
 } from "./db.ts";
@@ -82,7 +83,19 @@ export type PublicEdge = {
   toSlot: SlotName;
 };
 
+export type Announcement = {
+  id: number;
+  body: string;
+  at: number;
+};
+
+export type PublicMessage = Announcement & { direct: boolean };
+
 export type StatePayload = {
+  /** Broadcasts only. Direct messages are fetched with a racer token. */
+  announcements: Announcement[];
+  /** Bumps on any message, including direct ones, so clients know to refetch. */
+  messageEpoch: number;
   event: {
     name: string;
     year: number;
@@ -354,7 +367,19 @@ export function snapshot(): StatePayload {
   ).length;
   const eliminated = publicRacers.filter((r) => r.status === "out").length;
 
+  const announcements = db()
+    .query<MessageRow, []>(
+      "SELECT * FROM messages WHERE racer IS NULL ORDER BY id DESC LIMIT 5",
+    )
+    .all()
+    .map((row) => ({ id: row.id, body: row.body, at: row.created_at }));
+
+  const epoch =
+    db().query<{ n: number | null }, []>("SELECT MAX(id) AS n FROM messages").get()?.n ?? 0;
+
   return {
+    announcements,
+    messageEpoch: epoch,
     event: {
       name: event.name,
       year: event.year,
@@ -784,6 +809,7 @@ export function resetEvent(): void {
 }
 
 function clearEventTables(): void {
+  db().query("DELETE FROM messages").run();
   db().query("DELETE FROM results_log").run();
   db().query("DELETE FROM edges").run();
   db().query("DELETE FROM matches").run();
@@ -794,6 +820,50 @@ function clearEventTables(): void {
       "UPDATE event SET bracket_size = NULL, current_match = NULL, consolation = 0 WHERE id = 1",
     )
     .run();
+}
+
+/** `racerId` null broadcasts to everyone; otherwise it's a direct message. */
+export function sendMessage(body: string, racerId: number | null): MessageRow {
+  const text = body.trim().replace(/\s+/g, " ");
+  if (!text) {
+    throw new RaceError("Type a message first.");
+  }
+  if (text.length > 140) {
+    throw new RaceError("Keep it under 140 characters.");
+  }
+
+  if (racerId !== null) {
+    const exists = db()
+      .query<{ id: number }, [number, number]>(
+        "SELECT id FROM racers WHERE id = ? AND id != ?",
+      )
+      .get(racerId, BYE_ID);
+
+    if (!exists) {
+      throw new RaceError("No such racer.", 404);
+    }
+  }
+
+  db()
+    .query("INSERT INTO messages (racer, body, created_at) VALUES (?, ?, ?)")
+    .run(racerId, text, Date.now());
+
+  return db().query<MessageRow, []>("SELECT * FROM messages ORDER BY id DESC LIMIT 1").get()!;
+}
+
+/** Everything this racer should see: the broadcasts plus their own direct messages. */
+export function messagesFor(racerId: number): PublicMessage[] {
+  return db()
+    .query<MessageRow, [number]>(
+      "SELECT * FROM messages WHERE racer IS NULL OR racer = ? ORDER BY id DESC LIMIT 30",
+    )
+    .all(racerId)
+    .map((row) => ({
+      id: row.id,
+      body: row.body,
+      at: row.created_at,
+      direct: row.racer !== null,
+    }));
 }
 
 export function listArchives(): Omit<ArchiveRow, "state">[] {

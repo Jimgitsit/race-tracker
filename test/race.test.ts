@@ -9,6 +9,7 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import { rmSync } from "node:fs";
 
 import { DATA_DIR } from "../src/config.ts";
+import { BYE_ID } from "../src/shared/config.ts";
 import { closeDb } from "../src/server/db.ts";
 import {
   RaceError,
@@ -16,10 +17,12 @@ import {
   consolationCandidates,
   listArchives,
   lockRoster,
+  messagesFor,
   racerByToken,
   recordResult,
   registerRacer,
   removeRacer,
+  sendMessage,
   resetEvent,
   snapshot,
   startConsolation,
@@ -115,6 +118,44 @@ describe("token identity", () => {
   test("the bye sentinel is not reachable by token", () => {
     // Its row exists so that a bye is never NULL, but it must never authenticate.
     expect(racerByToken(" bye-token")).toBeNull();
+  });
+});
+
+describe("director messages", () => {
+  test("broadcasts are public, direct messages are not", () => {
+    const alice = snapshot().racers[0];
+    const bob = snapshot().racers[1];
+
+    sendMessage("Track is open.", null);
+    sendMessage("Where are you?", alice.id);
+
+    const state = snapshot();
+
+    // The state payload is served without auth, so a direct message must never
+    // appear anywhere in it — not even as metadata about who was messaged.
+    expect(state.announcements.map((a) => a.body)).toEqual(["Track is open."]);
+    expect(JSON.stringify(state)).not.toContain("Where are you?");
+    expect(state.messageEpoch).toBeGreaterThan(0);
+
+    const forAlice = messagesFor(alice.id);
+    expect(forAlice.map((m) => m.body).sort()).toEqual(["Track is open.", "Where are you?"]);
+    expect(forAlice.find((m) => m.body === "Where are you?")!.direct).toBe(true);
+
+    const forBob = messagesFor(bob.id);
+    expect(forBob.map((m) => m.body)).toEqual(["Track is open."]);
+  });
+
+  test("the epoch moves on every message so clients know to refetch", () => {
+    const before = snapshot().messageEpoch;
+    sendMessage("Another one.", null);
+    expect(snapshot().messageEpoch).toBeGreaterThan(before);
+  });
+
+  test("rejects empty, overlong, and unknown recipients", () => {
+    expect(() => sendMessage("   ", null)).toThrow(RaceError);
+    expect(() => sendMessage("x".repeat(141), null)).toThrow(RaceError);
+    expect(() => sendMessage("hello", 99999)).toThrow(RaceError);
+    expect(() => sendMessage("hello", BYE_ID)).toThrow(RaceError);
   });
 });
 

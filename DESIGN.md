@@ -96,7 +96,7 @@ URL stays typeable (`jimmcgowen.com/race-tracker/display`). All in-app links mus
   - `Knocked out — top 12 of 30` (with the two racers who beat you)
   - `🏆 You won!`
 - Before the roster is locked, this tab shows the waiting state instead: racer count,
-  "Waiting for the race director to start," and a **Share** button (§3.4).
+  "Waiting for the race director to start," and a **Share** button (§3.5).
 
 **`Bracket`** — the mobile bracket. **Do not attempt the classic connector-line tree here**;
 it is unreadable on a phone. Instead:
@@ -146,7 +146,7 @@ holding a phone, so it has to work with one thumb and no reading.
   the director's discretion."
 - **`Start consolation bracket`** appears once ≥8 racers are eliminated (§4.6).
 - Tapping a racer anywhere in the director view offers **Re-link** — a QR carrying that
-  racer's existing token, for someone who cleared their browser or switched phones (§3.4).
+  racer's existing token, for someone who cleared their browser or switched phones (§3.5).
 - A collapsed link to the full bracket.
 
 **Complete phase:** podium — 1st, 2nd, 3rd with photos, then two exits:
@@ -221,7 +221,40 @@ on-screen control bar showing the mapping, which auto-hides after 6s.
   `visibilitychange` (browsers drop the lock when the tab is backgrounded).
 - No auth. Anyone who can reach the URL can watch — that's the point.
 
-### 3.4 QR codes
+### 3.4 Messages and alerts
+
+**Director messages.** The director can send a line to **everyone** or to **one racer**, from
+either phase, with one-tap presets for the things they'll actually send ("You're up — get to
+the track!", "Where are you? You're holding up the race."). 140 characters, because this is a
+tannoy, not a chat.
+
+Broadcasts are public and ride along in the state payload; **direct messages never do**.
+`/api/state` is served without auth, so a direct message must not appear in it — not even as
+metadata about who was messaged. Instead the payload carries a `messageEpoch` that bumps on
+*any* message, and a client holding a racer token refetches `/api/me/messages` when it moves.
+One extra round trip, only when there's actually something new.
+
+**Alerts — what the platform actually allows.** Verified, not assumed:
+
+| Channel | Android | iPhone |
+|---|---|---|
+| `navigator.vibrate` | works | **never** — unsupported in every Safari version, desktop and iOS |
+| Web push | works in-browser | only if the site was added to the Home Screen first |
+| Audio | works after one user gesture | works after one user gesture |
+
+So **sound is the only channel that reaches everyone's phone**, and it's what this leans on:
+a synthesised chime (no asset to fetch on bad wifi), fired when a racer goes on deck, when
+they're up, and when a message arrives. Vibration and notifications are layered on where they
+exist. Opting in has to happen inside a real tap, because that gesture is what unlocks the
+`AudioContext` for the rest of the session.
+
+**Say what each phone will really do.** The opt-in card reads the platform and adjusts:
+Android is promised a buzz, iPhone is told plainly that a web page can't vibrate it. None of
+this survives a locked phone in a pocket, so the big screen and a human shouting remain the
+real backstop — which is exactly why the director got a message button rather than the app
+pretending push works.
+
+### 3.5 QR codes
 
 Two QR types with **very different exposure rules**, and collapsing them into one component
 that takes a URL is how they'd get confused later:
@@ -404,6 +437,13 @@ CREATE TABLE sessions (                 -- director sessions; in SQLite so a mid
   created_at  INTEGER NOT NULL
 );
 
+CREATE TABLE messages (                 -- director → racers
+  id          INTEGER PRIMARY KEY,
+  racer       INTEGER REFERENCES racers(id),  -- NULL = broadcast to everyone
+  body        TEXT    NOT NULL,
+  created_at  INTEGER NOT NULL
+);
+
 CREATE TABLE archives (                 -- one row per finished year
   year           INTEGER PRIMARY KEY,
   name           TEXT    NOT NULL,
@@ -444,6 +484,9 @@ to match on for a hall-of-fame line; their cars aren't, and accounts are out of 
 GET   /api/state                     → { event, racers, matches, edges }  (full snapshot)
 GET   /api/stream                    → SSE; pushes the same payload on every change
 
+GET   /api/me                                      → { id, name }           (token header)
+GET   /api/me/messages                             → broadcasts + own DMs   (token header)
+
 POST  /api/register        {name}                  → { token, racer }
 POST  /api/me/photo        multipart: full, thumb  → { photo, thumb }     (token header)
 PATCH /api/me              {name}                  → { racer }            (token header)
@@ -452,6 +495,7 @@ POST  /api/director/login  {password}              → sets HttpOnly cookie
 POST  /api/director/lock                           → shuffle, build bracket, phase=racing
 POST  /api/director/result {matchId, winnerId}
 POST  /api/director/undo                           → pops results_log, LIFO
+POST  /api/director/message {body, racerId|null}   → null racerId broadcasts
 POST  /api/director/current {matchId}
 DELETE /api/director/racer/:id                     → registration phase only
 POST  /api/director/consolation {racerIds}         → build the 'C' bracket

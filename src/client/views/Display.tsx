@@ -225,6 +225,13 @@ function Racing({ state }: { state: StatePayload }) {
           )}
         </div>
 
+        {state.announcements.length > 0 ? (
+          <p className="disp-announce" key={state.announcements[0].id}>
+            <span className="disp-announce-tag">Director</span>
+            {state.announcements[0].body}
+          </p>
+        ) : null}
+
         <div className="disp-foot-right">
           <span className="code disp-progress">
             {state.event.heatsDone}/{state.event.heatsTotal}

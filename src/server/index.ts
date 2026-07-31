@@ -21,12 +21,14 @@ import {
   getArchive,
   listArchives,
   lockRoster,
+  messagesFor,
   racerByToken,
   recordResult,
   registerRacer,
   removeRacer,
   renameRacer,
   resetEvent,
+  sendMessage,
   setCurrentMatch,
   setRacerPhoto,
   snapshot,
@@ -274,6 +276,13 @@ async function handle(req: Request): Promise<Response> {
     return mutate(() => renameRacer(racer.id, String(body.name ?? "")));
   }
 
+  // Broadcasts live in the public state payload; direct messages only ever come
+  // back through here, gated on the racer's own token.
+  if (path === "/api/me/messages" && req.method === "GET") {
+    const racer = requireRacer(req);
+    return json(messagesFor(racer.id));
+  }
+
   if (path === "/api/me/photo" && req.method === "POST") {
     const racer = requireRacer(req);
     return await uploadPhoto(req, racer.id);
@@ -328,6 +337,18 @@ async function handle(req: Request): Promise<Response> {
     if (path === "/api/director/result" && req.method === "POST") {
       const body = await readJson(req);
       return mutate(() => recordResult(Number(body.matchId), Number(body.winnerId)));
+    }
+
+    if (path === "/api/director/message" && req.method === "POST") {
+      const body = await readJson(req);
+      const target = body.racerId === null || body.racerId === undefined
+        ? null
+        : Number(body.racerId);
+
+      return mutate(() => {
+        const row = sendMessage(String(body.body ?? ""), target);
+        return { id: row.id };
+      });
     }
 
     if (path === "/api/director/undo" && req.method === "POST") {
