@@ -16,6 +16,22 @@ const SWATCHES = [
   "#6d5027",
 ];
 
+/**
+ * Avalanche hash, not `id % SWATCHES.length`. Racer ids are consecutive and the
+ * roster is a grid, so a plain modulo makes colour a function of column position
+ * — at eight columns the whole grid bands into vertical stripes. Mixing the high
+ * bits down breaks the alignment at every grid width.
+ */
+function swatchFor(id: number): string {
+  let h = id | 0;
+  h ^= h >>> 16;
+  h = Math.imul(h, 2246822507);
+  h ^= h >>> 13;
+  h = Math.imul(h, 3266489909);
+  h ^= h >>> 16;
+  return SWATCHES[(h >>> 0) % SWATCHES.length];
+}
+
 type Props = {
   racer: PublicRacer | null;
   size?: "sm" | "md" | "lg" | "xl";
@@ -42,7 +58,7 @@ export function Avatar({ racer, size = "md", full = false, placeholderLabel }: P
   return (
     <div
       className={`${className} avatar-initial`}
-      style={{ background: SWATCHES[racer.id % SWATCHES.length] }}
+      style={{ background: swatchFor(racer.id) }}
       aria-hidden="true"
     >
       {racer.name.trim().charAt(0).toUpperCase()}
