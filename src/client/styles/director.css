@@ -125,7 +125,9 @@
   margin-top: var(--s-3);
   padding: var(--s-3);
   border-radius: var(--r-sm);
-  background: rgb(232 83 28 / 12%);
+  /* Alpha tint over the sheet's --surface, so it rides whatever that is. Lifted
+     with the surfaces to hold the same separation it used to have. */
+  background: rgb(232 83 28 / 15%);
   border-left: 3px solid var(--track);
   font-size: var(--t-sm);
   color: var(--ink-dim);

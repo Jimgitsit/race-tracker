@@ -23,23 +23,45 @@
   --cold-rail: #7cc0e8;
   --cold-deep: #1f5c86;
 
-  /* Ground: warm dark, biased toward the accent. Not a pure near-black. */
-  --ground: #17120e;
-  --ground-deep: #0f0b08;
-  --surface: #221b15;
-  --surface-2: #2e2620;
-  --surface-3: #3a3129;
-  --line: #3d332b;
-  --line-soft: #2b241e;
+  /*
+   * Ground: warm dark, biased toward the accent. Not a pure near-black.
+   *
+   * The ramp is tuned so a card visibly sits *on* the floor rather than merging
+   * into it: ground→surface is ~12 ΔL*, which is where GitHub's overlay, Radix's
+   * panel step and Material's 8dp elevation all land. The first cut was ~4.6 ΔL*
+   * and read as one flat sheet under room light.
+   *
+   * The two levers pull against each other — the ground can only give up ~2 ΔL*
+   * before it is black, so nearly all the separation has to come from lifting the
+   * surfaces, and every step lighter costs contrast for the ink sitting on them.
+   * --ink-dim and --ink-faint are lifted in step to pay that back (see below).
+   * Hue and saturation are unchanged; this is a value adjustment only.
+   */
+  --ground: #120e0a;
+  --ground-deep: #0a0705;
+  --surface: #31271f;
+  --surface-2: #3e332b;
+  --surface-3: #463b32;
+  --line: #4b3f35;
+  --line-soft: #3c322a;
 
-  /* Ink. */
+  /*
+   * Ink. --ink-dim and --ink-faint are pinned to the *ratios* they had against
+   * the old, darker --surface (6.35:1 and 2.88:1), not to their old hex — raising
+   * a surface without raising the muted inks on it is how a contrast pass quietly
+   * makes secondary text worse. --ink is left alone: at 13:1 on a card it still
+   * clears AAA by nearly 2x, and no ink value can hold its old 15:1 against a
+   * surface this light (pure white would only reach 14.6:1).
+   */
   --ink: #f7f1ea;
-  --ink-dim: #a99c90;
-  --ink-faint: #6e6259;
+  --ink-dim: #b5aa9f;
+  --ink-faint: #7a6c62;
 
   /* Semantic — separate from the accent, per the information-design rule. */
   --win: #63c257;
-  --danger: #e5484d;
+  /* Lifted with the surfaces: it is used as *text* (.error-msg, .btn-danger), and
+     at the old value it fell to 3.7:1 on a card. Same hue and saturation. */
+  --danger: #e86064;
   --gold: #f2b636;
   --silver: #c9ccd1;
   --bronze: #c8813f;

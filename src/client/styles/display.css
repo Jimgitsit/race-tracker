@@ -6,7 +6,9 @@
 .disp {
   height: 100dvh;
   overflow: hidden;
-  background: radial-gradient(120% 90% at 50% 0%, #1d1610 0%, var(--ground-deep) 70%);
+  /* Hand-tuned to sit ~2 L* over --ground. It has to move when the ground does,
+     or the vignette reads as a hot spot rather than a lift. */
+  background: radial-gradient(120% 90% at 50% 0%, #181310 0%, var(--ground-deep) 70%);
 }
 
 .disp-eyebrow {
@@ -382,7 +384,7 @@
   padding: var(--s-2) var(--s-1);
   border-radius: var(--r-md);
   border: 1px dashed var(--line);
-  background: rgb(255 255 255 / 2%);
+  background: rgb(255 255 255 / 3%);
   min-width: 46px;
 }
 
@@ -653,7 +655,7 @@
   min-height: 40px;
   padding: 0 var(--s-4);
   border-radius: 999px;
-  background: rgb(15 11 8 / 92%);
+  background: rgb(10 7 5 / 92%);
   border: 1px solid var(--track);
   font-family: var(--body);
   font-size: var(--t-sm);
@@ -697,7 +699,7 @@
   gap: var(--s-3);
   padding: var(--s-2) var(--s-3);
   border-radius: 999px;
-  background: rgb(15 11 8 / 94%);
+  background: rgb(10 7 5 / 94%);
   border: 1px solid var(--track);
   box-shadow: var(--shadow-lg);
   backdrop-filter: blur(8px);

@@ -27,7 +27,8 @@ function Code({ value, size = 220, className }: CodeProps) {
       type: "svg",
       margin: 1,
       errorCorrectionLevel: "M",
-      color: { dark: "#17120e", light: "#f7f1ea" },
+      // Literal copies of --ground and --ink: the encoder takes hex, not var().
+      color: { dark: "#120e0a", light: "#f7f1ea" },
     })
       .then((markup) => {
         if (live) {

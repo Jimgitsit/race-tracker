@@ -48,6 +48,13 @@ stays inspectable.
 - **A React `onWheel` prop cannot `preventDefault()`.** React registers wheel on its root as
   passive, so the page scrolls out from under you. The canvas zoom is a native
   `addEventListener("wheel", …, { passive: false })` for exactly this reason.
+- **`background: linear-gradient(…, var(--surface) 60%)` is a card-killer.** `background` is
+  the shorthand, so it resets `background-color` and the tinted end composites onto the page
+  instead of the card. Always `linear-gradient(…, transparent 60%), var(--surface)`. Four
+  rules have had this bug; grep before adding a fifth.
+- **Colour lives in `tokens.css`.** Two hardcoded copies exist on purpose and drift silently
+  when the ramp moves: `QR.tsx` (the encoder takes hex, not `var()`) and the `.disp` vignette
+  in `display.css`, hand-tuned to sit ~2 L\* over `--ground`. Change a token, check both.
 - **Two QR types, different exposure rules.** The join QR is a bare URL and is safe anywhere.
   The re-link QR carries a racer's token and must never reach the big screen. They're
   separate components on purpose.

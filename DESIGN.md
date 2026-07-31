@@ -685,6 +685,19 @@ brand logo or the default "dark sports app with a neon accent."
 - **Committed dark, single theme.** The TV demands it, it's an evening event, and all three
   views are in the same room at the same time — consistency across them *is* the design.
   Contrast is set high enough that the director's phone still works in daylight.
+- **Ground→surface is ~12 ΔL\*.** A card has to visibly sit *on* the floor; the first cut was
+  4.6 and read as one flat sheet. WCAG ratio is the wrong ruler at this end of the scale —
+  its `+0.05` flare term crushes every near-black pairing into 1.0–1.5 — so the ramp is sized
+  in CIELAB and calibrated against Tailwind 950→800, Radix 1→4 and Material's 8dp step. The
+  ground can only give up ~2 L\* before it is black, so the separation comes from lifting the
+  surfaces, and `--ink-dim` / `--ink-faint` are lifted *in step* to hold their old ratios —
+  raising a surface without raising the muted inks on it is how a contrast pass quietly makes
+  secondary text worse.
+- **Tint over a surface, never a gradient that replaces it.** `background: linear-gradient(…,
+  var(--surface) 60%)` is the shorthand, so it resets `background-color` and the tinted end
+  composites onto the *page*, not the card — the card loses its edge exactly where it was
+  meant to be loudest. Write it as `linear-gradient(…, transparent 60%), var(--surface)`.
+  This has now been the bug in four separate rules.
 - **The signature is the track** (§3.3): bracket connectors drawn as orange track with
   raised rails, and the winner's photo travelling along one when a result lands. Boldness
   is spent there; everything around it stays quiet.

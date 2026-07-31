@@ -237,9 +237,14 @@
   border-left: 3px solid var(--line);
 }
 
+/* Tint layered over the surface, not a gradient that replaces it. Fading to
+   `var(--surface)` overrode .rc-status's own background, so the left end of the
+   card was 16% orange composited straight onto the page — the card lost its edge
+   exactly where it was meant to be loudest. Same trick, and same reason, as
+   .rc-toast below. */
 .rc-status-up-next {
   border-left-color: var(--track);
-  background: linear-gradient(90deg, rgb(232 83 28 / 16%), var(--surface) 60%);
+  background: linear-gradient(90deg, rgb(232 83 28 / 16%), transparent 60%), var(--surface);
 }
 
 .rc-status-won {
@@ -601,10 +606,12 @@
   color: var(--track);
 }
 
+/* An alpha tint rides its backdrop, so darkening the ground took this panel down
+   with it. 13% holds the lift it used to have off the page. */
 .rc-rules-note {
   padding: var(--s-3);
   border-radius: var(--r-sm);
-  background: rgb(232 83 28 / 10%);
+  background: rgb(232 83 28 / 13%);
   border-left: 3px solid var(--track);
 }
 
@@ -678,13 +685,14 @@
   gap: var(--s-2);
   padding: var(--s-4);
   border-radius: var(--r-md);
-  background: linear-gradient(90deg, rgb(232 83 28 / 18%), var(--surface) 70%);
+  /* Tint over an opaque surface — see .rc-status-up-next. */
+  background: linear-gradient(90deg, rgb(232 83 28 / 18%), transparent 70%), var(--surface);
   border: 1px solid var(--track-deep);
   border-left: 4px solid var(--track);
 }
 
 .rc-msg-direct {
-  background: linear-gradient(90deg, rgb(62 143 196 / 18%), var(--surface) 70%);
+  background: linear-gradient(90deg, rgb(62 143 196 / 18%), transparent 70%), var(--surface);
   border-color: var(--cold-deep);
   border-left-color: var(--cold);
 }
