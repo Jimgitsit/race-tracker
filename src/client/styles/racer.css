@@ -598,3 +598,16 @@
   text-transform: none;
   letter-spacing: 0.04em;
 }
+
+/* For the handful of people who already know the term — deliberately quiet, so
+   it reads as an aside rather than something you need to understand. */
+.rc-rules-aside {
+  margin-top: calc(var(--s-4) * -1);
+  font-size: var(--t-sm);
+  color: var(--ink-faint);
+}
+
+.rc-rules-aside strong {
+  color: var(--ink-dim);
+  font-weight: 600;
+}

@@ -555,7 +555,8 @@ function PhotoCard({ racer }: { racer: NonNullable<ReturnType<typeof racerById>>
 /**
  * Written to be understood by someone who has had a few, standing next to a
  * track, on a phone. Short sentences, one idea each, and the viewer's own state
- * up top — "you have one life left" lands where "double elimination" does not.
+ * up top — "one loss left" lands where "double elimination" does not, though the
+ * term itself is named once for the people who already know it.
  */
 function RulesTab({ state, meId }: { state: StatePayload; meId: number }) {
   const me = racerById(state, meId);
@@ -563,23 +564,25 @@ function RulesTab({ state, meId }: { state: StatePayload; meId: number }) {
   const lives = Math.max(0, 2 - losses);
   const out = me?.status === "out";
 
-  const headline = out
-    ? "You're out"
-    : lives === 2
-      ? "You get two lives"
-      : "One life left";
+  // The headline is a floor, not a countdown: two races is the minimum anyone
+  // gets, but a racer who keeps winning in the losers bracket races many more.
+  // The pips track losses to spare, which is the thing that actually runs out.
+  const headline = out ? "You're out" : losses === 0 ? "You get two races" : "One loss left";
 
   const sub = out
     ? `You finished ${me?.placement ?? "—"} of ${state.event.racerCount}.`
-    : lives === 2
-      ? "Both still yours."
-      : "Lose again and you're done.";
+    : losses === 0
+      ? "At least two. It takes two losses to knock you out."
+      : "Win and you keep racing. Lose and you're done.";
+
+  const pipLabel =
+    lives === 2 ? "Two losses to spare" : lives === 1 ? "One loss to spare" : "No losses to spare";
 
   return (
     <div className="rc-rules">
       <section className="rc-lives">
         <h1 className="rc-lives-head">{headline}</h1>
-        <div className="rc-pips" role="img" aria-label={`${lives} of 2 lives left`}>
+        <div className="rc-pips" role="img" aria-label={pipLabel}>
           <span className={`rc-pip ${lives >= 1 ? "" : "rc-pip-spent"}`} />
           <span className={`rc-pip ${lives >= 2 ? "" : "rc-pip-spent"}`} />
         </div>
@@ -588,6 +591,10 @@ function RulesTab({ state, meId }: { state: StatePayload; meId: number }) {
 
       <p className="rc-rules-lead">
         Lose a race and you keep racing. Lose twice and you're done. That's the whole format.
+      </p>
+
+      <p className="rc-rules-aside">
+        If the term means anything to you: it's a <strong>double-elimination</strong> bracket.
       </p>
 
       <section className="rc-rules-block">
@@ -621,7 +628,7 @@ function RulesTab({ state, meId }: { state: StatePayload; meId: number }) {
           <h2 className="rc-rules-h">Consolation bracket</h2>
           <p>
             Knocked out of the main race and still here? You've been put in a second one. Same
-            idea, except there you only get one life.
+            idea, except that one is single elimination — lose once and you're done.
           </p>
         </section>
       ) : null}
