@@ -155,6 +155,31 @@ export function roundsOf(state: StatePayload, brackets: string[]): RoundColumn[]
   );
 }
 
+/**
+ * What fills an empty slot, in words rather than a code. "Winner of W1M5" makes
+ * a person cross-reference a chart; "Winner of Ada vs Jim" tells them who they
+ * might be racing. Falls back to the round when the feeding heat's racers aren't
+ * themselves decided yet, which is the deepest anything useful can be said.
+ */
+export function sourceLabel(
+  state: StatePayload,
+  match: PublicMatch,
+  side: "a" | "b",
+): string {
+  const edge = state.edges.find((e) => e.to === match.id && e.toSlot === side);
+  const from = edge ? state.matches.find((m) => m.id === edge.from) : undefined;
+
+  if (!edge || !from) {
+    return "TBD";
+  }
+
+  const verb = edge.outcome === "W" ? "Winner" : "Loser";
+  const a = racerById(state, from.a);
+  const b = racerById(state, from.b);
+
+  return a && b ? `${verb} of ${a.name} vs ${b.name}` : `${verb} of ${from.label}`;
+}
+
 export function recordOf(racer: PublicRacer): string {
   return `${racer.wins}–${racer.losses}`;
 }

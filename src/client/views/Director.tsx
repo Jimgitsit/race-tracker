@@ -458,7 +458,7 @@ function Racing({ state }: { state: StatePayload }) {
       <header className="dir-racing-head">
         <p className="eyebrow">{current.label}</p>
         <p className="code">
-          {current.code} · heat {state.event.heatsDone + 1} of {state.event.heatsTotal}
+          heat {state.event.heatsDone + 1} of {state.event.heatsTotal}
         </p>
       </header>
 

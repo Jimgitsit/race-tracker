@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { joinUrl, type PublicMatch, type StatePayload } from "../lib/api.ts";
-import { matchById, racerById, roundsOf, type RoundColumn } from "../lib/derive.ts";
+import { matchById, racerById, roundsOf, sourceLabel, type RoundColumn } from "../lib/derive.ts";
 import { useResultFlash } from "../lib/useRace.ts";
 import { timeAgo, useNow } from "../lib/time.ts";
 import { Avatar } from "../components/Avatar.tsx";
 import { JoinQR } from "../components/QR.tsx";
 
-type Mode = "AUTO" | "WINNERS" | "LOSERS" | "CONSOLATION" | "EVERYTHING";
+type Mode = "AUTO" | "MAIN" | "LOSERS" | "CONSOLATION" | "EVERYTHING";
 type Density = "full" | "compact" | "collapsed";
 
-const MODES: Mode[] = ["AUTO", "WINNERS", "LOSERS", "CONSOLATION", "EVERYTHING"];
+const MODES: Mode[] = ["AUTO", "MAIN", "LOSERS", "CONSOLATION", "EVERYTHING"];
 const CONTROL_TIMEOUT_MS = 6000;
 
 export function DisplayView({ state }: { state: StatePayload }) {
@@ -344,7 +344,7 @@ function ControlBar({ mode, zoom }: { mode: Mode; zoom: number | null }) {
 
 function bracketsFor(mode: Mode, hasConsolation: boolean): string[] {
   switch (mode) {
-    case "WINNERS":
+    case "MAIN":
       return ["W", "GF", "GFR"];
     case "LOSERS":
       return ["L"];
@@ -560,10 +560,6 @@ function BracketCanvas({
   );
 }
 
-function shortSource(source: string | null): string {
-  return source ? source.replace(/^(Winner|Loser) of /, "") : "TBD";
-}
-
 /** Rounded elbow: out, across, in. */
 function elbow(x1: number, y1: number, x2: number, y2: number): string {
   const midX = x1 + (x2 - x1) / 2;
@@ -693,14 +689,14 @@ function DisplayMatch({
     <div className={classes.join(" ")} ref={(el) => register(match.id, el)}>
       <DisplaySide
         racer={a}
-        source={match.aSource}
+        source={sourceLabel(state, match, "a")}
         won={match.winner !== null && match.winner === match.a}
         lost={match.winner !== null && match.winner !== match.a && a !== null}
         density={density}
       />
       <DisplaySide
         racer={b}
-        source={match.bSource}
+        source={sourceLabel(state, match, "b")}
         won={match.winner !== null && match.winner === match.b}
         lost={match.winner !== null && match.winner !== match.b && b !== null}
         density={density}
@@ -717,7 +713,7 @@ function DisplaySide({
   density,
 }: {
   racer: ReturnType<typeof racerById>;
-  source: string | null;
+  source: string;
   won: boolean;
   lost: boolean;
   density: Density;
@@ -733,11 +729,7 @@ function DisplaySide({
   return (
     <div className={classes.join(" ")}>
       {density === "full" ? <Avatar racer={racer} size="sm" /> : null}
-      <span className="dm-name racer-name">
-        {/* "Winner of L2M1" is useful up close; at fifteen feet the code alone
-            carries the same information in a third of the width. */}
-        {racer ? racer.name : density === "full" ? (source ?? "TBD") : shortSource(source)}
-      </span>
+      <span className="dm-name racer-name">{racer ? racer.name : source}</span>
       {won ? <span className="dm-check">✓</span> : null}
     </div>
   );

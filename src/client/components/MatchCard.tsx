@@ -1,4 +1,4 @@
-import { racerById } from "../lib/derive.ts";
+import { racerById, sourceLabel } from "../lib/derive.ts";
 import type { PublicMatch, StatePayload } from "../lib/api.ts";
 import { Avatar } from "./Avatar.tsx";
 
@@ -24,7 +24,6 @@ function Side({
 }) {
   const racerId = side === "a" ? match.a : match.b;
   const racer = racerById(state, racerId);
-  const source = side === "a" ? match.aSource : match.bSource;
   const decided = match.winner !== null;
   const won = decided && match.winner === racerId;
   const lost = decided && !won && racer !== null;
@@ -40,7 +39,9 @@ function Side({
   return (
     <div className={classes.join(" ")}>
       {compact ? null : <Avatar racer={racer} size="sm" />}
-      <span className="mc-name racer-name">{racer ? racer.name : (source ?? "TBD")}</span>
+      <span className="mc-name racer-name">
+        {racer ? racer.name : sourceLabel(state, match, side)}
+      </span>
       {won ? (
         <span className="mc-check" aria-label="won">
           ✓
@@ -70,8 +71,10 @@ export function MatchCard({ state, match, dim, current, compact = false, onSelec
 
   const body = (
     <>
+      {/* No match code here. The column header already names the round, and a
+          code is only useful to someone cross-referencing a chart. */}
       <div className="mc-head">
-        <span className="code">{match.code}</span>
+        <span className="code">{match.label}</span>
         {match.state === "bye" ? <span className="mc-tag">bye</span> : null}
         {current ? <span className="mc-tag mc-tag-live">racing</span> : null}
       </div>

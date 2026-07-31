@@ -20,21 +20,34 @@ export function matchRef(bracket: BracketKind, round: number, slot: number): Mat
   return `${bracket}-${round}-${slot}`;
 }
 
-/** Short display code, 1-based match number: `W1M3`, `L4M2`, `GF`, `GFR`, `C2M1`. */
+/**
+ * The winners bracket is called the **Main** bracket everywhere a person can see
+ * it. Internally it stays `W` — in the DB, the edges and the engine — because
+ * renaming that would be a migration for a wording change.
+ */
+const DISPLAY_LETTER: Record<BracketKind, string> = {
+  W: "M",
+  L: "L",
+  GF: "GF",
+  GFR: "GFR",
+  C: "C",
+};
+
+/** Short display code, 1-based match number: `M1M3`, `L4M2`, `GF`, `GFR`, `C2M1`. */
 export function matchCode(bracket: BracketKind, round: number, slot: number): string {
   if (bracket === "GF" || bracket === "GFR") {
     return bracket;
   }
-  return `${bracket}${round}M${slot + 1}`;
+  return `${DISPLAY_LETTER[bracket]}${round}M${slot + 1}`;
 }
 
 export function roundLabel(bracket: BracketKind, round: number, rounds: number): string {
   switch (bracket) {
     case "W":
       if (round === rounds) {
-        return "Winners Final";
+        return "Main Final";
       }
-      return `Winners Round ${round}`;
+      return `Main Round ${round}`;
     case "L":
       if (round === rounds * 2 - 2) {
         return "Losers Final";
