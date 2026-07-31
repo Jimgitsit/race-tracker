@@ -36,7 +36,7 @@ const ZOOM_STEP = 1.15;
 
 /** Follow mode's zoom, as a multiple of fit, and where it parks the live heat
     across the frame — a third in, so the bracket ahead stays visible. */
-const FOLLOW_ZOOM = 4;
+const FOLLOW_ZOOM = 3;
 const FOLLOW_BIAS = 0.33;
 
 function clamp(value: number, low: number, high: number): number {
@@ -358,7 +358,6 @@ function Racing({ state }: { state: StatePayload }) {
           follow={follow}
           flash={flash}
           onView={setView}
-          onFocus={setFocus}
           onFit={setFit}
           onManual={manual}
         />
@@ -594,7 +593,7 @@ function Controls({
         </button>
       </div>
 
-      <span className="disp-ctl-hint">drag to pan · click a round</span>
+      <span className="disp-ctl-hint">drag to pan</span>
     </div>
   );
 }
@@ -625,7 +624,6 @@ function BracketCanvas({
   follow,
   flash,
   onView,
-  onFocus,
   onFit,
   onManual,
 }: {
@@ -637,7 +635,6 @@ function BracketCanvas({
   follow: boolean;
   flash: number | null;
   onView: (view: View) => void;
-  onFocus: (index: number) => void;
   onFit: (fit: number) => void;
   onManual: () => void;
 }) {
@@ -888,7 +885,9 @@ function BracketCanvas({
     const dx = event.clientX - held.x;
     const dy = event.clientY - held.y;
 
-    // A few pixels of slop, so a click that wobbles still counts as a click.
+    // A few pixels of slop before the bracket starts moving, so resting a hand on
+    // the trackpad doesn't nudge it. Latched, so once a drag is underway coming
+    // back inside the threshold doesn't stall it.
     if (!dragged.current && Math.abs(dx) < 4 && Math.abs(dy) < 4) {
       return;
     }
@@ -939,7 +938,7 @@ function BracketCanvas({
         </svg>
 
         <div className="disp-tree" ref={tree}>
-          {ordered.map(({ column, density, startsGroup, index }) => (
+          {ordered.map(({ column, density, startsGroup }) => (
             <Column
               key={column.key}
               state={state}
@@ -947,13 +946,6 @@ function BracketCanvas({
               density={density}
               startsGroup={startsGroup}
               currentId={state.event.currentMatch}
-              onPick={() => {
-                // The click that ends a drag is still a click. Ignore it, or
-                // panning across the bracket would re-focus wherever you let go.
-                if (!dragged.current) {
-                  onFocus(index);
-                }
-              }}
               register={(id, el) => {
                 if (el) {
                   boxes.current.set(id, el);
@@ -1031,7 +1023,6 @@ function Column({
   density,
   startsGroup,
   currentId,
-  onPick,
   register,
 }: {
   state: StatePayload;
@@ -1039,7 +1030,6 @@ function Column({
   density: Density;
   startsGroup: boolean;
   currentId: number | null;
-  onPick: () => void;
   register: (id: number, el: HTMLElement | null) => void;
 }) {
   const group = startsGroup ? " disp-col-group" : "";
@@ -1047,7 +1037,7 @@ function Column({
   if (density === "collapsed") {
     const done = column.matches.filter((m) => m.winner !== null).length;
     return (
-      <section className={`disp-col disp-col-collapsed${group}`} onClick={onPick}>
+      <section className={`disp-col disp-col-collapsed${group}`}>
         <span className="disp-col-code">{column.short}</span>
         <span className="disp-col-tally code">
           {done > 0 ? `✓${done}` : `${column.matches.length}`}
@@ -1057,7 +1047,7 @@ function Column({
   }
 
   return (
-    <section className={`disp-col disp-col-${density}${group}`} onClick={onPick}>
+    <section className={`disp-col disp-col-${density}${group}`}>
       <h2 className="disp-col-head">{column.label}</h2>
       <div className="disp-col-body">
         {column.matches.map((match) => (

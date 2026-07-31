@@ -374,13 +374,10 @@
   border-left: 1px solid var(--line-soft);
 }
 
-/* Clicking a round is the whole navigation model, so every column is a target —
-   including a collapsed one, which is the most useful click on the screen. */
 .disp-col {
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
-  cursor: pointer;
 }
 
 .disp-col-head {

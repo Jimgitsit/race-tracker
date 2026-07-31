@@ -234,7 +234,14 @@ and renders every round at one of three densities:
 Then measure the composed bracket and scale it to fit
 (`transform: scale(min(vw/w, vh/h)); transform-origin: top left`), re-measuring on resize.
 Because culling already did most of the work, the scale rarely drops far below 1 — which is
-exactly what keeps photos legible. Focus advances automatically as the race progresses.
+exactly what keeps photos legible.
+
+**Focus is automatic and stays automatic.** It follows the current match, and the arrow keys
+can step it while fitted. Clicking a column to focus it was built and removed: with Follow
+on, focusing re-flows the layout, which makes Follow re-aim on the live heat — so the click
+appeared to do nothing, and in "All rounds" it genuinely did nothing, because that mode
+forces every column compact before focus is consulted. Nobody missed it. Don't re-add a
+click target here without first making it survive both of those.
 
 **Track connectors — the signature.** Connectors are not generic elbows: they are drawn as
 **Hot Wheels track**, in orange, with the raised-rail cross-section. Draw each edge as an
@@ -264,12 +271,11 @@ brackets and differed only in density — the part that made the control unlearn
 |---|---|---|
 | **Bracket** | All · Winners · Losers · Consolation | which brackets are on screen (Consolation only appears once one exists) |
 | **All rounds** | off / on | off = collapse what's settled (the density table above); on = draw every round the same size |
-| **Follow** | off / on | zoom to 4× fit and park the live heat a third across, re-aiming as the race moves |
+| **Follow** | off / on | zoom to 3× fit and park the live heat a third across, re-aiming as the race moves |
 
 | Gesture | Action |
 |---|---|
 | Drag | pan, only once the bracket outgrows the frame |
-| Click a round | make it the focus round; a collapsed round is the most useful target on the screen |
 | Double-click | back to fit |
 | ↑ / ↓ / `+` / `-` | zoom in / out |
 | ← / → | pan when zoomed; step the focus round when fitted |
@@ -283,7 +289,7 @@ around a third of life size, so an absolute floor would mean pressing zoom-out m
 bracket bigger. Floor is fit itself (there is nothing below it to see) and zooming back out
 through it returns to fit proper, which recentres.
 
-**Follow mode** sits on the live heat at 4× fit, a third of the way across rather than dead
+**Follow mode** sits on the live heat at 3× fit, a third of the way across rather than dead
 centre — the bracket flows left to right, so the interesting half of the screen is the half
 that hasn't happened yet. It re-aims on layout, not on a timer, so a collapsing round or a
 resized window moves it too. Any hand on the controls (a drag, a zoom, a filter) drops it:
