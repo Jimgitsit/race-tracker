@@ -62,9 +62,21 @@ function storedNumber(key: string): number {
 const CHROME_IDLE_MS = 2500;
 const ZOOM_STEP = 1.15;
 
-/** Follow mode's zoom, as a multiple of fit, and where it parks the live heat
-    across the frame — a third in, so the bracket ahead stays visible. */
-const FOLLOW_ZOOM = 3;
+/**
+ * Follow mode sizes itself off the live heat's own card — the card is made to fill
+ * this much of the frame's width — and *not* off a multiple of fit.
+ *
+ * Fit is a moving target: it rises as rounds settle and collapse, as the filter
+ * narrows to one bracket, as the window changes shape. A multiple of it meant the
+ * heat kept growing through the evening, and "3×" was legible at the start and
+ * far too close by the losers rounds. Anchoring to the card holds the one thing
+ * that actually matters — how big the heat you are watching looks — steady for the
+ * whole race, and it scales with the screen rather than against it.
+ */
+const FOLLOW_CARD_SHARE = 0.23;
+
+/** Where follow parks the live heat across the frame — a third in, so the bracket
+    ahead of it stays visible. */
 const FOLLOW_BIAS = 0.33;
 
 function clamp(value: number, low: number, high: number): number {
@@ -914,7 +926,12 @@ function BracketCanvas({
       return;
     }
 
-    const next = Math.min(fit * FOLLOW_ZOOM, zoomCeiling(fit));
+    // Frame width and card width are both stable; only the whole bracket's laid-out
+    // size moves, which is why fit moves. Sizing between the two stable measurements
+    // keeps the heat the same size on screen all evening. Floored at fit because
+    // there is nothing to see below it, capped absolutely so a narrow card in a
+    // one-column filter can't fill the screen.
+    const next = clamp((frame.w * FOLLOW_CARD_SHARE) / box.offsetWidth, fit, 3);
     onView({
       scale: next,
       x: frame.w * FOLLOW_BIAS - (box.offsetLeft + box.offsetWidth / 2) * next,

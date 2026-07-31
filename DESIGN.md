@@ -285,7 +285,7 @@ brackets and differed only in density — the part that made the control unlearn
 |---|---|---|
 | **Bracket** | All · Winners · Losers · Consolation | which brackets are on screen (Consolation only appears once one exists) |
 | **All rounds** | off / on | off = collapse what's settled (the density table above); on = draw every round the same size |
-| **Follow** | off / on | zoom to 3× fit and park the live heat a third across, re-aiming as the race moves |
+| **Follow** | off / on | size the live heat to ~23% of the frame, park it a third across, re-aim as the race moves |
 
 | Gesture | Action |
 |---|---|
@@ -320,9 +320,24 @@ around a third of life size, so an absolute floor would mean pressing zoom-out m
 bracket bigger. Floor is fit itself (there is nothing below it to see) and zooming back out
 through it returns to fit proper, which recentres.
 
-**Follow mode** sits on the live heat at 3× fit, a third of the way across rather than dead
-centre — the bracket flows left to right, so the interesting half of the screen is the half
-that hasn't happened yet. It re-aims on layout, not on a timer, so a collapsing round or a
+**Follow mode** sits on the live heat a third of the way across rather than dead centre — the
+bracket flows left to right, so the interesting half of the screen is the half that hasn't
+happened yet.
+
+Its zoom is chosen so the live heat's **card fills ~23% of the frame's width**, and is
+explicitly *not* a multiple of fit. Fit is a moving target: it rises as rounds settle and
+collapse, as a filter narrows to one bracket, as the window changes shape. A multiple of it
+meant the heat kept growing through the evening — legible in winners round 1 and far too
+close by the losers rounds. Frame width and card width are both stable; only the whole
+bracket's laid-out size moves, which is exactly what makes fit move. Anchoring between the
+two stable measurements holds the thing that actually matters — how big the heat you are
+watching looks — steady for the entire race, and scales with the screen rather than against
+it. No extra container is needed for this: `.disp-canvas` is already a fixed frame.
+
+A consequence worth expecting: **the zoom readout drifts while following**, because it reads
+as a percentage of fit and fit is the thing that moves. The apparent size is the constant,
+not the number. If the live heat isn't rendered at all — filtered out, or in a collapsed
+round — follow has nothing to aim at and does nothing. It re-aims on layout, not on a timer, so a collapsing round or a
 resized window moves it too. Any hand on the controls (a drag, a zoom, a filter) drops it:
 auto-framing that fights the person driving is worse than none.
 
