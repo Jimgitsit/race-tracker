@@ -373,13 +373,9 @@
 }
 
 .rc-lives-head {
-  font-size: var(--t-xl);
+  font-size: var(--t-lg);
+  line-height: 1.08;
   color: var(--ink);
-}
-
-.rc-lives-second {
-  font-size: var(--t-md);
-  color: var(--ink-dim);
 }
 
 .rc-pips-block {
@@ -403,22 +399,32 @@
   gap: var(--s-3);
 }
 
+/* An empty slot has to read as a slot. A 1px dashed hairline in --line sits
+   almost on top of the card background; a recessed well with a solid mid-tone
+   edge is visible at arm's length in a dim garage. */
 .rc-pip {
   flex: 1;
-  height: 16px;
+  height: 18px;
   border-radius: 3px;
-  border: 1px dashed var(--line);
+  border: 1px solid var(--surface-3);
+  background: var(--ground-deep);
+  box-shadow: inset 0 1px 3px rgb(0 0 0 / 55%);
   transition: background 300ms ease;
 }
 
 .rc-pip-taken {
   border: none;
+  box-shadow: none;
   background: linear-gradient(
     to bottom,
     var(--cold-rail) 0 3px,
-    var(--cold) 3px 13px,
-    var(--cold-rail) 13px 16px
+    var(--cold) 3px 15px,
+    var(--cold-rail) 15px 18px
   );
+}
+
+.rc-pips-label {
+  color: var(--ink-dim);
 }
 
 .rc-rules-block {

@@ -575,11 +575,12 @@ function RulesTab({ state, meId }: { state: StatePayload; meId: number }) {
   return (
     <div className="rc-rules">
       <section className="rc-lives">
-        <h1 className="rc-lives-head">Win and you get to keep racing.</h1>
-        <p className="rc-lives-second">Lose twice and you're out.</p>
+        <h1 className="rc-lives-head">
+          Win and you get to keep racing, lose twice and you're out.
+        </h1>
 
         <div className="rc-pips-block">
-          <p className="eyebrow">Losses</p>
+          <p className="eyebrow rc-pips-label">Losses</p>
           <div className="rc-pips" role="img" aria-label={`${losses} of 2 losses`}>
             <span className={`rc-pip ${losses >= 1 ? "rc-pip-taken" : ""}`} />
             <span className={`rc-pip ${losses >= 2 ? "rc-pip-taken" : ""}`} />
