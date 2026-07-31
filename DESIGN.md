@@ -285,7 +285,7 @@ brackets and differed only in density — the part that made the control unlearn
 |---|---|---|
 | **Bracket** | All · Winners · Losers · Consolation | which brackets are on screen (Consolation only appears once one exists) |
 | **All rounds** | off / on | off = collapse what's settled (the density table above); on = draw every round the same size |
-| **Follow** | off / on | size the live heat to ~23% of the frame, park it a third across, re-aim as the race moves |
+| **Follow** | off / on | size the live heat to ~18% of the frame, park it a third across, re-aim as the race moves |
 
 | Gesture | Action |
 |---|---|
@@ -324,7 +324,7 @@ through it returns to fit proper, which recentres.
 bracket flows left to right, so the interesting half of the screen is the half that hasn't
 happened yet.
 
-Its zoom is chosen so the live heat's **card fills ~23% of the frame's width**, and is
+Its zoom is chosen so the live heat's **card fills ~18% of the frame's width**, and is
 explicitly *not* a multiple of fit. Fit is a moving target: it rises as rounds settle and
 collapse, as a filter narrows to one bracket, as the window changes shape. A multiple of it
 meant the heat kept growing through the evening — legible in winners round 1 and far too

@@ -73,7 +73,7 @@ const ZOOM_STEP = 1.15;
  * that actually matters — how big the heat you are watching looks — steady for the
  * whole race, and it scales with the screen rather than against it.
  */
-const FOLLOW_CARD_SHARE = 0.23;
+const FOLLOW_CARD_SHARE = 0.184;
 
 /** Where follow parks the live heat across the frame — a third in, so the bracket
     ahead of it stays visible. */
