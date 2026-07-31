@@ -760,7 +760,7 @@ function DisplaySide({
     <div className={classes.join(" ")}>
       {density === "full" ? <Avatar racer={racer} size="sm" /> : null}
       <span className="dm-name racer-name">{racer ? racer.name : source}</span>
-      {won ? <span className="dm-check">✓</span> : null}
+      {won ? <span className="dm-check">Winner</span> : null}
     </div>
   );
 }

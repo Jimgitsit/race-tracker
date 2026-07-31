@@ -44,11 +44,7 @@ function Side({
       <span className="mc-name racer-name">
         {racer ? racer.name : sourceLabel(state, match, side)}
       </span>
-      {won ? (
-        <span className="mc-check" aria-label="won">
-          ✓
-        </span>
-      ) : null}
+      {won ? <span className="mc-check">Winner</span> : null}
     </div>
   );
 }

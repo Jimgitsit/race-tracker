@@ -33,11 +33,19 @@ const TABS: { id: Tab; label: string }[] = [
 const ID_KEY = "race-tracker.id";
 const TAB_KEY = "race-tracker.tab";
 const WATCH_KEY = "race-tracker.watching";
+const READ_KEY = "race-tracker.msgRead";
+const GROUP_KEY = "race-tracker.bracketGroup";
+const PATH_KEY = "race-tracker.myPath";
 
 /** Validated against the known tabs, so a stale stored value can't blank the view. */
 function storedTab(): Tab {
   const stored = localStorage.getItem(TAB_KEY);
   return TABS.some((t) => t.id === stored) ? (stored as Tab) : "now";
+}
+
+function storedNumber(key: string): number {
+  const value = Number(localStorage.getItem(key));
+  return Number.isFinite(value) ? value : 0;
 }
 
 export function RacerView({
@@ -239,13 +247,22 @@ function Main({
   onJoin?: () => void;
 }) {
   const [tab, setTab] = useState<Tab>(storedTab);
+  const [inbox, setInbox] = useState(false);
   const messages = useMessages(state, meId);
+  const { unread, markRead } = useUnread(messages);
 
   useRaceAlerts(state, meId, messages);
 
   useEffect(() => {
     localStorage.setItem(TAB_KEY, tab);
   }, [tab]);
+
+  // Reading the list is the same acknowledgement as dismissing the card: after
+  // this there is nothing left to interrupt anyone with.
+  const openInbox = () => {
+    markRead();
+    setInbox(true);
+  };
 
   return (
     <div className="rc">
@@ -268,12 +285,21 @@ function Main({
         </div>
       </header>
 
+      {/* On the Now tab the message has a card of its own; anywhere else it has to
+          come to you, because the alert chime doesn't say what was said. */}
+      {unread && tab !== "now" ? (
+        <MessageToast message={unread} onOpen={openInbox} onDismiss={markRead} />
+      ) : null}
+
       <main className="rc-body">
         {tab === "now" ? (
           <NowTab
             state={state}
             meId={meId}
             messages={messages}
+            unread={unread}
+            onOpenInbox={openInbox}
+            onDismissMessage={markRead}
             onExplain={() => setTab("rules")}
             onJoin={onJoin}
           />
@@ -297,6 +323,8 @@ function Main({
         ))}
       </nav>
 
+      <Inbox open={inbox} messages={messages} onClose={() => setInbox(false)} />
+
       {/* An id with no racer behind it means the director removed them after the
           roster locked — distinct from a spectator, who never had one. */}
       {meId !== null && racerById(state, meId) === null ? (
@@ -304,6 +332,26 @@ function Main({
       ) : null}
     </div>
   );
+}
+
+/**
+ * The newest message, until it's acknowledged. "Read" is one id in localStorage
+ * rather than a per-message set: messages arrive in order and are read in order,
+ * so a high-water mark is the whole of the state and survives a refresh.
+ */
+function useUnread(messages: Message[]) {
+  const [read, setRead] = useState(() => storedNumber(READ_KEY));
+
+  const latest = messages[0] ?? null;
+  const unread = latest !== null && latest.id > read ? latest : null;
+
+  const markRead = () => {
+    const top = messages[0]?.id ?? 0;
+    localStorage.setItem(READ_KEY, String(top));
+    setRead(top);
+  };
+
+  return { unread, markRead };
 }
 
 function ShareButton({ state }: { state: StatePayload }) {
@@ -352,15 +400,30 @@ function NowTab({
   state,
   meId,
   messages,
+  unread,
+  onOpenInbox,
+  onDismissMessage,
   onExplain,
   onJoin,
 }: {
   state: StatePayload;
   meId: number | null;
   messages: Message[];
+  unread: Message | null;
+  onOpenInbox: () => void;
+  onDismissMessage: () => void;
   onExplain: () => void;
   onJoin?: () => void;
 }) {
+  const messageSlot = (
+    <MessageSlot
+      messages={messages}
+      unread={unread}
+      onOpenInbox={onOpenInbox}
+      onDismiss={onDismissMessage}
+    />
+  );
+
   const me = racerById(state, meId);
   const status = statusFor(state, me);
   const current = matchById(state, state.event.currentMatch);
@@ -383,7 +446,7 @@ function NowTab({
             </button>
           ) : null}
         </section>
-        <MessageList messages={messages} />
+        {messageSlot}
         {me ? <AlertsCard /> : null}
         {me ? <PhotoCard racer={me} /> : null}
       </div>
@@ -399,7 +462,7 @@ function NowTab({
 
   return (
     <div className="stack">
-      <MessageList messages={messages} />
+      {messageSlot}
 
       {current ? <NowCard state={state} match={current} meId={meId} /> : null}
 
@@ -445,45 +508,120 @@ function NowTab({
 function WatchingNote() {
   return (
     <section className="rc-watching">
-      <p className="rc-watching-head">You're watching</p>
+      <p className="rc-watching-head">You're spectating</p>
       <p className="rc-watching-sub">
         Everything updates on its own. Tap <strong>Big screen</strong> up top to put the whole
-        bracket on a TV — or turn your phone sideways.
+        bracket on a TV.
       </p>
     </section>
   );
 }
 
 /**
- * Newest message only, with older ones behind a tap. A drunk person reading a
- * thread is not a thing that happens.
+ * The message slot on the Now tab: the newest message until it's acknowledged,
+ * then a way back to the full list. One message at a time — a drunk person
+ * reading a thread is not a thing that happens — but never a dead end, because
+ * "what did they just say?" is asked constantly and the answer has to be findable.
  */
-function MessageList({ messages }: { messages: Message[] }) {
-  const [open, setOpen] = useState(false);
-  const now = useNow();
+function MessageSlot({
+  messages,
+  unread,
+  onOpenInbox,
+  onDismiss,
+}: {
+  messages: Message[];
+  unread: Message | null;
+  onOpenInbox: () => void;
+  onDismiss: () => void;
+}) {
+  if (unread) {
+    return <MessageCard message={unread} onOpen={onOpenInbox} onDismiss={onDismiss} />;
+  }
 
   if (messages.length === 0) {
     return null;
   }
 
-  const [latest, ...older] = messages;
+  return (
+    <button type="button" className="rc-inbox-link" onClick={onOpenInbox}>
+      All messages ({messages.length}) →
+    </button>
+  );
+}
+
+function MessageHead({ message }: { message: Message }) {
+  const now = useNow();
 
   return (
-    <>
-      <section className={`rc-msg ${latest.direct ? "rc-msg-direct" : ""}`}>
-        <p className="eyebrow rc-msg-head">
-          <span>{latest.direct ? "Message for you" : "From the race director"}</span>
-          <span className="rc-msg-when">{timeAgo(latest.at, now)}</span>
-        </p>
-        <p className="rc-msg-body">{latest.body}</p>
-        {older.length > 0 ? (
-          <button type="button" className="rc-msg-more" onClick={() => setOpen(true)}>
-            {older.length} earlier {older.length === 1 ? "message" : "messages"}
-          </button>
-        ) : null}
-      </section>
+    <span className="eyebrow rc-msg-head">
+      <span>{message.direct ? "Message for you" : "From the race director"}</span>
+      <span className="rc-msg-when">{timeAgo(message.at, now)}</span>
+    </span>
+  );
+}
 
-      <Sheet open={open} title="Messages" onClose={() => setOpen(false)}>
+function MessageCard({
+  message,
+  onOpen,
+  onDismiss,
+}: {
+  message: Message;
+  onOpen: () => void;
+  onDismiss: () => void;
+}) {
+  return (
+    <section className={`rc-msg ${message.direct ? "rc-msg-direct" : ""}`}>
+      <button type="button" className="rc-msg-tap" onClick={onOpen}>
+        <MessageHead message={message} />
+        <span className="rc-msg-body">{message.body}</span>
+        <span className="rc-msg-more">All messages →</span>
+      </button>
+      <button type="button" className="rc-x" onClick={onDismiss} aria-label="Dismiss message">
+        ×
+      </button>
+    </section>
+  );
+}
+
+/** Same message, but it has to arrive over whatever tab you're on. */
+function MessageToast({
+  message,
+  onOpen,
+  onDismiss,
+}: {
+  message: Message;
+  onOpen: () => void;
+  onDismiss: () => void;
+}) {
+  return (
+    <div className={`rc-toast ${message.direct ? "rc-toast-direct" : ""}`} role="status">
+      <button type="button" className="rc-toast-tap" onClick={onOpen}>
+        <MessageHead message={message} />
+        <span className="rc-toast-text">{message.body}</span>
+      </button>
+      <button type="button" className="rc-x" onClick={onDismiss} aria-label="Dismiss message">
+        ×
+      </button>
+    </div>
+  );
+}
+
+function Inbox({
+  open,
+  messages,
+  onClose,
+}: {
+  open: boolean;
+  messages: Message[];
+  onClose: () => void;
+}) {
+  const now = useNow();
+
+  return (
+    <Sheet open={open} title="Messages" onClose={onClose}>
+      {messages.length === 0 ? (
+        <p className="empty-note">Nothing from the race director yet.</p>
+      ) : (
         <div className="stack">
           {messages.map((message) => (
             <div className="rc-msg-old" key={message.id}>
@@ -498,8 +636,8 @@ function MessageList({ messages }: { messages: Message[] }) {
             </div>
           ))}
         </div>
-      </Sheet>
-    </>
+      )}
+    </Sheet>
   );
 }
 
@@ -756,7 +894,7 @@ function RulesTab({ state, meId }: { state: StatePayload; meId: number | null })
             <span className="rc-key-swatch rc-key-l" /> Losers bracket
           </li>
           <li>
-            <span className="rc-key-mark">✓</span> won that race
+            <span className="rc-key-mark">Winner</span> won that race
           </li>
           <li>
             <span className="rc-key-mark rc-key-struck">Name</span> lost that race
@@ -802,9 +940,17 @@ const GROUPS = [
 ];
 
 function BracketTab({ state, meId }: { state: StatePayload; meId: number | null }) {
-  const [group, setGroup] = useState("W");
-  const [myPath, setMyPath] = useState(true);
+  const [group, setGroup] = useState(() => localStorage.getItem(GROUP_KEY) ?? "W");
+  const [myPath, setMyPath] = useState(() => localStorage.getItem(PATH_KEY) !== "0");
   const [detail, setDetail] = useState<PublicMatch | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem(GROUP_KEY, group);
+  }, [group]);
+
+  useEffect(() => {
+    localStorage.setItem(PATH_KEY, myPath ? "1" : "0");
+  }, [myPath]);
 
   const mine = useMemo(
     () => (meId === null ? new Set<number>() : pathOf(state, meId)),
@@ -813,7 +959,12 @@ function BracketTab({ state, meId }: { state: StatePayload; meId: number | null 
   const groups = GROUPS.filter(
     (g) => g.key !== "C" || state.event.consolation,
   );
-  const columns = roundsOf(state, groups.find((g) => g.key === group)?.brackets ?? ["W"]);
+
+  // A stored group can name a bracket that doesn't exist yet — Consolation, saved
+  // last year, before this year's is started. Fall back for display without
+  // discarding the choice, so it comes back if that bracket appears.
+  const active = groups.some((g) => g.key === group) ? group : "W";
+  const columns = roundsOf(state, groups.find((g) => g.key === active)?.brackets ?? ["W"]);
 
   if (state.event.phase === "registration") {
     return <p className="empty-note">The bracket appears once the director starts the race.</p>;
@@ -830,8 +981,8 @@ function BracketTab({ state, meId }: { state: StatePayload; meId: number | null 
             key={g.key}
             type="button"
             role="tab"
-            aria-selected={group === g.key}
-            className={`rc-seg-btn ${group === g.key ? "rc-seg-on" : ""}`}
+            aria-selected={active === g.key}
+            className={`rc-seg-btn ${active === g.key ? "rc-seg-on" : ""}`}
             onClick={() => setGroup(g.key)}
           >
             {g.label}

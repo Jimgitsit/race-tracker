@@ -104,10 +104,15 @@ it is unreadable on a phone. Instead:
 - A `Winners / Losers / Finals / Consolation` segmented toggle at the top.
 - Rounds as horizontally scrollable columns, snap-scrolling, round name in a sticky header
   (`Winners R2`). Each column is a vertical list of match cards.
-- A match card: two rows (photo thumb, name), winner in bold with a ✓, loser dimmed and
-  struck through. Unfilled slots read `Winner of W1M3` / `TBD`.
+- A match card: two rows (photo thumb, name), winner in bold labelled **`Winner`**, loser
+  dimmed and struck through. A word rather than a ✓ — a tick needs the legend to decode it,
+  and this is not a room where people look things up. Unfilled slots read what fills them,
+  in words (`Winner of Ada vs Jim`), never a match code.
 - A **"My path"** chip that dims every match the viewer isn't in — this is what makes the
   bracket usable on a phone. Default it **on** for a registered racer.
+- The bracket toggle and the "My path" chip **persist across a refresh**, alongside the
+  active tab. Someone who has picked Losers and turned their path off has said what they
+  want to look at; a reload is not them changing their mind.
 - Tapping a match opens a detail sheet: both cars full-size, round, result.
 
 **`Racers`** — grid of cards, 2-up: car photo, name, `2–0` record, and status
@@ -268,7 +273,24 @@ Broadcasts are public and ride along in the state payload; **direct messages nev
 `/api/state` is served without auth, so a direct message must not appear in it — not even as
 metadata about who was messaged. Instead the payload carries a `messageEpoch` that bumps on
 *any* message, and a client holding a racer token refetches `/api/me/messages` when it moves.
-One extra round trip, only when there's actually something new.
+One extra round trip, only when there's actually something new. A spectator has no token, so
+their messages are `state.announcements` — the broadcasts, and nothing else.
+
+**Where a message shows up.** One message at a time, never a thread, but never a dead end:
+
+- **Now tab:** a card with the newest unread message, an `×` to dismiss it, and the whole
+  card tapping through to the full list. Once nothing is unread the card becomes a quiet
+  **All messages (n) →** link in the same slot, so messages are always in one place.
+- **Any other tab:** the same message **slides down from the top** over whatever you're
+  looking at, with its own `×`. The chime says *something* was said; it doesn't say what, and
+  a message you can't read until you find the right tab is a message that didn't arrive.
+- **The list** is a sheet: every message, newest first, clock time *and* relative time,
+  labelled `For you` / `Everyone`.
+
+Read state is **one high-water-mark id in `localStorage`**, not a per-message set: messages
+arrive in order and get read in order, so an id is the whole of the state and it survives a
+refresh. Dismissing and opening the list both mark everything read — after either, there is
+nothing left to interrupt anyone with.
 
 **Alerts — what the platform actually allows.** Verified, not assumed:
 
