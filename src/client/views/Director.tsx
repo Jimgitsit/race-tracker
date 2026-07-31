@@ -294,7 +294,8 @@ function Roster({ state }: { state: StatePayload }) {
           {byes > 0 ? `, ${byes} ${byes === 1 ? "bye" : "byes"}` : ""}. Registration closes.
         </p>
         <p className="dir-confirm-warn">
-          Read the names first — they go on the big screen, and there are kids in the room.
+          Be sure to check all names for profanity first. They go on the big screen and there
+          are kids around.
         </p>
         <div className="sheet-actions">
           <button type="button" className="btn" onClick={() => setConfirming(false)}>
