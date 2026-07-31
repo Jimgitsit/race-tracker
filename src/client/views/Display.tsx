@@ -29,6 +29,34 @@ const FILTERS: { key: Filter; label: string }[] = [
 
 const FIT: View = { scale: null, x: 0, y: 0 };
 
+/**
+ * The big screen survives a refresh with its settings intact — it runs unattended
+ * for hours and a stray reload shouldn't drop it back to defaults mid-race.
+ *
+ * Zoom and pan are deliberately *not* kept. A pan is only meaningful against the
+ * layout it was made in, and the layout changes with the window, the round and the
+ * bracket — restoring one lands the view on empty space. Follow mode is the reason
+ * to be zoomed in and it is persisted, so the useful case comes back on its own.
+ */
+const KEY = {
+  filter: "race-tracker.disp.filter",
+  detail: "race-tracker.disp.detail",
+  follow: "race-tracker.disp.follow",
+  dismissed: "race-tracker.disp.msgDismissed",
+} as const;
+
+const FILTER_KEYS: Filter[] = ["all", "main", "losers", "consolation"];
+const DETAIL_KEYS: Detail[] = ["auto", "all"];
+
+function stored<T extends string>(key: string, allowed: T[], fallback: T): T {
+  const found = localStorage.getItem(key);
+  return allowed.includes(found as T) ? (found as T) : fallback;
+}
+
+function storedNumber(key: string): number {
+  return Number(localStorage.getItem(key) ?? 0) || 0;
+}
+
 /** Long enough to cross the screen to a button, short enough that the room never
     notices the chrome was there. */
 const CHROME_IDLE_MS = 2500;
@@ -185,16 +213,25 @@ function Registration({ state }: { state: StatePayload }) {
 
 function Racing({ state }: { state: StatePayload }) {
   const flash = useResultFlash(state);
-  const [filter, setFilter] = useState<Filter>("all");
-  const [detail, setDetail] = useState<Detail>("auto");
+  const [filter, setFilter] = useState<Filter>(() => stored(KEY.filter, FILTER_KEYS, "all"));
+  const [detail, setDetail] = useState<Detail>(() => stored(KEY.detail, DETAIL_KEYS, "auto"));
   const [view, setView] = useState<View>(FIT);
   const [focus, setFocus] = useState<number | null>(null);
-  const [follow, setFollow] = useState(false);
+  const [follow, setFollow] = useState(() => localStorage.getItem(KEY.follow) === "1");
   const [fit, setFit] = useState(1);
-  const [dismissed, setDismissed] = useState<number | null>(null);
+  const [dismissed, setDismissed] = useState(() => storedNumber(KEY.dismissed));
   const [chrome, setChrome] = useState(false);
   const idle = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const clock = useNow();
+
+  // Written from effects rather than from each handler, so every path that can
+  // change a setting persists it — including Esc, which routes through the same
+  // setters and so writes the defaults back rather than leaving a stale value to
+  // come back on the next refresh.
+  useEffect(() => localStorage.setItem(KEY.filter, filter), [filter]);
+  useEffect(() => localStorage.setItem(KEY.detail, detail), [detail]);
+  useEffect(() => localStorage.setItem(KEY.follow, follow ? "1" : "0"), [follow]);
+  useEffect(() => localStorage.setItem(KEY.dismissed, String(dismissed)), [dismissed]);
 
   const current = matchById(state, state.event.currentMatch);
   const flashed = matchById(state, flash);
@@ -204,6 +241,15 @@ function Racing({ state }: { state: StatePayload }) {
     () => FILTERS.filter((f) => f.key !== "consolation" || state.event.consolation),
     [state.event.consolation],
   );
+
+  // A stored filter can name a bracket that no longer exists — Consolation, saved
+  // last year, before this year's is built. Fall back rather than leaving no
+  // button lit and the bracket quietly showing something else.
+  useEffect(() => {
+    if (!filters.some((f) => f.key === filter)) {
+      setFilter("all");
+    }
+  }, [filters, filter]);
 
   const columns = useMemo(
     () => roundsOf(state, bracketsFor(filter, state.event.consolation)),
@@ -331,8 +377,11 @@ function Racing({ state }: { state: StatePayload }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [view.scale, filters, columns.length, focusIndex, zoomBy, reset, manual, wake]);
 
+  // A high-water mark, not an exact id: dismissing hides that message and anything
+  // older, so a message being deleted server-side can't resurface one that was
+  // already closed. Anything newer still gets through.
   const latest = state.announcements[0] ?? null;
-  const announcement = latest !== null && latest.id !== dismissed ? latest : null;
+  const announcement = latest !== null && latest.id > dismissed ? latest : null;
 
   const onDeck = state.queue
     .filter((id) => id !== state.event.currentMatch)

@@ -218,9 +218,10 @@ for car photos.
 - **Body: the bracket, auto-framed** (below).
 - **Foot strip:** `ON DECK` — the next two or three matches — plus a small join QR, because
   people arrive late. The latest director message sits here with an **×**; dismissal is local
-  to this screen and keyed on the message id, so clearing a stale one neither touches what
-  racers see on their phones nor swallows the next one. The × fades in with the toolbar — it
-  is for whoever is driving, not for the room.
+  to this screen, persisted, and stored as a **high-water mark** rather than an exact id — so
+  a message deleted server-side can't resurface one already closed, while anything newer
+  still gets through. It neither touches what racers see on their phones nor swallows the
+  next message. The × fades in with the toolbar — it is for whoever is driving, not the room.
 
 **Auto-framing.** The display keeps a *focus round* (the one containing the current match)
 and renders every round at one of three densities:
@@ -283,6 +284,23 @@ brackets and differed only in density — the part that made the control unlearn
 
 **The wheel deliberately does nothing.** Scroll-to-zoom was tried and removed: on a trackpad
 it fires constantly by accident, and this screen is in front of a room.
+
+**Settings survive a refresh.** Bracket, All rounds, Follow and the dismissed-message mark
+all persist to `localStorage` — the screen runs unattended for hours and a stray reload
+shouldn't drop it to defaults mid-race. They are written from effects rather than from each
+handler, so *every* path that changes a setting persists it, Esc included: reset routes
+through the same setters and writes the defaults back, rather than leaving a stale value to
+reappear on the next refresh.
+
+Zoom and pan are deliberately **not** kept. A pan is only meaningful against the layout it
+was made in, and that changes with the window, the round and the bracket — restoring one
+lands the view on empty space. Follow is the reason to be zoomed in, and it *is* persisted,
+so the case worth restoring restores itself.
+
+A stored bracket filter can name a bracket that no longer exists (Consolation, saved last
+year), so it falls back to All rather than leaving no button lit while the bracket quietly
+shows something else. Esc does not un-dismiss a message: closing one is a deliberate act, not
+a view setting.
 
 Zoom is bounded **relative to fit**, never absolutely: fit for the full 62-match bracket is
 around a third of life size, so an absolute floor would mean pressing zoom-out made the
