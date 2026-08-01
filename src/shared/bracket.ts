@@ -45,9 +45,9 @@ export function roundLabel(bracket: BracketKind, round: number, rounds: number):
   switch (bracket) {
     case "W":
       if (round === rounds) {
-        return "Main Final";
+        return "Winners Final";
       }
-      return `Main Round ${round}`;
+      return `Winners Round ${round}`;
     case "L":
       if (round === rounds * 2 - 2) {
         return "Losers Final";

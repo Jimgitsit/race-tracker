@@ -903,7 +903,7 @@ function RulesTab({ state, meId }: { state: StatePayload; meId: number | null })
       <section className="rc-rules-block">
         <h2 className="rc-rules-h">How it goes</h2>
         <ol className="rc-steps">
-          <li>Everyone starts in the Main bracket.</li>
+          <li>Everyone starts in the Winners bracket.</li>
           <li>
             Lose once and you drop to the Losers bracket. <strong>You're still in.</strong>
           </li>
@@ -940,7 +940,7 @@ function RulesTab({ state, meId }: { state: StatePayload; meId: number | null })
         <h2 className="rc-rules-h">Reading the screen</h2>
         <ul className="rc-key">
           <li>
-            <span className="rc-key-swatch rc-key-w" /> Main bracket
+            <span className="rc-key-swatch rc-key-w" /> Winners bracket
           </li>
           <li>
             <span className="rc-key-swatch rc-key-l" /> Losers bracket
@@ -985,10 +985,10 @@ function RulesTab({ state, meId }: { state: StatePayload; meId: number | null })
 // ---------------------------------------------------------------------------------
 
 const GROUPS = [
-  { key: "W", label: "Main", brackets: ["W"] },
-  { key: "L", label: "Losers", brackets: ["L"] },
+  { key: "W", label: "Winners bracket", brackets: ["W"] },
+  { key: "L", label: "Losers bracket", brackets: ["L"] },
   { key: "F", label: "Finals", brackets: ["GF", "GFR"] },
-  { key: "C", label: "Consolation", brackets: ["C"] },
+  { key: "C", label: "Consolation bracket", brackets: ["C"] },
 ];
 
 function BracketTab({ state, meId }: { state: StatePayload; meId: number | null }) {

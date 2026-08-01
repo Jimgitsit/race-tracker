@@ -114,9 +114,9 @@ URL stays typeable (`jimmcgowen.com/race-tracker/display`). All in-app links mus
 
 **`Bracket`** — the mobile bracket. **Do not attempt the classic connector-line tree here**;
 it is unreadable on a phone. Instead:
-- A `Winners / Losers / Finals / Consolation` segmented toggle at the top.
+- A `Winners bracket / Losers bracket / Finals / Consolation bracket` segmented toggle at the top.
 - Rounds as horizontally scrollable columns, snap-scrolling, round name in a sticky header
-  (`Winners R2`). Each column is a vertical list of match cards.
+  (`Winners Round 2`). Each column is a vertical list of match cards.
 - A match card: two rows (photo thumb, name), winner in bold labelled **`Winner`**, loser
   dimmed and struck through. A word rather than a ✓ — a tick needs the legend to decode it,
   and this is not a room where people look things up. Unfilled slots read what fills them,
@@ -263,9 +263,18 @@ appeared to do nothing, and in "All rounds" it genuinely did nothing, because th
 forces every column compact before focus is consulted. Nobody missed it. Don't re-add a
 click target here without first making it survive both of those.
 
-**Bracket titles.** Each bracket carries a quiet heading — `WINNERS`, `LOSERS`, `FINALS`,
-`CONSOLATION` — above its columns, with the hairline separator that already divided the
-groups. `GF` and `GFR` are separate brackets internally but share one heading; they are all
+**Terminology: always "*X* bracket", never a bare "*X*".** Winners/losers is the most common
+naming for double elimination (Wikipedia also lists upper/lower, championship/elimination and
+main/repechage), so that is what this uses — but always **qualified**. "Winners" alone names
+the people who have won, and at the point anyone is reading the screen nobody has; "Winners
+bracket" names the half of the draw. The same for the losers and consolation brackets.
+**Finals** is the exception and stays bare: those matches conclude the draw rather than being
+a bracket of their own. "Consolation" is never a synonym for the losers bracket here — this
+event has a real, separate consolation bracket, and the collision would be genuine.
+
+**Bracket titles.** Each bracket carries a quiet heading — `WINNERS BRACKET`, `LOSERS
+BRACKET`, `FINALS`, `CONSOLATION BRACKET` — above its columns, with the hairline separator
+that already divided the groups. `GF` and `GFR` are separate brackets internally but share one heading; they are all
 "the finals" to anyone reading the screen. Deliberately understated: brighter than the round
 labels beneath it and wider-tracked, but no larger, so it names the half of the bracket you
 are looking at without competing with the racers' names. The wrapping elements are all
@@ -298,7 +307,7 @@ brackets and differed only in density — the part that made the control unlearn
 
 | Control | Values | What it changes |
 |---|---|---|
-| **Bracket** | All · Winners · Losers · Consolation | which brackets are on screen (Consolation only appears once one exists) |
+| **Bracket** | All · Winners bracket · Losers bracket · Consolation bracket | which brackets are on screen (Consolation only appears once one exists) |
 | **All rounds** | off / on | off = collapse what's settled (the density table above); on = draw every round the same size |
 | **Follow** | off / on | size the live heat to ~11.6% of the frame's *height*, centre it with the rounds either side readable, re-aim as the race moves |
 

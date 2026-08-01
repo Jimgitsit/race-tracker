@@ -23,9 +23,9 @@ type View = { scale: number | null; x: number; y: number };
 
 const FILTERS: { key: Filter; label: string }[] = [
   { key: "all", label: "All" },
-  { key: "main", label: "Winners" },
-  { key: "losers", label: "Losers" },
-  { key: "consolation", label: "Consolation" },
+  { key: "main", label: "Winners bracket" },
+  { key: "losers", label: "Losers bracket" },
+  { key: "consolation", label: "Consolation bracket" },
 ];
 
 const FIT: View = { scale: null, x: 0, y: 0 };
@@ -752,19 +752,24 @@ function Controls({
 // The bracket, drawn as track
 // ---------------------------------------------------------------------------------
 
-/** Heading for a bracket. GF and GFR are separate brackets internally but one
-    thing — the finals — to anyone reading the screen. */
+/**
+ * Heading for a bracket. Always qualified — "Winners" on its own names the people
+ * who have won, which nobody has yet; "Winners bracket" names the half of the draw
+ * you are looking at. "Finals" is the exception and stays bare: those matches are
+ * the conclusion of the draw, not a bracket of their own. GF and GFR are separate
+ * brackets internally but one thing to anyone reading the screen.
+ */
 function bracketGroup(bracket: string): { key: string; label: string } {
   switch (bracket) {
     case "L":
-      return { key: "L", label: "Losers" };
+      return { key: "L", label: "Losers bracket" };
     case "GF":
     case "GFR":
       return { key: "F", label: "Finals" };
     case "C":
-      return { key: "C", label: "Consolation" };
+      return { key: "C", label: "Consolation bracket" };
     default:
-      return { key: "W", label: "Winners" };
+      return { key: "W", label: "Winners bracket" };
   }
 }
 
