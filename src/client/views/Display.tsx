@@ -748,6 +748,22 @@ function Controls({
 // The bracket, drawn as track
 // ---------------------------------------------------------------------------------
 
+/** Heading for a bracket. GF and GFR are separate brackets internally but one
+    thing — the finals — to anyone reading the screen. */
+function bracketGroup(bracket: string): { key: string; label: string } {
+  switch (bracket) {
+    case "L":
+      return { key: "L", label: "Losers" };
+    case "GF":
+    case "GFR":
+      return { key: "F", label: "Finals" };
+    case "C":
+      return { key: "C", label: "Consolation" };
+    default:
+      return { key: "W", label: "Winners" };
+  }
+}
+
 function bracketsFor(filter: Filter, hasConsolation: boolean): string[] {
   switch (filter) {
     case "main":
@@ -827,7 +843,7 @@ function BracketCanvas({
 
     const focusPosition = sorted.findIndex((entry) => entry.index === focusIndex);
 
-    return sorted.map((entry, position, all) => ({
+    return sorted.map((entry, position) => ({
       ...entry,
       /*
        * Follow only: whatever ends up *beside* the live round on screen has to be
@@ -849,12 +865,30 @@ function BracketCanvas({
         follow && entry.density === "collapsed" && Math.abs(position - focusPosition) === 1
           ? ("compact" as Density)
           : entry.density,
-      startsGroup:
-        position > 0 &&
-        (all[position - 1].column.matches[0]?.bracket ?? "") !==
-          (entry.column.matches[0]?.bracket ?? ""),
     }));
   }, [columns, densities, focusIndex, follow]);
+
+  /**
+   * The same columns, gathered under their bracket so each one can carry a title.
+   * The two grand-final columns share a heading — `GF` and `GFR` are separate
+   * brackets internally but "Finals" to anyone reading the screen.
+   */
+  const groups = useMemo(() => {
+    const out: { key: string; label: string; entries: typeof ordered }[] = [];
+
+    for (const entry of ordered) {
+      const { key, label } = bracketGroup(entry.column.matches[0]?.bracket ?? "W");
+      const last = out[out.length - 1];
+
+      if (last && last.key === key) {
+        last.entries.push(entry);
+      } else {
+        out.push({ key, label, entries: [entry] });
+      }
+    }
+
+    return out;
+  }, [ordered]);
 
   // Measure in layout coordinates (offsetLeft/Top), which the scale transform on
   // the wrapper does not affect — so connectors stay correct at any zoom.
@@ -1211,23 +1245,31 @@ function BracketCanvas({
           ))}
         </svg>
 
+        {/* The wrapping divs are all static, so match boxes still measure their
+            offsets against .disp-scale and the connectors are unaffected. */}
         <div className="disp-tree" ref={tree}>
-          {ordered.map(({ column, density, startsGroup }) => (
-            <Column
-              key={column.key}
-              state={state}
-              column={column}
-              density={density}
-              startsGroup={startsGroup}
-              currentId={state.event.currentMatch}
-              register={(id, el) => {
-                if (el) {
-                  boxes.current.set(id, el);
-                } else {
-                  boxes.current.delete(id);
-                }
-              }}
-            />
+          {groups.map((group) => (
+            <section className="disp-group" key={group.key}>
+              <h2 className="disp-group-title">{group.label}</h2>
+              <div className="disp-group-cols">
+                {group.entries.map(({ column, density }) => (
+                  <Column
+                    key={column.key}
+                    state={state}
+                    column={column}
+                    density={density}
+                    currentId={state.event.currentMatch}
+                    register={(id, el) => {
+                      if (el) {
+                        boxes.current.set(id, el);
+                      } else {
+                        boxes.current.delete(id);
+                      }
+                    }}
+                  />
+                ))}
+              </div>
+            </section>
           ))}
         </div>
 
@@ -1295,23 +1337,19 @@ function Column({
   state,
   column,
   density,
-  startsGroup,
   currentId,
   register,
 }: {
   state: StatePayload;
   column: RoundColumn;
   density: Density;
-  startsGroup: boolean;
   currentId: number | null;
   register: (id: number, el: HTMLElement | null) => void;
 }) {
-  const group = startsGroup ? " disp-col-group" : "";
-
   if (density === "collapsed") {
     const done = column.matches.filter((m) => m.winner !== null).length;
     return (
-      <section className={`disp-col disp-col-collapsed${group}`}>
+      <section className="disp-col disp-col-collapsed">
         <span className="disp-col-code">{column.short}</span>
         <span className="disp-col-tally code">
           {done > 0 ? `✓${done}` : `${column.matches.length}`}
@@ -1321,7 +1359,7 @@ function Column({
   }
 
   return (
-    <section className={`disp-col disp-col-${density}${group}`}>
+    <section className={`disp-col disp-col-${density}`}>
       <h2 className="disp-col-head">{column.label}</h2>
       <div className="disp-col-body">
         {column.matches.map((match) => (

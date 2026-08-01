@@ -257,6 +257,15 @@ appeared to do nothing, and in "All rounds" it genuinely did nothing, because th
 forces every column compact before focus is consulted. Nobody missed it. Don't re-add a
 click target here without first making it survive both of those.
 
+**Bracket titles.** Each bracket carries a quiet heading — `WINNERS`, `LOSERS`, `FINALS`,
+`CONSOLATION` — above its columns, with the hairline separator that already divided the
+groups. `GF` and `GFR` are separate brackets internally but share one heading; they are all
+"the finals" to anyone reading the screen. Deliberately understated: brighter than the round
+labels beneath it and wider-tracked, but no larger, so it names the half of the bracket you
+are looking at without competing with the racers' names. The wrapping elements are all
+statically positioned, so match boxes still measure their offsets against `.disp-scale` and
+the connectors are unaffected.
+
 **Track connectors — the signature.** Connectors are not generic elbows: they are drawn as
 **Hot Wheels track**, in orange, with the raised-rail cross-section. Draw each edge as an
 SVG path stroked **twice** — a wide stroke in the rail colour, then the same path stroked

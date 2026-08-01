@@ -387,11 +387,40 @@
   padding: 16px 22px;
 }
 
+.disp-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-height: 0;
+}
+
 /* A wider gap plus a hairline where one bracket ends and the next begins. */
-.disp-col-group {
+.disp-group + .disp-group {
   margin-left: 30px;
   padding-left: 34px;
   border-left: 1px solid var(--line-soft);
+}
+
+/* Quiet, and a step above the round labels rather than competing with them: the
+   round heads are --ink-faint at 0.95rem, so this is brighter and wider-tracked
+   but no bigger. It names the half of the bracket you are looking at, which from
+   across a room is otherwise guesswork once the columns are collapsed. */
+.disp-group-title {
+  font-family: var(--display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+
+.disp-group-cols {
+  display: flex;
+  align-items: stretch;
+  gap: 38px;
+  flex: 1;
+  min-height: 0;
 }
 
 .disp-col {
