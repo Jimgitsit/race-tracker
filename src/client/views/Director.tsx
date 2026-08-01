@@ -298,6 +298,11 @@ function Roster({ state }: { state: StatePayload }) {
           Be sure to check all names for profanity first. They go on the big screen and there
           are kids around.
         </p>
+        {/* Inside the sheet, not in the footer. A refused action leaves the sheet
+            open, and the footer is behind it — so the message was invisible and
+            the button looked dead. */}
+        {error ? <p className="error-msg">{error}</p> : null}
+
         <div className="sheet-actions">
           <button type="button" className="btn" onClick={() => setConfirming(false)}>
             Back
@@ -733,6 +738,8 @@ function Complete({ state }: { state: StatePayload }) {
           {state.event.year} gets saved to the history page — bracket, photos and all — and
           registration reopens for {state.event.year + 1}.
         </p>
+        {error ? <p className="error-msg">{error}</p> : null}
+
         <div className="sheet-actions">
           <button type="button" className="btn" onClick={() => setConfirmArchive(false)}>
             Not yet
@@ -752,6 +759,8 @@ function Complete({ state }: { state: StatePayload }) {
           This wipes {state.event.year} without saving it. Archive first unless this race was a
           false start.
         </p>
+        {error ? <p className="error-msg">{error}</p> : null}
+
         <div className="sheet-actions">
           <button type="button" className="btn" onClick={() => setConfirmReset(false)}>
             Cancel
