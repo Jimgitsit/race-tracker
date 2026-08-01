@@ -75,9 +75,13 @@ const ZOOM_STEP = 1.15;
  */
 const FOLLOW_CARD_SHARE = 0.184;
 
-/** Where follow parks the live heat across the frame — a third in, so the bracket
-    ahead of it stays visible. */
-const FOLLOW_BIAS = 0.33;
+/**
+ * Where follow parks the live heat across the frame. Centred, so the round that
+ * fed this heat and the round it feeds are both fully on screen — where a racer
+ * came from and where they're going are the two questions the bracket is being
+ * shown to answer, and at this zoom there is room for both either side.
+ */
+const FOLLOW_BIAS = 0.5;
 
 function clamp(value: number, low: number, high: number): number {
   return Math.min(high, Math.max(low, value));
@@ -738,21 +742,44 @@ function BracketCanvas({
   const ordered = useMemo(() => {
     const rank: Record<string, number> = { W: 0, L: 1, GF: 2, GFR: 3, C: 4 };
 
-    return columns
+    const sorted = columns
       .map((column, index) => ({ column, density: densities[index], index }))
       .sort((x, y) => {
         const xg = rank[x.column.matches[0]?.bracket ?? "W"] ?? 0;
         const yg = rank[y.column.matches[0]?.bracket ?? "W"] ?? 0;
         return xg - yg || (x.column.matches[0]?.round ?? 0) - (y.column.matches[0]?.round ?? 0);
-      })
-      .map((entry, position, all) => ({
-        ...entry,
-        startsGroup:
-          position > 0 &&
-          (all[position - 1].column.matches[0]?.bracket ?? "") !==
-            (entry.column.matches[0]?.bracket ?? ""),
-      }));
-  }, [columns, densities]);
+      });
+
+    const focusPosition = sorted.findIndex((entry) => entry.index === focusIndex);
+
+    return sorted.map((entry, position, all) => ({
+      ...entry,
+      /*
+       * Follow only: whatever ends up *beside* the live round on screen has to be
+       * readable, because those two are the round that fed this heat and the round
+       * it feeds — where these racers came from and where the winner goes.
+       *
+       * Density is decided on playing order, which is temporal adjacency, but the
+       * layout is grouped by bracket. Playing order interleaves W and L, so the
+       * next winners round sits two or three steps away in time while being the
+       * very next column on screen, and gets collapsed as "untouched". Promote it
+       * back by its position in the laid-out order rather than in time.
+       *
+       * Not applied when fitting the whole bracket: a settled round is the biggest
+       * waste of space on the screen (winners round 1 is sixteen matches tall), and
+       * collapsing it is what lets everything else be drawn large. Follow doesn't
+       * pay that cost, because its zoom comes from the card, not from fit.
+       */
+      density:
+        follow && entry.density === "collapsed" && Math.abs(position - focusPosition) === 1
+          ? ("compact" as Density)
+          : entry.density,
+      startsGroup:
+        position > 0 &&
+        (all[position - 1].column.matches[0]?.bracket ?? "") !==
+          (entry.column.matches[0]?.bracket ?? ""),
+    }));
+  }, [columns, densities, focusIndex, follow]);
 
   // Measure in layout coordinates (offsetLeft/Top), which the scale transform on
   // the wrapper does not affect — so connectors stay correct at any zoom.
@@ -828,7 +855,7 @@ function BracketCanvas({
     observer.observe(content);
 
     return () => observer.disconnect();
-  }, [state, columns, densities]);
+  }, [state, columns, ordered]);
 
   useEffect(() => {
     onFit(fit);
@@ -937,7 +964,7 @@ function BracketCanvas({
       x: frame.w * FOLLOW_BIAS - (box.offsetLeft + box.offsetWidth / 2) * next,
       y: frame.h / 2 - (box.offsetTop + box.offsetHeight / 2) * next,
     });
-  }, [follow, target, fit, size, frame, densities, onView]);
+  }, [follow, target, fit, size, frame, ordered, onView]);
 
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     dragged.current = false;

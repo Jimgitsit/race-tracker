@@ -285,7 +285,7 @@ brackets and differed only in density — the part that made the control unlearn
 |---|---|---|
 | **Bracket** | All · Winners · Losers · Consolation | which brackets are on screen (Consolation only appears once one exists) |
 | **All rounds** | off / on | off = collapse what's settled (the density table above); on = draw every round the same size |
-| **Follow** | off / on | size the live heat to ~18% of the frame, park it a third across, re-aim as the race moves |
+| **Follow** | off / on | size the live heat to ~18% of the frame, centre it with the rounds either side readable, re-aim as the race moves |
 
 | Gesture | Action |
 |---|---|
@@ -320,9 +320,19 @@ around a third of life size, so an absolute floor would mean pressing zoom-out m
 bracket bigger. Floor is fit itself (there is nothing below it to see) and zooming back out
 through it returns to fit proper, which recentres.
 
-**Follow mode** sits on the live heat a third of the way across rather than dead centre — the
-bracket flows left to right, so the interesting half of the screen is the half that hasn't
-happened yet.
+**Follow mode** centres the live heat, so the round that fed it and the round it feeds are
+both on screen either side — where these two racers came from and where the winner goes are
+the two questions the bracket is there to answer.
+
+Centring alone doesn't deliver that, and this is the trap: **density is decided on playing
+order, but the layout is grouped by bracket.** Playing order interleaves W and L, so the next
+winners round is two or three steps away *in time* while being the very next column *on
+screen* — and it gets collapsed to a stub as "untouched" while sitting right beside the live
+heat. So in follow mode, a collapsed column immediately adjacent to the focus **in the
+laid-out order** is promoted back to `compact`. Only in follow mode: when fitting the whole
+bracket a settled round is the biggest waste of space on the screen (winners round 1 is
+sixteen matches tall) and collapsing it is what lets everything else be drawn large. Follow
+doesn't pay that cost, because its zoom comes from the card rather than from fit.
 
 Its zoom is chosen so the live heat's **card fills ~18% of the frame's width**, and is
 explicitly *not* a multiple of fit. Fit is a moving target: it rises as rounds settle and
@@ -360,9 +370,9 @@ could fire. Anything downstream of the flash has this ordering problem — move 
 the state being watched, never into the reaction.
 
 The pan clamp carries **a third of a frame of slack** past each edge. Without it the clamp
-refuses to show any background at all, and follow cannot honour its bias for a heat in the
-first or last round — the live heat would drift between a third in and hard against the edge
-depending on the round, destroying the one thing follow mode is for.
+refuses to show any background at all, so a heat in the first or last round cannot be
+centred — the live heat would drift between the middle and hard against the edge depending
+on which round it is in, destroying the one thing follow mode is for.
 
 **Measure the tree, never the wrapper.** The fit maths reads `.disp-tree`, because
 `.disp-scale` also contains the connector SVG — which is sized *from that measurement*. Read
