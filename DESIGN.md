@@ -263,6 +263,15 @@ appeared to do nothing, and in "All rounds" it genuinely did nothing, because th
 forces every column compact before focus is consulted. Nobody missed it. Don't re-add a
 click target here without first making it survive both of those.
 
+**Reset needs an override, and the override is a second ask.** A finished race that hasn't
+been archived is refused, because a stray tap would eat a whole year. But reset is *the
+documented way out of a false start*, and a false start that reaches `complete` is exactly
+what that guard blocks — so without an escape hatch the one case reset exists for is the one
+case it cannot do. The guard stays the default; the first refusal arms an override, states
+what goes with it (racers, recorded heats, every photo) and relabels the button **"Delete
+without archiving"**. `resetEvent(force)` on the server, `{ force }` on the wire, tolerant of
+a missing body so a stale cached page reads as *no* override rather than erroring.
+
 **Terminology: always "*X* bracket", never a bare "*X*".** Winners/losers is the most common
 naming for double elimination (Wikipedia also lists upper/lower, championship/elimination and
 main/repechage), so that is what this uses — but always **qualified**. "Winners" alone names

@@ -785,11 +785,20 @@ export function archiveYear(): ArchiveRow {
   return row;
 }
 
-export function resetEvent(): void {
+/**
+ * Wipe the event back to registration.
+ *
+ * `force` is the escape hatch, and it has to exist: reset is documented as the
+ * way out of a false start, but a false start that reaches `complete` is exactly
+ * what the archive guard below refuses — so without an override the one case
+ * reset was written for is the one case it cannot do. The guard stays the
+ * default, and the director has to ask a second time to get past it.
+ */
+export function resetEvent(force = false): void {
   const event = eventRow();
 
   // Resetting a finished-but-unarchived race would eat a whole year.
-  if (event.phase === "complete") {
+  if (!force && event.phase === "complete") {
     const archived = db()
       .query<{ n: number }, [number]>("SELECT COUNT(*) AS n FROM archives WHERE year = ?")
       .get(event.year)!;

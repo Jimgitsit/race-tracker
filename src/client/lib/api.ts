@@ -89,7 +89,7 @@ export const api = {
     consolationCandidates: () => request<PublicRacer[]>("director/consolation"),
     startConsolation: (racerIds: number[]) => post("director/consolation", { racerIds }),
     archive: () => post<{ year: number; champion: string | null }>("director/archive"),
-    reset: () => post("director/reset"),
+    reset: (force = false) => post("director/reset", { force }),
   },
 
   archives: {

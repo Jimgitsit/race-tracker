@@ -389,7 +389,11 @@ async function handle(req: Request): Promise<Response> {
     }
 
     if (path === "/api/director/reset" && req.method === "POST") {
-      return mutate(() => resetEvent());
+      // Tolerates a missing body: a page cached from before `force` existed posts
+      // nothing, and "Expected a JSON body" is a baffling answer to "delete this".
+      // No body means no override, which is the safe reading anyway.
+      const body = await readJson(req).catch(() => ({}) as Record<string, unknown>);
+      return mutate(() => resetEvent(body.force === true));
     }
 
     const racerMatch = path.match(/^\/api\/director\/racer\/(\d+)$/);

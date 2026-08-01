@@ -665,6 +665,7 @@ function ConsolationPicker({ onDone }: { onDone: () => void }) {
 function Complete({ state }: { state: StatePayload }) {
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [override, setOverride] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const podium = useMemo(
@@ -684,6 +685,28 @@ function Complete({ state }: { state: StatePayload }) {
       setError(null);
     } catch (problem) {
       setError(problem instanceof ApiError ? problem.message : "That didn't work.");
+    }
+  };
+
+  const closeReset = () => {
+    setConfirmReset(false);
+    setOverride(false);
+    setError(null);
+  };
+
+  /**
+   * A refused reset is the server asking whether this was really meant, not a
+   * dead end — a false start that reached "complete" is exactly what the archive
+   * guard blocks, and reset is the documented way out of a false start. So the
+   * first refusal arms the override and says plainly what goes with it.
+   */
+  const wipe = async () => {
+    try {
+      await api.director.reset(override);
+      closeReset();
+    } catch (problem) {
+      setError(problem instanceof ApiError ? problem.message : "That didn't work.");
+      setOverride(true);
     }
   };
 
@@ -754,23 +777,28 @@ function Complete({ state }: { state: StatePayload }) {
         </div>
       </Sheet>
 
-      <Sheet open={confirmReset} title="Delete this race?" onClose={() => setConfirmReset(false)}>
+      <Sheet open={confirmReset} title="Delete this race?" onClose={closeReset}>
         <p className="dir-confirm-warn">
           This wipes {state.event.year} without saving it. Archive first unless this race was a
           false start.
         </p>
         {error ? <p className="error-msg">{error}</p> : null}
 
+        {override ? (
+          <p className="dir-confirm-warn">
+            Deleting anyway loses {state.racers.length}{" "}
+            {state.racers.length === 1 ? "racer" : "racers"}, {state.event.heatsDone} recorded{" "}
+            {state.event.heatsDone === 1 ? "heat" : "heats"} and every uploaded photo. There is
+            no undo.
+          </p>
+        ) : null}
+
         <div className="sheet-actions">
-          <button type="button" className="btn" onClick={() => setConfirmReset(false)}>
+          <button type="button" className="btn" onClick={closeReset}>
             Cancel
           </button>
-          <button
-            type="button"
-            className="btn btn-danger"
-            onClick={() => run(api.director.reset, () => setConfirmReset(false))}
-          >
-            Delete it
+          <button type="button" className="btn btn-danger" onClick={wipe}>
+            {override ? "Delete without archiving" : "Delete it"}
           </button>
         </div>
       </Sheet>
