@@ -1,14 +1,24 @@
+import clipUrl from "../assets/dragster-launch.mp3";
+
 /**
- * The one sound this app makes: a launch as the winner's car runs up its connector.
+ * The one sound this app makes: a dragster launching as the winner's car runs up
+ * its connector.
  *
- * Synthesised rather than shipped as a file. A recording would be a few hundred KB
- * to download on race day over a domestic uplink, would need a licence, and could
- * not be re-tuned without re-encoding. This is an oscillator sweep and a noise
- * burst — a few dozen lines, no asset, no network, and the length is a parameter
- * so it can be matched to the animation it accompanies.
+ * The clip is a 1.7s cut from a **CC0 / public-domain** recording — "auto
+ * performance dragster take off", freesound.org sound 637195 by kyles. CC0 carries
+ * no attribution obligation; it's recorded here because knowing where an asset
+ * came from is worth more than the licence requires. Trimmed to the launch itself
+ * (3.0–4.7s of the source, where the power builds to its peak), gained, limited
+ * and faded at both ends so it neither clicks nor outstays the animation. 24 KB.
+ *
+ * A synthesised engine sits behind it as a fallback for the case where the clip
+ * fails to decode. It is not as good — that is rather the point of the clip — but
+ * a screen that makes a noise beats one that has silently failed.
  */
 
 let context: AudioContext | null = null;
+let clip: AudioBuffer | null = null;
+let fetched = false;
 let noise: AudioBuffer | null = null;
 
 /**
@@ -22,10 +32,56 @@ export function unlockAudio(): void {
     if (context.state === "suspended") {
       void context.resume();
     }
+    void load();
   } catch {
     // No Web Audio, or the browser refused. The screen is no worse than silent.
   }
 }
+
+/** Decode once, on the first unlock, so the first result isn't the one that waits. */
+async function load(): Promise<void> {
+  if (fetched || !context) {
+    return;
+  }
+  fetched = true;
+
+  try {
+    const response = await fetch(clipUrl);
+    clip = await context.decodeAudioData(await response.arrayBuffer());
+  } catch {
+    // Falls through to the synthesised engine below.
+  }
+}
+
+/**
+ * A launch. Silent and harmless if audio was never unlocked, so callers never have
+ * to check.
+ */
+export function playLaunch(volume = 0.75): void {
+  const audio = context;
+  if (!audio || audio.state !== "running") {
+    return;
+  }
+
+  if (clip === null) {
+    synthesise(audio, 1700, volume * 0.5);
+    return;
+  }
+
+  const source = audio.createBufferSource();
+  source.buffer = clip;
+
+  const gain = audio.createGain();
+  gain.gain.value = volume;
+
+  source.connect(gain);
+  gain.connect(audio.destination);
+  source.start(audio.currentTime);
+}
+
+// ---------------------------------------------------------------------------------
+// Fallback
+// ---------------------------------------------------------------------------------
 
 /** White noise for the tyre chirp, built once and reused. */
 function noiseBuffer(audio: AudioContext): AudioBuffer {
@@ -41,15 +97,9 @@ function noiseBuffer(audio: AudioContext): AudioBuffer {
 
 /**
  * A standing-start pull, `ms` long: tyres chirp, then the engine winds out through
- * its rev range as the filter opens up. Silent and harmless if audio was never
- * unlocked, so callers never have to check.
+ * its rev range as the filter opens up. Only heard if the clip didn't decode.
  */
-export function playLaunch(ms: number, volume = 0.38): void {
-  const audio = context;
-  if (!audio || audio.state !== "running") {
-    return;
-  }
-
+function synthesise(audio: AudioContext, ms: number, volume: number): void {
   const now = audio.currentTime;
   const length = ms / 1000;
 

@@ -298,18 +298,29 @@ brackets and differed only in density — the part that made the control unlearn
 **The wheel deliberately does nothing.** Scroll-to-zoom was tried and removed: on a trackpad
 it fires constantly by accident, and this screen is in front of a room.
 
-**Sound.** One sound, on the big screen only: a standing-start launch as the winner's car
-runs up its connector, the same length as that animation. It is **synthesised** with the Web
-Audio API rather than shipped as a file — a recording is hundreds of KB to pull over a
-domestic uplink on race day, needs a licence, and can't be re-tuned without re-encoding.
-This is two detuned sawtooths sweeping through a rev range behind an opening lowpass, plus a
-band-passed noise burst for the tyre chirp.
+**Sound.** One sound, on the big screen only: a real dragster launching as the winner's car
+runs up its connector.
+
+The clip is a 1.7s cut from a **CC0 / public-domain** recording — "auto performance dragster
+take off", [freesound.org sound 637195](https://freesound.org/s/637195/) by *kyles*. CC0
+imposes no attribution obligation; the provenance is recorded because knowing where an asset
+came from is worth more than the licence demands. The source is 12.5s and its power builds
+to a peak around 4.5s, so the cut is **3.0–4.7s** — the launch itself, not the quiet approach
+that precedes it. Gained, limited, faded at both ends so it neither clicks nor outlasts the
+animation. **24 KB**, bundled by Vite with a content hash.
+
+A synthesised engine (two detuned sawtooths through an opening lowpass, plus a band-passed
+noise burst) remains as a **fallback** if the clip ever fails to decode. It is markedly worse
+— which is why the clip exists — but a screen that makes a noise beats one that has silently
+failed. Anything ripped from a streaming site is not an option here regardless of how private
+the event is, and CC0 gets the same result with none of the problem.
 
 Two things follow from browser autoplay rules. The `AudioContext` is created **lazily**, on
 the first real gesture, so an unattended screen never logs a blocked-autoplay warning; and a
 gesture means a click or a keypress, **not** the mouse move that reveals the toolbar — so the
 window listens for `pointerdown` and `keydown` and unlocks on either. Until then `playLaunch`
-is a silent no-op, and callers never have to check.
+is a silent no-op, and callers never have to check. Decoding happens **at unlock**, not on
+first use, so the first result of the evening isn't the one that waits for it.
 
 The **Sound** toggle is on by default and persisted, and the trigger is latched on the match
 id, so an unrelated push mid-celebration — or toggling the sound on part way through one —

@@ -65,6 +65,10 @@ stays inspectable.
 - **Colour lives in `tokens.css`.** Two hardcoded copies exist on purpose and drift silently
   when the ramp moves: `QR.tsx` (the encoder takes hex, not `var()`) and the `.disp` vignette
   in `display.css`, hand-tuned to sit ~2 L\* over `--ground`. Change a token, check both.
+- **The launch clip is CC0.** `src/client/assets/dragster-launch.mp3` is cut from
+  [freesound 637195](https://freesound.org/s/637195/) by *kyles*, public domain. If you ever
+  swap it, keep it CC0 or a licence that permits redistribution — this repo is public, and
+  ripping audio from a streaming site is not an option however private the event is.
 - **Two QR types, different exposure rules.** The join QR is a bare URL and is safe anywhere.
   The re-link QR carries a racer's token and must never reach the big screen. They're
   separate components on purpose.

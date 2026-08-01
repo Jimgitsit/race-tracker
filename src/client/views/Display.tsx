@@ -47,11 +47,6 @@ const KEY = {
   dismissed: "race-tracker.disp.msgDismissed",
 } as const;
 
-/**
- * Matches `trk-travel` in display.css — the sound is the winner's car making that
- * run, so the two have to be the same length. Change one, change the other.
- */
-const TRAVEL_MS = 1600;
 
 const FILTER_KEYS: Filter[] = ["all", "main", "losers", "consolation"];
 const DETAIL_KEYS: Detail[] = ["auto", "all"];
@@ -296,7 +291,7 @@ function Racing({ state }: { state: StatePayload }) {
     }
     sounded.current = flash;
     if (sound) {
-      playLaunch(TRAVEL_MS);
+      playLaunch();
     }
   }, [flash, sound]);
 
