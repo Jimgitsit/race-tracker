@@ -29,7 +29,7 @@ export function useRace(): { state: StatePayload | null; connected: boolean } {
 }
 
 /** How long a result holds the screen before the next heat takes over. */
-export const FLASH_MS = 3000;
+export const FLASH_MS = 4000;
 
 /**
  * Fires when a match's result lands, so a view can celebrate it.

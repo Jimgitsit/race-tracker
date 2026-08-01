@@ -94,7 +94,7 @@ URL stays typeable (`jimmcgowen.com/race-tracker/display`). All in-app links mus
 - Big card: **NOW RACING**, the two cars side by side (photo, name), a `VS` between them.
 - If the viewer is in this match, the card gets a loud accent border and a "**That's you!**"
   label.
-- **When a result lands, the card holds it for 3 seconds before moving on.** The winner's
+- **When a result lands, the card holds it for 4 seconds before moving on.** The winner's
   photo gets a green ring and **`WINNER!`** scales down onto it from oversized; the loser
   dims and strikes through; then the card fades to the next heat. Everyone in the room is
   looking at their phone, so the moment of winning belongs there too, not only on the TV.
@@ -220,7 +220,7 @@ for car photos.
   names in a very large weight, `VS` between. When a result lands the banner runs **the same
   celebration as the racer view** (§3.1): a green ring on the winner's photo, their name in
   green, **WINNER!** landing on the photo oversized-and-transparent then scaling down onto
-  it, and the loser dimmed and struck. It holds ~3s, then the banner swaps to the next match.
+  it, and the loser dimmed and struck. It holds ~4s, then the banner swaps to the next match.
   This animation is the thing that makes a room look up — and it is the *same* animation on
   the phone in your hand and on the screen across the room, on purpose.
 - **Body: the bracket, auto-framed** (below).
@@ -293,10 +293,28 @@ brackets and differed only in density — the part that made the control unlearn
 | Double-click | back to fit |
 | ↑ / ↓ / `+` / `-` | zoom in / out |
 | ← / → | pan when zoomed; step the focus round when fitted |
-| Enter | cycle the bracket filter · `d` all-rounds · `a` follow · `f` fit · Esc reset |
+| Enter | cycle the bracket filter · `d` all-rounds · `a` follow · `s` sound · `f` fit · Esc reset |
 
 **The wheel deliberately does nothing.** Scroll-to-zoom was tried and removed: on a trackpad
 it fires constantly by accident, and this screen is in front of a room.
+
+**Sound.** One sound, on the big screen only: a standing-start launch as the winner's car
+runs up its connector, the same length as that animation. It is **synthesised** with the Web
+Audio API rather than shipped as a file — a recording is hundreds of KB to pull over a
+domestic uplink on race day, needs a licence, and can't be re-tuned without re-encoding.
+This is two detuned sawtooths sweeping through a rev range behind an opening lowpass, plus a
+band-passed noise burst for the tyre chirp.
+
+Two things follow from browser autoplay rules. The `AudioContext` is created **lazily**, on
+the first real gesture, so an unattended screen never logs a blocked-autoplay warning; and a
+gesture means a click or a keypress, **not** the mouse move that reveals the toolbar — so the
+window listens for `pointerdown` and `keydown` and unlocks on either. Until then `playLaunch`
+is a silent no-op, and callers never have to check.
+
+The **Sound** toggle is on by default and persisted, and the trigger is latched on the match
+id, so an unrelated push mid-celebration — or toggling the sound on part way through one —
+can't retrigger it. Never on the racer view: thirty phones in one room all launching at once
+is a different product.
 
 **Settings survive a refresh.** Bracket, All rounds, Follow and the dismissed-message mark
 all persist to `localStorage` — the screen runs unattended for hours and a stray reload
@@ -312,7 +330,8 @@ so the case worth restoring restores itself.
 
 A stored bracket filter can name a bracket that no longer exists (Consolation, saved last
 year), so it falls back to All rather than leaving no button lit while the bracket quietly
-shows something else. Esc does not un-dismiss a message: closing one is a deliberate act, not
+shows something else. Esc resets the *view* only — it does not un-dismiss a message or unmute
+the sound, because closing one and muting the other are deliberate acts, not
 a view setting.
 
 Zoom is bounded **relative to fit**, never absolutely: fit for the full 62-match bracket is

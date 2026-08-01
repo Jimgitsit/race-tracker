@@ -177,7 +177,7 @@
 
 /*
  * Lands on the photo: starts oversized and transparent, then scales down onto it.
- * It has to stay put for the three seconds afterwards, so the animation fills
+ * It has to stay put for the rest of the hold, so the animation fills
  * forwards rather than fading straight back out — the whole point is that someone
  * glancing over a second later still sees who won.
  */

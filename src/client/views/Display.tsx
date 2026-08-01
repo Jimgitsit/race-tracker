@@ -3,6 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { joinUrl, type PublicMatch, type StatePayload } from "../lib/api.ts";
 import { matchById, racerById, roundsOf, sourceLabel, type RoundColumn } from "../lib/derive.ts";
 import { FLASH_MS, useResultFlash } from "../lib/useRace.ts";
+import { playLaunch, unlockAudio } from "../lib/sound.ts";
 import { timeAgo, useNow } from "../lib/time.ts";
 import { Avatar } from "../components/Avatar.tsx";
 import { JoinQR } from "../components/QR.tsx";
@@ -42,8 +43,15 @@ const KEY = {
   filter: "race-tracker.disp.filter",
   detail: "race-tracker.disp.detail",
   follow: "race-tracker.disp.follow",
+  sound: "race-tracker.disp.sound",
   dismissed: "race-tracker.disp.msgDismissed",
 } as const;
+
+/**
+ * Matches `trk-travel` in display.css — the sound is the winner's car making that
+ * run, so the two have to be the same length. Change one, change the other.
+ */
+const TRAVEL_MS = 1600;
 
 const FILTER_KEYS: Filter[] = ["all", "main", "losers", "consolation"];
 const DETAIL_KEYS: Detail[] = ["auto", "all"];
@@ -242,6 +250,7 @@ function Racing({ state }: { state: StatePayload }) {
   const [view, setView] = useState<View>(FIT);
   const [focus, setFocus] = useState<number | null>(null);
   const [follow, setFollow] = useState(() => localStorage.getItem(KEY.follow) === "1");
+  const [sound, setSound] = useState(() => localStorage.getItem(KEY.sound) !== "0");
   const [fit, setFit] = useState(1);
   const [dismissed, setDismissed] = useState(() => storedNumber(KEY.dismissed));
   const [chrome, setChrome] = useState(false);
@@ -255,7 +264,41 @@ function Racing({ state }: { state: StatePayload }) {
   useEffect(() => localStorage.setItem(KEY.filter, filter), [filter]);
   useEffect(() => localStorage.setItem(KEY.detail, detail), [detail]);
   useEffect(() => localStorage.setItem(KEY.follow, follow ? "1" : "0"), [follow]);
+  useEffect(() => localStorage.setItem(KEY.sound, sound ? "1" : "0"), [sound]);
   useEffect(() => localStorage.setItem(KEY.dismissed, String(dismissed)), [dismissed]);
+
+  // Audio needs a real gesture before a browser will let it start — a click or a
+  // keypress, and specifically not the mouse move that reveals the toolbar. Any
+  // press anywhere counts, so the first time the operator touches anything the
+  // sound is armed for the rest of the evening.
+  useEffect(() => {
+    window.addEventListener("pointerdown", unlockAudio);
+    window.addEventListener("keydown", unlockAudio);
+    return () => {
+      window.removeEventListener("pointerdown", unlockAudio);
+      window.removeEventListener("keydown", unlockAudio);
+    };
+  }, []);
+
+  // Fires on the result, which is when the winner's chip sets off up its
+  // connector. Keyed on the flash rather than on `state`, so an unrelated push
+  // mid-celebration can't retrigger it — and latched on the match id, so nor can
+  // toggling the sound on part way through one.
+  const sounded = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (flash === null) {
+      sounded.current = null;
+      return;
+    }
+    if (sounded.current === flash) {
+      return;
+    }
+    sounded.current = flash;
+    if (sound) {
+      playLaunch(TRAVEL_MS);
+    }
+  }, [flash, sound]);
 
   const current = matchById(state, state.event.currentMatch);
   const flashed = matchById(state, flash);
@@ -372,6 +415,9 @@ function Racing({ state }: { state: StatePayload }) {
         case "a":
           setFollow((f) => !f);
           break;
+        case "s":
+          setSound((s) => !s);
+          break;
         case "Enter":
           setFilter((f) => filters[(filters.findIndex((x) => x.key === f) + 1) % filters.length].key);
           setFocus(null);
@@ -468,11 +514,13 @@ function Racing({ state }: { state: StatePayload }) {
           filter={filter}
           detail={detail}
           follow={follow}
+          sound={sound}
           scale={view.scale}
           fit={fit}
           onFilter={pickFilter}
           onDetail={() => setDetail((d) => (d === "all" ? "auto" : "all"))}
           onFollow={() => setFollow((f) => !f)}
+          onSound={() => setSound((s) => !s)}
           onZoom={zoomBy}
           onFit={() => {
             manual();
@@ -603,11 +651,13 @@ function Controls({
   filter,
   detail,
   follow,
+  sound,
   scale,
   fit,
   onFilter,
   onDetail,
   onFollow,
+  onSound,
   onZoom,
   onFit,
 }: {
@@ -616,11 +666,13 @@ function Controls({
   filter: Filter;
   detail: Detail;
   follow: boolean;
+  sound: boolean;
   scale: number | null;
   fit: number;
   onFilter: (key: Filter) => void;
   onDetail: () => void;
   onFollow: () => void;
+  onSound: () => void;
   onZoom: (steps: number) => void;
   onFit: () => void;
 }) {
@@ -657,6 +709,14 @@ function Controls({
           title="Zoom in on the current heat and track it as the race moves"
         >
           Follow
+        </button>
+        <button
+          type="button"
+          className={`disp-ctl-btn ${sound ? "is-on" : ""}`}
+          onClick={onSound}
+          title="Play a launch as the winner's car runs up the bracket"
+        >
+          Sound
         </button>
       </div>
 
