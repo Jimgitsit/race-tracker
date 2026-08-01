@@ -584,6 +584,13 @@
 }
 
 .disp-progress {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  flex: none;
+}
+
+.disp-progress-count {
   font-size: 1rem;
   color: var(--ink-dim);
 }
@@ -684,7 +691,12 @@
     display: none;
   }
 
-  .disp-progress {
+  /* No room for the label beside a message on a phone — the number still reads. */
+  .disp-progress .disp-eyebrow {
+    display: none;
+  }
+
+  .disp-progress-count {
     font-size: 0.7rem;
   }
 }

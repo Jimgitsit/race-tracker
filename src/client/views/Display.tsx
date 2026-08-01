@@ -88,7 +88,7 @@ const PINCH_FEEL = 120;
  * card is 87px tall in both brackets, and holding that steady holds the text
  * steady — which is the thing anybody is actually reading.
  */
-const FOLLOW_CARD_SHARE = 0.116;
+const FOLLOW_CARD_SHARE = 0.093;
 
 /**
  * Where follow parks the live heat across the frame. Centred, so the round that
@@ -549,8 +549,14 @@ function Racing({ state }: { state: StatePayload }) {
           </p>
         ) : null}
 
-        <span className="code disp-progress">
-          {state.event.heatsDone}/{state.event.heatsTotal}
+        {/* "Heats run", not "heat N of M": this is the count already raced, so the
+            number is one behind the heat on the track. The director's own screen
+            shows heatsDone + 1 for that, and the two should not read alike. */}
+        <span className="disp-progress">
+          <span className="disp-eyebrow">Heats run</span>
+          <span className="code tabular disp-progress-count">
+            {state.event.heatsDone} / {state.event.heatsTotal}
+          </span>
         </span>
       </footer>
     </main>

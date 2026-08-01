@@ -379,7 +379,13 @@ bracket a settled round is the biggest waste of space on the screen (winners rou
 sixteen matches tall) and collapsing it is what lets everything else be drawn large. Follow
 doesn't pay that cost, because its zoom comes from the card rather than from fit.
 
-Its zoom is chosen so the live heat's **card is ~11.6% of the frame's height**, and is
+Its zoom is chosen so the live heat's **card is ~9.3% of the frame's height** — a request,
+floored at `fit`, and at this setting the floor is what usually wins on a 1080p+ screen. That
+is deliberate: once the whole bracket is readable there is nothing below fit worth showing,
+so follow settles into centring the live heat and expanding the rounds either side rather
+than magnifying anything. Note the feedback loop if you tune this further — turning follow on
+promotes the neighbouring collapsed rounds to `compact`, which enlarges the tree and so
+*lowers* fit, meaning a smaller share can produce a slightly larger card. The zoom is
 explicitly *not* a multiple of fit. Fit is a moving target: it rises as rounds settle and
 collapse, as a filter narrows to one bracket, as the window changes shape. A multiple of it
 meant the heat kept growing through the evening — legible in winners round 1 and far too
