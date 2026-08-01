@@ -267,7 +267,7 @@ function Roster({ state }: { state: StatePayload }) {
 
       <main className="dir-roster">
         {count === 0 ? (
-          <p className="empty-note">Nobody has registered yet. Put the join QR on the screen.</p>
+          <p className="empty-note">Nobody has registered yet.</p>
         ) : (
           <ul className="dir-list">
             {state.racers.map((racer) => (
