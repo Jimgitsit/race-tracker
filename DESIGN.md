@@ -285,7 +285,7 @@ brackets and differed only in density — the part that made the control unlearn
 |---|---|---|
 | **Bracket** | All · Winners · Losers · Consolation | which brackets are on screen (Consolation only appears once one exists) |
 | **All rounds** | off / on | off = collapse what's settled (the density table above); on = draw every round the same size |
-| **Follow** | off / on | size the live heat to ~18% of the frame, centre it with the rounds either side readable, re-aim as the race moves |
+| **Follow** | off / on | size the live heat to ~14.5% of the frame's *height*, centre it with the rounds either side readable, re-aim as the race moves |
 
 | Gesture | Action |
 |---|---|
@@ -334,15 +334,24 @@ bracket a settled round is the biggest waste of space on the screen (winners rou
 sixteen matches tall) and collapsing it is what lets everything else be drawn large. Follow
 doesn't pay that cost, because its zoom comes from the card rather than from fit.
 
-Its zoom is chosen so the live heat's **card fills ~18% of the frame's width**, and is
+Its zoom is chosen so the live heat's **card is ~14.5% of the frame's height**, and is
 explicitly *not* a multiple of fit. Fit is a moving target: it rises as rounds settle and
 collapse, as a filter narrows to one bracket, as the window changes shape. A multiple of it
 meant the heat kept growing through the evening — legible in winners round 1 and far too
-close by the losers rounds. Frame width and card width are both stable; only the whole
-bracket's laid-out size moves, which is exactly what makes fit move. Anchoring between the
-two stable measurements holds the thing that actually matters — how big the heat you are
-watching looks — steady for the entire race, and scales with the screen rather than against
-it. No extra container is needed for this: `.disp-canvas` is already a fixed frame.
+close by the losers rounds. Only the whole bracket's laid-out size moves, which is exactly
+what makes fit move; the frame and the card are stable, so anchoring between those two holds
+the apparent size steady for the entire race and scales with the screen rather than against
+it. No extra container is needed: `.disp-canvas` is already a fixed frame.
+
+**Height, not width — this matters and is not obvious.** A card's *width* is set by the
+longest label anywhere in its column, because `.disp-col-body` is a flex stack and every card
+stretches to the widest one. Losers columns carry source labels ("Loser of Wheelsy
+McWheelerson Jr. vs Emma"), so a losers card lays out 370px wide against a winners card's
+249px **for the very same two names**. Anchoring on width therefore held the card's screen
+width constant and shrank the *text* by a third the moment the race reached the losers
+bracket — every losers heat, in every view. Height is immune: names are single-line `nowrap`
+and the avatar is a fixed size, so the card is 87px tall in both brackets. Holding height
+steady holds the text steady, which is the thing anybody is actually reading.
 
 A consequence worth expecting: **the zoom readout drifts while following**, because it reads
 as a percentage of fit and fit is the thing that moves. The apparent size is the constant,

@@ -63,17 +63,25 @@ const CHROME_IDLE_MS = 2500;
 const ZOOM_STEP = 1.15;
 
 /**
- * Follow mode sizes itself off the live heat's own card — the card is made to fill
- * this much of the frame's width — and *not* off a multiple of fit.
+ * Follow mode sizes itself off the live heat's own card — the card is made this
+ * tall a share of the frame — rather than off a multiple of fit.
  *
  * Fit is a moving target: it rises as rounds settle and collapse, as the filter
  * narrows to one bracket, as the window changes shape. A multiple of it meant the
- * heat kept growing through the evening, and "3×" was legible at the start and
- * far too close by the losers rounds. Anchoring to the card holds the one thing
- * that actually matters — how big the heat you are watching looks — steady for the
- * whole race, and it scales with the screen rather than against it.
+ * heat kept growing through the evening, legible in winners round 1 and far too
+ * close by the losers rounds.
+ *
+ * **Height, not width.** A card's width is set by the *longest label anywhere in
+ * its column*, because the column is a flex stack and every card stretches to the
+ * widest one. Losers columns carry source labels — "Loser of Wheelsy McWheelerson
+ * Jr. vs Emma" — so a losers card lays out at 370px against a winners card's 249px
+ * for the very same two names. Holding width constant on screen therefore *shrank
+ * the text* by a third the moment the race reached the losers bracket. Height is
+ * immune: names are single-line `nowrap` and the avatar is a fixed size, so the
+ * card is 87px tall in both brackets, and holding that steady holds the text
+ * steady — which is the thing anybody is actually reading.
  */
-const FOLLOW_CARD_SHARE = 0.184;
+const FOLLOW_CARD_SHARE = 0.145;
 
 /**
  * Where follow parks the live heat across the frame. Centred, so the round that
@@ -953,12 +961,12 @@ function BracketCanvas({
       return;
     }
 
-    // Frame width and card width are both stable; only the whole bracket's laid-out
+    // Frame height and card height are both stable; only the whole bracket's laid-out
     // size moves, which is why fit moves. Sizing between the two stable measurements
     // keeps the heat the same size on screen all evening. Floored at fit because
-    // there is nothing to see below it, capped absolutely so a narrow card in a
+    // there is nothing to see below it, capped absolutely so a short card in a
     // one-column filter can't fill the screen.
-    const next = clamp((frame.w * FOLLOW_CARD_SHARE) / box.offsetWidth, fit, 3);
+    const next = clamp((frame.h * FOLLOW_CARD_SHARE) / box.offsetHeight, fit, 3);
     onView({
       scale: next,
       x: frame.w * FOLLOW_BIAS - (box.offsetLeft + box.offsetWidth / 2) * next,
