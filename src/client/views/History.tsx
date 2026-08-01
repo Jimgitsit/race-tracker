@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 
 import { BASE, api, type StatePayload } from "../lib/api.ts";
-import { racerById, roundsOf } from "../lib/derive.ts";
+import { racerById } from "../lib/derive.ts";
 import { Avatar } from "../components/Avatar.tsx";
-import { MatchCard } from "../components/MatchCard.tsx";
+import { BracketColumns } from "../components/Bracket.tsx";
 
 type ArchiveSummary = Awaited<ReturnType<typeof api.archives.list>>[number];
 
@@ -93,7 +93,6 @@ function Year({ year }: { year: number }) {
     );
   }
 
-  const columns = roundsOf(state, ["W", "L", "GF", "GFR", "C"]);
   const podium = [
     { place: "1st", id: state.event.champion },
     { place: "2nd", id: state.event.runnerUp },
@@ -121,18 +120,7 @@ function Year({ year }: { year: number }) {
         })}
       </section>
 
-      <div className="rc-columns scroll-x">
-        {columns.map((column) => (
-          <section className="rc-column" key={column.key}>
-            <h2 className="rc-column-head">{column.label}</h2>
-            <div className="stack rc-column-body">
-              {column.matches.map((match) => (
-                <MatchCard key={match.id} state={state} match={match} showRound={false} />
-              ))}
-            </div>
-          </section>
-        ))}
-      </div>
+      <BracketColumns state={state} brackets={["W", "L", "GF", "GFR", "C"]} />
 
       <a className="btn btn-ghost hist-back" href={`${BASE}history`}>
         All years

@@ -59,6 +59,64 @@
   color: var(--ink-faint);
 }
 
+/* --- bracket ----------------------------------------------------------------- */
+
+/*
+ * Shared by three views (racer, director, history) — the `rc-` prefix is where
+ * they started, not where they live. Markup is components/Bracket.tsx.
+ */
+.rc-seg {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--r-md);
+  background: var(--ground-deep);
+  border: 1px solid var(--line-soft);
+}
+
+.rc-seg-btn {
+  flex: 1;
+  padding: var(--s-2) var(--s-1);
+  border-radius: var(--r-sm);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--ink-faint);
+}
+
+.rc-seg-on {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.rc-columns {
+  display: flex;
+  min-width: 0;
+  gap: var(--s-3);
+  padding-bottom: var(--s-3);
+  scroll-snap-type: x mandatory;
+}
+
+.rc-column {
+  flex: none;
+  width: min(76vw, 300px);
+  scroll-snap-align: start;
+}
+
+.rc-column-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: var(--s-2) 0;
+  margin-bottom: var(--s-2);
+  background: var(--ground);
+  font-size: var(--t-md);
+  color: var(--ink-dim);
+}
+
+.rc-column-body {
+  gap: var(--s-2);
+}
+
 /* --- match card -------------------------------------------------------------- */
 
 .mc {

@@ -36,6 +36,11 @@ stays inspectable.
 - **Display fit maths measures `clientHeight`**, which includes padding — so `.disp-canvas`
   must stay padding-free or the bracket clips at the bottom. Padding goes inside the scaled
   content.
+- **A shrink-to-fit box can't tell you how much room you have.** The registration roster
+  sizes its cards from `.disp-grid`'s own height, which is only the *available* height
+  because the rule says `flex: 1`. Without it the box is as tall as its content, so three
+  cars measure a short box, pick small cards, and stay small — the fit reads back its own
+  output. Same family as the `.disp-tree` ratchet below.
 - **Fit measures `.disp-tree`, never `.disp-scale`.** The wrapper also holds the connector
   SVG, which is sized *from* that measurement — measure the wrapper and the size becomes its
   own input. It ratchets (the SVG props up `scrollHeight`), the measured height can never
@@ -62,6 +67,14 @@ stays inspectable.
   the shorthand, so it resets `background-color` and the tinted end composites onto the page
   instead of the card. Always `linear-gradient(…, transparent 60%), var(--surface)`. Four
   rules have had this bug; grep before adding a fifth.
+- **The bracket columns are one component** (`components/Bracket.tsx`), used by the racer
+  view, the director's next-heat sheet and `/history`. Their CSS still carries the `rc-`
+  prefix it was born with in the racer view but lives in `components.css`. Adding a fourth
+  copy of `roundsOf(...).map(...)` is how the bracket names drift.
+- **`.dir-pick` was already taken** by a consolation-picker row when the next-heat sheet
+  wanted it, and CSS merges silently: the new rule won `display` and the old one kept
+  `align-items: center`, so the sheet's controls shrank to their content and the columns
+  overflowed instead of scrolling. Grep the stylesheet before naming a class.
 - **Colour lives in `tokens.css`.** Two hardcoded copies exist on purpose and drift silently
   when the ramp moves: `QR.tsx` (the encoder takes hex, not `var()`) and the `.disp` vignette
   in `display.css`, hand-tuned to sit ~2 L\* over `--ground`. Change a token, check both.

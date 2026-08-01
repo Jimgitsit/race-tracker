@@ -8,7 +8,6 @@ import {
   pathOf,
   racerById,
   recordOf,
-  roundsOf,
   statusChip,
   statusFor,
 } from "../lib/derive.ts";
@@ -17,6 +16,13 @@ import { useMessages, useRaceAlerts, type Message } from "../lib/useAlerts.ts";
 import { useResultFlash } from "../lib/useRace.ts";
 import { clockTime, timeAgo, useNow } from "../lib/time.ts";
 import { Avatar } from "../components/Avatar.tsx";
+import {
+  BracketColumns,
+  GROUP_KEY,
+  GroupTabs,
+  activeGroup,
+  bracketsOf,
+} from "../components/Bracket.tsx";
 import { MatchCard } from "../components/MatchCard.tsx";
 import { JoinQR } from "../components/QR.tsx";
 import { ShareLink } from "../components/ShareLink.tsx";
@@ -35,7 +41,6 @@ const ID_KEY = "race-tracker.id";
 const TAB_KEY = "race-tracker.tab";
 const WATCH_KEY = "race-tracker.watching";
 const READ_KEY = "race-tracker.msgRead";
-const GROUP_KEY = "race-tracker.bracketGroup";
 const PATH_KEY = "race-tracker.myPath";
 
 /** Validated against the known tabs, so a stale stored value can't blank the view. */
@@ -987,13 +992,6 @@ function RulesTab({ state, meId }: { state: StatePayload; meId: number | null })
 // Bracket
 // ---------------------------------------------------------------------------------
 
-const GROUPS = [
-  { key: "W", label: "Winners bracket", brackets: ["W"] },
-  { key: "L", label: "Losers bracket", brackets: ["L"] },
-  { key: "F", label: "Finals", brackets: ["GF", "GFR"] },
-  { key: "C", label: "Consolation bracket", brackets: ["C"] },
-];
-
 function BracketTab({ state, meId }: { state: StatePayload; meId: number | null }) {
   const [group, setGroup] = useState(() => localStorage.getItem(GROUP_KEY) ?? "W");
   const [myPath, setMyPath] = useState(() => localStorage.getItem(PATH_KEY) !== "0");
@@ -1011,15 +1009,7 @@ function BracketTab({ state, meId }: { state: StatePayload; meId: number | null 
     () => (meId === null ? new Set<number>() : pathOf(state, meId)),
     [state, meId],
   );
-  const groups = GROUPS.filter(
-    (g) => g.key !== "C" || state.event.consolation,
-  );
-
-  // A stored group can name a bracket that doesn't exist yet — Consolation, saved
-  // last year, before this year's is started. Fall back for display without
-  // discarding the choice, so it comes back if that bracket appears.
-  const active = groups.some((g) => g.key === group) ? group : "W";
-  const columns = roundsOf(state, groups.find((g) => g.key === active)?.brackets ?? ["W"]);
+  const active = activeGroup(state, group);
 
   if (state.event.phase === "registration") {
     return <p className="empty-note">The bracket appears once the director starts the race.</p>;
@@ -1030,20 +1020,7 @@ function BracketTab({ state, meId }: { state: StatePayload; meId: number | null 
       <p className="eyebrow rc-seg-label" id="rc-seg-label">
         Bracket
       </p>
-      <div className="rc-seg" role="tablist" aria-labelledby="rc-seg-label">
-        {groups.map((g) => (
-          <button
-            key={g.key}
-            type="button"
-            role="tab"
-            aria-selected={active === g.key}
-            className={`rc-seg-btn ${active === g.key ? "rc-seg-on" : ""}`}
-            onClick={() => setGroup(g.key)}
-          >
-            {g.label}
-          </button>
-        ))}
-      </div>
+      <GroupTabs state={state} group={active} onPick={setGroup} labelledBy="rc-seg-label" />
 
       {meId === null ? null : (
         <button
@@ -1056,26 +1033,14 @@ function BracketTab({ state, meId }: { state: StatePayload; meId: number | null 
         </button>
       )}
 
-      <div className="rc-columns scroll-x">
-        {columns.map((column) => (
-          <section className="rc-column" key={column.key}>
-            <h2 className="rc-column-head">{column.label}</h2>
-            <div className="stack rc-column-body">
-              {column.matches.map((match) => (
-                <MatchCard
-                  key={match.id}
-                  state={state}
-                  match={match}
-                  dim={meId !== null && myPath && !mine.has(match.id)}
-                  current={match.id === state.event.currentMatch}
-                  showRound={false}
-                  onSelect={setDetail}
-                />
-              ))}
-            </div>
-          </section>
-        ))}
-      </div>
+      <BracketColumns
+        state={state}
+        brackets={bracketsOf(state, active)}
+        card={(match) => ({
+          dim: meId !== null && myPath && !mine.has(match.id),
+          onSelect: setDetail,
+        })}
+      />
 
       <Sheet
         open={detail !== null}

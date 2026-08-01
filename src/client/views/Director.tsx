@@ -11,6 +11,13 @@ import {
 } from "../lib/api.ts";
 import { matchById, racerById, recordOf } from "../lib/derive.ts";
 import { Avatar } from "../components/Avatar.tsx";
+import {
+  BracketColumns,
+  GROUP_KEY,
+  GroupTabs,
+  activeGroup,
+  bracketsOf,
+} from "../components/Bracket.tsx";
 import { MatchCard } from "../components/MatchCard.tsx";
 import { JoinQR, RelinkQR } from "../components/QR.tsx";
 import { ShareLink } from "../components/ShareLink.tsx";
@@ -18,6 +25,9 @@ import { Sheet } from "../components/Sheet.tsx";
 
 /** One guard against a fat-finger, then the tap targets go dead for a beat. */
 const TAP_LOCKOUT_MS = 1000;
+
+/** Whether the director last picked a heat off the list or off the bracket. */
+const PICK_KEY = "race-tracker.dir.pick";
 
 export function DirectorView({ state }: { state: StatePayload }) {
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
@@ -530,24 +540,8 @@ function Racing({ state }: { state: StatePayload }) {
         </div>
       </Sheet>
 
-      <Sheet open={showQueue} title="Up next" onClose={() => setShowQueue(false)}>
-        {upNext.length === 0 ? (
-          <p className="empty-note">Nothing else is ready yet.</p>
-        ) : (
-          <div className="stack">
-            {upNext.map((match) => (
-              <MatchCard
-                key={match.id}
-                state={state}
-                match={match}
-                onSelect={async (picked) => {
-                  await api.director.setCurrent(picked.id);
-                  setShowQueue(false);
-                }}
-              />
-            ))}
-          </div>
-        )}
+      <Sheet open={showQueue} title="Next heat" onClose={() => setShowQueue(false)}>
+        <HeatPicker state={state} upNext={upNext} onPicked={() => setShowQueue(false)} />
       </Sheet>
 
       <Sheet
@@ -560,6 +554,105 @@ function Racing({ state }: { state: StatePayload }) {
 
       <MessageSheet state={state} open={showMessage} onClose={() => setShowMessage(false)} />
     </>
+  );
+}
+
+/**
+ * Two ways to choose what races next, because they answer different questions.
+ * The list is "what can I run right now" — short, ordered, no thinking. The
+ * bracket is "where are we", which is the question that gets asked out loud, and
+ * the director is the one person in the room without a view of the big screen.
+ *
+ * Only a ready heat is tappable in the bracket; everything else renders as a plain
+ * card rather than a dead button, so there is nothing to press that does nothing.
+ */
+function HeatPicker({
+  state,
+  upNext,
+  onPicked,
+}: {
+  state: StatePayload;
+  upNext: PublicMatch[];
+  onPicked: () => void;
+}) {
+  const [mode, setMode] = useState(() =>
+    localStorage.getItem(PICK_KEY) === "bracket" ? "bracket" : "list",
+  );
+  const [group, setGroup] = useState(() => localStorage.getItem(GROUP_KEY) ?? "W");
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem(PICK_KEY, mode);
+  }, [mode]);
+
+  useEffect(() => {
+    localStorage.setItem(GROUP_KEY, group);
+  }, [group]);
+
+  const ready = useMemo(
+    () => new Set(state.queue.filter((id) => id !== state.event.currentMatch)),
+    [state.queue, state.event.currentMatch],
+  );
+
+  const pick = async (match: PublicMatch) => {
+    try {
+      await api.director.setCurrent(match.id);
+      onPicked();
+    } catch (problem) {
+      setError(problem instanceof ApiError ? problem.message : "Couldn't switch heats.");
+    }
+  };
+
+  return (
+    <div className="dir-next">
+      <div className="rc-seg" role="tablist" aria-label="How to choose">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === "list"}
+          className={`rc-seg-btn ${mode === "list" ? "rc-seg-on" : ""}`}
+          onClick={() => setMode("list")}
+        >
+          Ready ({upNext.length})
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === "bracket"}
+          className={`rc-seg-btn ${mode === "bracket" ? "rc-seg-on" : ""}`}
+          onClick={() => setMode("bracket")}
+        >
+          Bracket
+        </button>
+      </div>
+
+      {error ? <p className="error-msg">{error}</p> : null}
+
+      {mode === "list" ? (
+        upNext.length === 0 ? (
+          <p className="empty-note">Nothing else is ready yet.</p>
+        ) : (
+          <div className="stack">
+            {upNext.map((match) => (
+              <MatchCard key={match.id} state={state} match={match} onSelect={pick} />
+            ))}
+          </div>
+        )
+      ) : (
+        <>
+          <GroupTabs state={state} group={activeGroup(state, group)} onPick={setGroup} />
+          <BracketColumns
+            state={state}
+            brackets={bracketsOf(state, activeGroup(state, group))}
+            startAtSelectable
+            card={(match) => ({
+              dim: !ready.has(match.id) && match.id !== state.event.currentMatch,
+              onSelect: ready.has(match.id) ? pick : undefined,
+            })}
+          />
+        </>
+      )}
+    </div>
   );
 }
 

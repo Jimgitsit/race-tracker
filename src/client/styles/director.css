@@ -414,3 +414,24 @@
   resize: none;
   line-height: 1.35;
 }
+
+/* --- picking the next heat ---------------------------------------------------- */
+
+.dir-next {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+
+/* The column header sticks to the sheet, not the page, so it has to match the
+   sheet's surface — against --ground the cards scroll under a slab of the wrong
+   brown. Same reason the sheet's own head is painted. */
+.dir-next .rc-column-head {
+  background: var(--surface);
+}
+
+/* A heat that isn't ready is a plain card, not a button. Dimming says so without
+   needing a legend; the live one keeps its own accent and is never dimmed. */
+.dir-next .rc-column .mc-dim {
+  opacity: 0.42;
+}

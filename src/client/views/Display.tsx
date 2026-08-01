@@ -207,7 +207,70 @@ function useWakeLock(): void {
 // Registration — the TV is idle, so it does the onboarding
 // ---------------------------------------------------------------------------------
 
+/**
+ * A TV has no scrollbar anyone is going to use, so the roster has to *fit* — the
+ * whole point of the screen is that someone who just scanned the QR finds their car
+ * on it. The card size therefore follows the roster, between two bounds: a floor so
+ * the names stay readable, and a ceiling so the first three arrivals aren't
+ * billboards.
+ */
+const CARD_MIN = 96;
+const CARD_MAX = 200;
+
+/**
+ * Fewest columns — so the biggest cards — that still fit the box, given that every
+ * card is a square photo plus a fixed label block. Fewer columns means wider cards
+ * *and* taller rows, so the height is what actually binds.
+ */
+function rosterColumns(count: number, w: number, h: number, gap: number, label: number): number {
+  const most = Math.max(1, Math.floor((w + gap) / (CARD_MIN + gap)));
+
+  for (let cols = 1; cols <= most; cols++) {
+    const card = (w - (cols - 1) * gap) / cols;
+    if (card > CARD_MAX) {
+      continue;
+    }
+    const rows = Math.ceil(count / cols);
+    if (rows * (card + label) + (rows - 1) * gap <= h) {
+      return cols;
+    }
+  }
+
+  // Everyone can't fit even at the floor. Only a phone gets here, and a phone scrolls.
+  return most;
+}
+
 function Registration({ state }: { state: StatePayload }) {
+  const grid = useRef<HTMLDivElement>(null);
+  const [cols, setCols] = useState(0);
+  const count = state.racers.length;
+
+  useLayoutEffect(() => {
+    const box = grid.current;
+    if (!box || count === 0) {
+      return;
+    }
+
+    const measure = () => {
+      const card = box.firstElementChild as HTMLElement | null;
+      const photo = card?.firstElementChild as HTMLElement | null;
+      if (!card || !photo) {
+        return;
+      }
+
+      // The label block is a constant: the name is clamped to a reserved two lines,
+      // so this can't move when the cards resize and the fit can't chase itself.
+      const label = card.offsetHeight - photo.offsetHeight;
+      const gap = parseFloat(getComputedStyle(box).rowGap) || 0;
+      setCols(rosterColumns(count, box.clientWidth, box.clientHeight, gap, label));
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, [count]);
+
   return (
     <main className="disp disp-join">
       <section className="disp-join-left">
@@ -225,7 +288,11 @@ function Registration({ state }: { state: StatePayload }) {
           </span>
         </div>
 
-        <div className="disp-grid">
+        <div
+          className="disp-grid"
+          ref={grid}
+          style={cols > 0 ? { gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` } : undefined}
+        >
           {state.racers.map((racer) => (
             <div className="disp-grid-car" key={racer.id}>
               <Avatar racer={racer} size="xl" />

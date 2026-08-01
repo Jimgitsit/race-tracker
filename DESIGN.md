@@ -178,10 +178,17 @@ holding a phone, so it has to work with one thumb and no reading.
 - **Multi-level undo**, not one-deep. `results_log` is already an append-only stack and
   undo is the exact inverse of the edge walk, so popping LIFO repeatedly *is* multi-level
   undo — it's nearly free, and the director will not always notice the mistake immediately.
-- Below the fold: **Up next** queue. Any ready match is tappable to make it current, for
-  when a racer has wandered off and you want to run a different heat. Once the consolation
-  bracket exists, its matches appear in the same queue — that is the whole of "mix it in at
-  the director's discretion."
+- Below the fold: **Next heat**, which offers the same choice two ways, because they answer
+  different questions. **Ready** is a flat list of what can be run right now — short,
+  ordered, no thinking — for when a racer has wandered off and you want a different heat.
+  **Bracket** is the same columns the racers and the big screen see, for "where are we",
+  which is the question that gets asked out loud and which the director, alone in the room,
+  has no screen for. Both set the current match; which one was last used is remembered.
+  In the bracket only a *ready* heat is tappable, and a match with no action renders as a
+  plain card rather than a dead button — there is nothing to press that does nothing. It
+  opens on the round that can be acted on, not on round one, and then leaves the scroll
+  alone. Once the consolation bracket exists, its matches appear in both — that is the whole
+  of "mix it in at the director's discretion."
 - **`Start consolation bracket`** appears once ≥8 racers are eliminated (§4.6).
 - Tapping a racer anywhere in the director view offers **Re-link** — a QR carrying that
   racer's existing token, for someone who cleared their browser or switched phones (§3.5).
@@ -203,7 +210,12 @@ for car photos.
 **Phases:**
 - **Registration:** a giant **join QR**, the event name, the racer count, and the roster
   filling in live. The TV is idle during registration anyway, and this is what solves
-  onboarding for a room of people who won't type a URL.
+  onboarding for a room of people who won't type a URL. **The roster fits — it never
+  scrolls**, because the whole point is that whoever just scanned the QR finds their car on
+  the screen, and nobody is going to scroll a TV. Card size follows the roster (the column
+  count is chosen so the rows fit the box) between a floor that keeps names readable and a
+  ceiling so the first three arrivals aren't billboards. A phone can't always win that and
+  falls back to scrolling, which is fine — a phone scrolls.
 - **Racing:** banner + bracket + on-deck strip (below).
 - **Complete:** podium, then the final bracket.
 
