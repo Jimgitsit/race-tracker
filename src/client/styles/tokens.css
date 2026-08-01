@@ -4,7 +4,8 @@
  * The palette is lifted off a real Hot Wheels track set rather than the brand
  * logo: the orange bed with its lighter raised rails, sitting on a warm dark
  * garage floor. Every colour below has a job — orange is the winners side and
- * the track itself, steel blue is the losers side so the two halves read apart
+ * the track itself, yellow is the consolation bracket beside them, steel blue is
+ * the losers side so the halves read apart
  * from across a room, green only ever means "confirmed".
  *
  * Committed dark, single theme: the TV demands it, it's an evening event, and
@@ -22,6 +23,17 @@
   --cold: #3e8fc4;
   --cold-rail: #7cc0e8;
   --cold-deep: #1f5c86;
+
+  /*
+   * Consolation — its own yellow, because it is a third bracket running beside
+   * the other two and inherited the winners orange until now. Hue ~46°, well
+   * clear of the track's ~19°, and deliberately a shade greener and duller than
+   * --gold (~40°): gold means first place on the podium and must not be confused
+   * with "this heat is in the consolation bracket".
+   */
+  --sun: #d4a51e;
+  --sun-rail: #f0cf5c;
+  --sun-deep: #806314;
 
   /*
    * Ground: warm dark, biased toward the accent. Not a pure near-black.

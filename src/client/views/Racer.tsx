@@ -946,6 +946,9 @@ function RulesTab({ state, meId }: { state: StatePayload; meId: number | null })
             <span className="rc-key-swatch rc-key-l" /> Losers bracket
           </li>
           <li>
+            <span className="rc-key-swatch rc-key-c" /> Consolation bracket
+          </li>
+          <li>
             <span className="rc-key-mark">Winner</span> won that race
           </li>
           <li>

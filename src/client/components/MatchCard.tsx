@@ -68,6 +68,9 @@ export function MatchCard({
   if (match.bracket === "L") {
     classes.push("mc-losers");
   }
+  if (match.bracket === "C") {
+    classes.push("mc-consolation");
+  }
   if (match.state === "bye") {
     classes.push("mc-bye");
   }

@@ -1409,6 +1409,9 @@ function DisplayMatch({
   if (match.bracket === "L") {
     classes.push("dm-losers");
   }
+  if (match.bracket === "C") {
+    classes.push("dm-consolation");
+  }
   if (match.state === "bye") {
     classes.push("dm-bye");
   }

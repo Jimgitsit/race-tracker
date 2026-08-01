@@ -79,6 +79,10 @@
   border-left-color: var(--cold);
 }
 
+.mc-consolation {
+  border-left-color: var(--sun);
+}
+
 .mc-bye {
   border-left-color: var(--line);
   opacity: 0.5;

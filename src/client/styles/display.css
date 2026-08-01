@@ -347,6 +347,16 @@
   stroke: #1c4763;
 }
 
+/* Same relationship to --sun that the losers strokes have to --cold: a shade
+   under the card accent, so the track recedes behind the cards it joins. */
+.trk-rail.trk-consolation {
+  stroke: #a8811a;
+}
+
+.trk-bed.trk-consolation {
+  stroke: #705410;
+}
+
 .trk-car {
   position: absolute;
   top: 0;
@@ -488,6 +498,10 @@
 
 .dm-losers {
   border-left-color: var(--cold);
+}
+
+.dm-consolation {
+  border-left-color: var(--sun);
 }
 
 .dm-bye {
@@ -972,7 +986,7 @@
 }
 
 .disp-consolation strong {
-  color: var(--cold-rail);
+  color: var(--sun-rail);
 }
 
 .disp-announce {

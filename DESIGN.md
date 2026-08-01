@@ -870,6 +870,18 @@ brand logo or the default "dark sports app with a neon accent."
   rails, a warm dark garage-floor ground (a neutral biased toward the accent, not a pure
   near-black), and a cold blue reserved for the losers bracket so the two halves of the
   bracket are distinguishable at 15 feet.
+- **One colour per bracket, all the way through.** Orange = winners, blue = losers, **yellow
+  = consolation**. Each is applied in every place the others are: the card's left border on
+  all three views, the track connectors, and the legend on the Rules tab. Consolation
+  inherited the winners orange until it was given `--sun` — the `trk-consolation` class had
+  been referenced in the canvas for as long as the bracket existed but never had a rule, so
+  a third bracket was drawn in the first one's colour. Yellow sits at hue ~46°, clear of the
+  track's ~19°, and deliberately duller and greener than `--gold` (~40°): gold means first
+  place on the podium and must not read as "this heat is in the consolation bracket".
+- **The live heat outranks its bracket colour.** `.dm-current` sets all four borders to the
+  track rail, so the current match glows orange whichever bracket it is in. That is
+  deliberate — from across a room "this one is running now" has to win over "this one is in
+  the losers bracket".
 - **Type does functional work.** A heavy condensed display face (Big Shoulders Display)
   fits long names into narrow bracket cards; a sturdy grotesque (Archivo) carries UI text;
   a technical mono (IBM Plex Mono) sets round codes, records, seeds, and counts. Self-hosted

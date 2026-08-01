@@ -655,6 +655,15 @@
   );
 }
 
+.rc-key-c {
+  background: linear-gradient(
+    to bottom,
+    var(--sun-rail) 0 2px,
+    var(--sun) 2px 8px,
+    var(--sun-rail) 8px 10px
+  );
+}
+
 .rc-key-mark {
   flex: none;
   font-family: var(--mono);
