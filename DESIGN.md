@@ -289,14 +289,29 @@ brackets and differed only in density — the part that made the control unlearn
 
 | Gesture | Action |
 |---|---|
+| Pinch | zoom, anchored on the pointer — the thing you're looking at stays put |
 | Drag | pan, only once the bracket outgrows the frame |
 | Double-click | back to fit |
 | ↑ / ↓ / `+` / `-` | zoom in / out |
 | ← / → | pan when zoomed; step the focus round when fitted |
 | Enter | cycle the bracket filter · `d` all-rounds · `a` follow · `s` sound · `f` fit · Esc reset |
 
-**The wheel deliberately does nothing.** Scroll-to-zoom was tried and removed: on a trackpad
-it fires constantly by accident, and this screen is in front of a room.
+**A plain wheel deliberately does nothing; a pinch zooms.** Scroll-to-zoom was tried and
+removed — on a trackpad it fires constantly by accident, and this screen is in front of a
+room. A pinch is never accidental, so it survives the same objection, and the two can be told
+apart cleanly: macOS and Windows both report a trackpad pinch as a **wheel event with
+`ctrlKey` set**. So the handler ignores every wheel that doesn't carry it.
+
+Two-finger touch is handled separately, by tracking pointers: a second pointer converts an
+in-progress drag into a pinch, and lifting back to one pointer ends it *without* resuming the
+drag — that finger has moved since it went down, so resuming would make the bracket jump.
+Both paths anchor off the scale and offset the gesture **started** at rather than the live
+ones, so a long pinch can't accumulate rounding drift and slide out from under the fingers.
+
+`touch-action: none` sits on `.disp-canvas` unconditionally, not only when the bracket is
+pannable: at fit there is nothing to pan, but a pinch still has to reach the app rather than
+zooming the whole page. Nothing is lost — `.disp` is a fixed-height, overflow-hidden screen
+with no page scroll behind it.
 
 **Sound.** One sound, on the big screen only: a real dragster launching as the winner's car
 runs up its connector.

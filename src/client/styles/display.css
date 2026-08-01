@@ -269,17 +269,13 @@
 /* No padding here: the fit maths measures against clientHeight, which includes
    padding, so any padding on the frame gets double-counted and clips the bottom
    of the bracket. Breathing room lives inside the scaled content instead. */
+/* Unconditional, not only when pannable: at fit there is nothing to pan, but a
+   pinch still has to reach us rather than zooming the whole page. Nothing is lost
+   — .disp is a fixed-height, overflow-hidden screen with no page scroll behind. */
 .disp-canvas {
   position: relative;
   overflow: hidden;
   min-height: 0;
-}
-
-/* touch-action only where a drag is the intent — zoomed in. There is no page to
-   scroll behind it (.disp is a fixed-height, overflow-hidden screen), so nothing
-   is lost, and a finger dragging the bracket stops fighting the browser. */
-.disp-canvas-pan,
-.disp-canvas-grabbing {
   touch-action: none;
 }
 

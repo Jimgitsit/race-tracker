@@ -65,6 +65,10 @@ function storedNumber(key: string): number {
 const CHROME_IDLE_MS = 2500;
 const ZOOM_STEP = 1.15;
 
+/** Divisor on a trackpad pinch's `deltaY`. Bigger is gentler; this is about one
+    doubling per full pinch across the pad. */
+const PINCH_FEEL = 120;
+
 /**
  * Follow mode sizes itself off the live heat's own card — the card is made this
  * tall a share of the frame — rather than off a multiple of fit.
@@ -729,7 +733,7 @@ function Controls({
         </button>
       </div>
 
-      <span className="disp-ctl-hint">drag to pan</span>
+      <span className="disp-ctl-hint">pinch to zoom · drag to pan</span>
     </div>
   );
 }
@@ -780,6 +784,8 @@ function BracketCanvas({
   const boxes = useRef<Map<number, HTMLElement>>(new Map());
   const drag = useRef<{ id: number; x: number; y: number; ox: number; oy: number } | null>(null);
   const dragged = useRef(false);
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const pinch = useRef<{ dist: number; scale: number; ox: number; oy: number } | null>(null);
 
   const [fit, setFit] = useState(1);
   const [grabbing, setGrabbing] = useState(false);
@@ -1029,18 +1035,106 @@ function BracketCanvas({
     });
   }, [follow, target, fit, size, frame, ordered, onView]);
 
-  const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    dragged.current = false;
-    if (event.button !== 0 || !pannable) {
+  /**
+   * Zoom to `next`, holding the content under (px, py) still. Anchored off the
+   * scale and offset the gesture *started* at, not the live ones, so a long pinch
+   * doesn't accumulate rounding drift and slide out from under the fingers.
+   */
+  const zoomAt = useCallback(
+    (px: number, py: number, next: number, fromScale: number, fromX: number, fromY: number) => {
+      if (next <= fit) {
+        onView(FIT);
+        return;
+      }
+      const ratio = next / fromScale;
+      onView({ scale: next, x: px - (px - fromX) * ratio, y: py - (py - fromY) * ratio });
+    },
+    [fit, onView],
+  );
+
+  /**
+   * Trackpad pinch. Both macOS and Windows report one as a wheel event with
+   * `ctrlKey` set, which is why this can exist without bringing back scroll-to-
+   * zoom: a plain wheel stays deliberately inert, because on a trackpad it fires
+   * by accident constantly and this screen is in front of a room.
+   *
+   * Native and non-passive because React registers wheel on its root as passive,
+   * so `preventDefault` from an `onWheel` prop is ignored — and without it the
+   * browser zooms the whole page instead.
+   */
+  useEffect(() => {
+    const el = viewport.current;
+    if (!el) {
       return;
     }
-    onManual();
+
+    const onWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey) {
+        return;
+      }
+
+      event.preventDefault();
+      onManual();
+
+      const next = clamp(scale * Math.exp(-event.deltaY / PINCH_FEEL), fit, zoomCeiling(fit));
+      if (next === scale) {
+        return;
+      }
+
+      const rect = el.getBoundingClientRect();
+      zoomAt(event.clientX - rect.left, event.clientY - rect.top, next, scale, offsetX, offsetY);
+    };
+
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [scale, fit, offsetX, offsetY, zoomAt, onManual]);
+
+  /** Midpoint and separation of the two active touches. */
+  const spread = () => {
+    const [a, b] = [...pointers.current.values()];
+    return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, dist: Math.hypot(a.x - b.x, a.y - b.y) };
+  };
+
+  const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    dragged.current = false;
+    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
     viewport.current?.setPointerCapture(event.pointerId);
-    drag.current = { id: event.pointerId, x: event.clientX, y: event.clientY, ox: offsetX, oy: offsetY };
-    setGrabbing(true);
+
+    // A second finger turns a drag into a pinch.
+    if (pointers.current.size === 2) {
+      onManual();
+      drag.current = null;
+      setGrabbing(false);
+      pinch.current = { dist: spread().dist, scale, ox: offsetX, oy: offsetY };
+      return;
+    }
+
+    if (pointers.current.size === 1 && event.button === 0 && pannable) {
+      onManual();
+      drag.current = { id: event.pointerId, x: event.clientX, y: event.clientY, ox: offsetX, oy: offsetY };
+      setGrabbing(true);
+    }
   };
 
   const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!pointers.current.has(event.pointerId)) {
+      return;
+    }
+    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+
+    const pinching = pinch.current;
+    if (pinching && pointers.current.size >= 2) {
+      const now = spread();
+      const rect = viewport.current?.getBoundingClientRect();
+      if (!rect || now.dist <= 0) {
+        return;
+      }
+
+      const next = clamp(pinching.scale * (now.dist / pinching.dist), fit, zoomCeiling(fit));
+      zoomAt(now.x - rect.left, now.y - rect.top, next, pinching.scale, pinching.ox, pinching.oy);
+      return;
+    }
+
     const held = drag.current;
     if (!held || held.id !== event.pointerId) {
       return;
@@ -1060,13 +1154,23 @@ function BracketCanvas({
     onView({ scale, x: held.ox + dx, y: held.oy + dy });
   };
 
-  const endDrag = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (drag.current?.id !== event.pointerId) {
-      return;
+  const endPointer = (event: React.PointerEvent<HTMLDivElement>) => {
+    pointers.current.delete(event.pointerId);
+
+    if (viewport.current?.hasPointerCapture(event.pointerId)) {
+      viewport.current.releasePointerCapture(event.pointerId);
     }
-    viewport.current?.releasePointerCapture(event.pointerId);
-    drag.current = null;
-    setGrabbing(false);
+
+    // Lifting one finger of a pinch must not resume a drag with the other — the
+    // remaining finger has moved since it went down, and the bracket would jump.
+    if (pointers.current.size < 2) {
+      pinch.current = null;
+    }
+
+    if (drag.current?.id === event.pointerId) {
+      drag.current = null;
+      setGrabbing(false);
+    }
   };
 
   const classes = ["disp-canvas"];
@@ -1080,8 +1184,8 @@ function BracketCanvas({
       ref={viewport}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
-      onPointerUp={endDrag}
-      onPointerCancel={endDrag}
+      onPointerUp={endPointer}
+      onPointerCancel={endPointer}
       onDoubleClick={() => onView(FIT)}
     >
       <div
