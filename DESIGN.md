@@ -186,9 +186,12 @@ holding a phone, so it has to work with one thumb and no reading.
   has no screen for. Both set the current match; which one was last used is remembered.
   In the bracket only a *ready* heat is tappable, and a match with no action renders as a
   plain card rather than a dead button — there is nothing to press that does nothing. It
-  opens on the round that can be acted on, not on round one, and then leaves the scroll
-  alone. Once the consolation bracket exists, its matches appear in both — that is the whole
-  of "mix it in at the director's discretion."
+  **opens scrolled to the heat that's racing**, so it answers "where are we" before it is
+  touched; in a bracket the live heat isn't in, the first pickable heat stands in. Then it
+  leaves the scroll alone — a result landing mid-look must not move the view under your
+  finger. The columns scroll in their own box rather than scrolling the sheet, so the tabs
+  stay put. Once the consolation bracket exists, its matches appear in both — that is the
+  whole of "mix it in at the director's discretion."
 - **`Start consolation bracket`** appears once ≥8 racers are eliminated (§4.6).
 - Tapping a racer anywhere in the director view offers **Re-link** — a QR carrying that
   racer's existing token, for someone who cleared their browser or switched phones (§3.5).

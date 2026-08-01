@@ -644,7 +644,7 @@ function HeatPicker({
           <BracketColumns
             state={state}
             brackets={bracketsOf(state, activeGroup(state, group))}
-            startAtSelectable
+            openOn={state.event.currentMatch}
             card={(match) => ({
               dim: !ready.has(match.id) && match.id !== state.event.currentMatch,
               onSelect: ready.has(match.id) ? pick : undefined,

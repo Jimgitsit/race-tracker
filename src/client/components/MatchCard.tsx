@@ -91,12 +91,23 @@ export function MatchCard({
     </>
   );
 
+  // The id is on the element so a container can scroll a named heat into view
+  // without threading a ref through every card.
   if (!onSelect) {
-    return <div className={classes.join(" ")}>{body}</div>;
+    return (
+      <div className={classes.join(" ")} data-match={match.id}>
+        {body}
+      </div>
+    );
   }
 
   return (
-    <button type="button" className={classes.join(" ")} onClick={() => onSelect(match)}>
+    <button
+      type="button"
+      className={classes.join(" ")}
+      data-match={match.id}
+      onClick={() => onSelect(match)}
+    >
       {body}
     </button>
   );

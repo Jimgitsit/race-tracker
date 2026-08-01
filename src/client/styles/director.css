@@ -423,7 +423,15 @@
   gap: var(--s-3);
 }
 
-/* The column header sticks to the sheet, not the page, so it has to match the
+/* The bracket scrolls inside its own box rather than scrolling the sheet, so the
+   two rows of tabs stay put and the live heat can be scrolled into view without
+   taking the controls off screen with it. */
+.dir-next .rc-columns {
+  max-height: 55dvh;
+  overflow-y: auto;
+}
+
+/* The column header sticks to that box, not to the page, so it has to match the
    sheet's surface — against --ground the cards scroll under a slab of the wrong
    brown. Same reason the sheet's own head is painted. */
 .dir-next .rc-column-head {

@@ -76,7 +76,7 @@ export function BracketColumns({
   state,
   brackets,
   card = () => ({}),
-  startAtSelectable = false,
+  openOn = null,
 }: {
   state: StatePayload;
   brackets: string[];
@@ -84,23 +84,49 @@ export function BracketColumns({
     dim?: boolean;
     onSelect?: (match: PublicMatch) => void;
   };
-  /** Open on the round that can be acted on rather than on round one. */
-  startAtSelectable?: boolean;
+  /**
+   * Scroll this heat into view on open, so the bracket answers "where are we"
+   * before it is touched. If it isn't in these columns — the live heat is in the
+   * winners bracket, you're looking at the losers — the first heat that can be
+   * picked stands in, and failing that it stays at the start.
+   */
+  openOn?: number | null;
 }) {
   const strip = useRef<HTMLDivElement>(null);
   const columns = roundsOf(state, brackets);
   const key = brackets.join(",");
 
-  // Deliberately keyed on the bracket alone, not on the results: it should land in
-  // the right place when it opens and when the group is switched, and then leave
-  // the scroll to whoever is holding the phone.
+  // Read through a ref so the effect can depend on the bracket alone. It should
+  // land in the right place when it opens and when the group is switched, and then
+  // leave the scroll to whoever is holding the phone — a result landing mid-look
+  // must not move the view under their finger.
+  const target = useRef(openOn);
+  target.current = openOn;
+
   useLayoutEffect(() => {
     const box = strip.current;
-    const first = box?.querySelector<HTMLElement>("button.mc")?.closest<HTMLElement>(".rc-column");
-    if (box && first && startAtSelectable) {
-      box.scrollLeft = first.offsetLeft;
+    if (!box) {
+      return;
     }
-  }, [key, startAtSelectable]);
+
+    const card =
+      (target.current !== null
+        ? box.querySelector<HTMLElement>(`[data-match="${target.current}"]`)
+        : null) ?? box.querySelector<HTMLElement>("button.mc");
+    const column = card?.closest<HTMLElement>(".rc-column");
+    if (!card || !column) {
+      return;
+    }
+
+    // Rect deltas rather than offsetTop: neither the strip nor the column is a
+    // positioned ancestor, so offsets are measured against something further up.
+    const strut = column.querySelector<HTMLElement>(".rc-column-head")?.offsetHeight ?? 0;
+    const frame = box.getBoundingClientRect();
+    const seen = card.getBoundingClientRect();
+
+    box.scrollLeft += seen.left - frame.left;
+    box.scrollTop += seen.top - frame.top - strut;
+  }, [key]);
 
   return (
     <div className="rc-columns scroll-x" ref={strip}>
