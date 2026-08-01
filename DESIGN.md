@@ -224,17 +224,23 @@ for car photos.
   This animation is the thing that makes a room look up — and it is the *same* animation on
   the phone in your hand and on the screen across the room, on purpose.
 - **Body: the bracket, auto-framed** (below).
-- **Foot strip:** the latest director message and the heat count, nothing else — everything
-  that used to live here moved to the top band, and the height it gave back went to the
-  bracket. The message carries an **×**; dismissal is local to this screen, persisted, and
-  stored as a **high-water mark** rather than an exact id — so a message deleted server-side
-  can't resurface one already closed, while anything newer still gets through. It neither
-  touches what racers see on their phones nor swallows the next message. The × fades in with
-  the toolbar — it is for whoever is driving, not the room.
+- **Foot strip:** the latest director message and nothing else, so it is **not rendered at
+  all** when there is no message and the bracket takes the height back. The message carries
+  an **×**; dismissal is local to this screen, persisted, and stored as a **high-water mark**
+  rather than an exact id — so a message deleted server-side can't resurface one already
+  closed, while anything newer still gets through. It neither touches what racers see on
+  their phones nor swallows the next message. The × fades in with the toolbar — it is for
+  whoever is driving, not the room.
 
-On a phone both outer corners go entirely: there is no width to spare beside the two cars,
+The **heat count** lives in the top-right corner above the join QR, flush to the edge so the
+two read as one block against the on-deck list opposite. It is `HEATS RUN 49 / 71` — heats
+*already raced*, not which heat is on the track, and worded to stay distinct from the
+director's own `heat 50 of 71`, which is the same figure plus one.
+
+On a phone on-deck and the QR go entirely: there is no width to spare beside the two cars,
 and neither earns it there — nobody scans the QR on the phone in their hand, and on deck is
-one tap away on the racer view they just came from.
+one tap away on the racer view they just came from. The heat count is a few characters and
+stays; it is the only progress the screen shows now that the footer is message-only.
 
 **Auto-framing.** The display keeps a *focus round* (the one containing the current match)
 and renders every round at one of three densities:

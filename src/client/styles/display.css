@@ -607,6 +607,15 @@
   color: var(--ink-faint);
 }
 
+/* Right corner: heat count over the join QR, both flush to the edge so the two
+   line up as one block against the on-deck list in the opposite corner. */
+.disp-top-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--s-2);
+}
+
 .disp-top-qr {
   display: flex;
   align-items: center;
@@ -661,9 +670,11 @@
     gap: var(--s-3);
   }
 
-  /* Both corners go on a phone. There is no width to spare beside the two cars,
-     and neither earns it here: nobody scans the QR on the phone in their hand,
-     and on deck is one tap away on the racer view they just came from. */
+  /* On deck and the QR go on a phone — there is no width to spare beside the two
+     cars, and neither earns it here: nobody scans the QR on the phone in their
+     hand, and on deck is one tap away on the racer view they came from. The heat
+     count is a few characters and stays; it is the only progress the big screen
+     shows now that the footer is message-only. */
   .disp-ondeck,
   .disp-top-qr {
     display: none;

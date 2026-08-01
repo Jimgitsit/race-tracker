@@ -484,8 +484,20 @@ function Racing({ state }: { state: StatePayload }) {
 
         <Banner state={state} match={banner} flashed={flashed !== null} />
 
-        <div className="disp-top-qr">
-          <JoinQR url={joinUrl()} size={92} label="" />
+        {/* "Heats run", not "heat N of M": this is the count already raced, so the
+            number is one behind the heat on the track. The director's own screen
+            shows heatsDone + 1 for that, and the two should not read alike. */}
+        <div className="disp-top-right">
+          <span className="disp-progress">
+            <span className="disp-eyebrow">Heats run</span>
+            <span className="code tabular disp-progress-count">
+              {state.event.heatsDone} / {state.event.heatsTotal}
+            </span>
+          </span>
+
+          <div className="disp-top-qr">
+            <JoinQR url={joinUrl()} size={92} label="" />
+          </div>
         </div>
       </header>
 
@@ -528,12 +540,14 @@ function Racing({ state }: { state: StatePayload }) {
         />
       </div>
 
-      <footer className="disp-foot">
-        {/* Dismissal is local to this screen and keyed on the id, so clearing a
-            stale message here neither touches what racers see on their phones nor
-            swallows the next one. The × only appears with the rest of the chrome —
-            it is for whoever is driving, not for the room. */}
-        {announcement !== null ? (
+      {/* The footer is now only ever a director message, so it goes away entirely
+          when there isn't one and the bracket takes the height back. Dismissal is
+          local to this screen and keyed on the id, so clearing a stale message
+          neither touches what racers see on their phones nor swallows the next
+          one. The × only appears with the rest of the chrome — it is for whoever
+          is driving, not for the room. */}
+      {announcement !== null ? (
+        <footer className="disp-foot">
           <p className="disp-announce" key={announcement.id}>
             <span className="disp-announce-tag">Director</span>
             <span className="disp-announce-body">{announcement.body}</span>
@@ -547,18 +561,8 @@ function Racing({ state }: { state: StatePayload }) {
               ×
             </button>
           </p>
-        ) : null}
-
-        {/* "Heats run", not "heat N of M": this is the count already raced, so the
-            number is one behind the heat on the track. The director's own screen
-            shows heatsDone + 1 for that, and the two should not read alike. */}
-        <span className="disp-progress">
-          <span className="disp-eyebrow">Heats run</span>
-          <span className="code tabular disp-progress-count">
-            {state.event.heatsDone} / {state.event.heatsTotal}
-          </span>
-        </span>
-      </footer>
+        </footer>
+      ) : null}
     </main>
   );
 }
