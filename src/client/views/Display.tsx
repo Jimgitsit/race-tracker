@@ -88,7 +88,7 @@ const PINCH_FEEL = 120;
  * card is 87px tall in both brackets, and holding that steady holds the text
  * steady — which is the thing anybody is actually reading.
  */
-const FOLLOW_CARD_SHARE = 0.145;
+const FOLLOW_CARD_SHARE = 0.116;
 
 /**
  * Where follow parks the live heat across the frame. Centred, so the round that

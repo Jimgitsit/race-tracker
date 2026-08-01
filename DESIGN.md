@@ -285,7 +285,7 @@ brackets and differed only in density — the part that made the control unlearn
 |---|---|---|
 | **Bracket** | All · Winners · Losers · Consolation | which brackets are on screen (Consolation only appears once one exists) |
 | **All rounds** | off / on | off = collapse what's settled (the density table above); on = draw every round the same size |
-| **Follow** | off / on | size the live heat to ~14.5% of the frame's *height*, centre it with the rounds either side readable, re-aim as the race moves |
+| **Follow** | off / on | size the live heat to ~11.6% of the frame's *height*, centre it with the rounds either side readable, re-aim as the race moves |
 
 | Gesture | Action |
 |---|---|
@@ -379,7 +379,7 @@ bracket a settled round is the biggest waste of space on the screen (winners rou
 sixteen matches tall) and collapsing it is what lets everything else be drawn large. Follow
 doesn't pay that cost, because its zoom comes from the card rather than from fit.
 
-Its zoom is chosen so the live heat's **card is ~14.5% of the frame's height**, and is
+Its zoom is chosen so the live heat's **card is ~11.6% of the frame's height**, and is
 explicitly *not* a multiple of fit. Fit is a moving target: it rises as rounds settle and
 collapse, as a filter narrows to one bracket, as the window changes shape. A multiple of it
 meant the heat kept growing through the evening — legible in winners round 1 and far too
