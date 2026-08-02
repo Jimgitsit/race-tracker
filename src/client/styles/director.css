@@ -423,19 +423,32 @@
   gap: var(--s-3);
 }
 
-/* The bracket scrolls inside its own box rather than scrolling the sheet, so the
-   two rows of tabs stay put and the live heat can be scrolled into view without
-   taking the controls off screen with it. */
-.dir-next .rc-columns {
+/* A match card is --surface and so is the sheet, so a card dropped straight onto
+   one has nothing but its border to stand on. Both modes sit in a --ground well
+   instead: that is the ~12 ΔL* step the ramp is built around, and it makes a card
+   in here read exactly as it does on the page. */
+.dir-next-list,
+.dir-next .rc-strip {
+  padding: var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--ground);
+  border: 1px solid var(--line-soft);
+}
+
+/* Both modes scroll inside their own box rather than scrolling the sheet, so the
+   two rows of tabs stay put, switching between them doesn't move the sheet, and
+   the live heat can be scrolled into view without taking the controls with it. */
+.dir-next-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
   max-height: 55dvh;
   overflow-y: auto;
 }
 
-/* The column header sticks to that box, not to the page, so it has to match the
-   sheet's surface — against --ground the cards scroll under a slab of the wrong
-   brown. Same reason the sheet's own head is painted. */
-.dir-next .rc-column-head {
-  background: var(--surface);
+.dir-next .rc-columns {
+  max-height: 55dvh;
+  overflow-y: auto;
 }
 
 /* A heat that isn't ready is a plain card, not a button. Dimming says so without

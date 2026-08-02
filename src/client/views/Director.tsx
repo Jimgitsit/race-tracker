@@ -632,7 +632,7 @@ function HeatPicker({
         upNext.length === 0 ? (
           <p className="empty-note">Nothing else is ready yet.</p>
         ) : (
-          <div className="stack">
+          <div className="dir-next-list">
             {upNext.map((match) => (
               <MatchCard key={match.id} state={state} match={match} onSelect={pick} />
             ))}
