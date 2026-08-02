@@ -116,7 +116,16 @@ URL stays typeable (`jimmcgowen.com/race-tracker/display`). All in-app links mus
 it is unreadable on a phone. Instead:
 - A `Winners bracket / Losers bracket / Finals / Consolation bracket` segmented toggle at the top.
 - Rounds as horizontally scrollable columns, snap-scrolling, round name in a sticky header
-  (`Winners Round 2`). Each column is a vertical list of match cards.
+  (`Winners Round 2`). Each column is a vertical list of match cards. A column is narrower
+  than the screen — that sliver of the next one is the only thing saying there *is* a next
+  one — which means the strip needs trailing runway equal to that sliver, or the last column
+  can never reach the start edge and the scroll simply stops looking snapped.
+- Every column is as tall as the tallest, so a fifth round with two heats leaves a screenful
+  of nothing under it, and scrolled down there you are looking at a blank page with no clue
+  which way anything is. When no card is on screen a **`← Back to the heats`** pill appears
+  with a nudging arrow and takes you back. Left is always right: the first column is the one
+  with a card at every scroll position. Shared with the director's bracket, which reaches the
+  same emptiness by scrolling its own box rather than the page.
 - A match card: two rows (photo thumb, name), winner in bold labelled **`Winner`**, loser
   dimmed and struck through. A word rather than a ✓ — a tick needs the legend to decode it,
   and this is not a room where people look things up. Unfilled slots read what fills them,
@@ -190,13 +199,10 @@ holding a phone, so it has to work with one thumb and no reading.
   touched; in a bracket the live heat isn't in, the first pickable heat stands in. Then it
   leaves the scroll alone — a result landing mid-look must not move the view under your
   finger. The columns scroll in their own box rather than scrolling the sheet, so the tabs
-  stay put. Because every column is as tall as the tallest but a fifth round holds a
-  sixteenth of the heats, scrolled right *and* down lands on nothing at all: when no card is
-  on screen a **`← Back to the heats`** pill fades in with a nudging arrow, and tapping it
-  returns to the live heat. Left is always the right way to point — the scroll height is set
-  by the first column, so it is the one column with a card at every scroll position. Once
-  the consolation bracket exists, its matches appear in both — that is the whole of "mix it
-  in at the director's discretion."
+  stay put. Scrolled right *and* down it lands on nothing, and gets the same
+  **`← Back to the heats`** pill as the racer's bracket (§3.1) — here it returns to the live
+  heat. Once the consolation bracket exists, its matches appear in both — that is the whole
+  of "mix it in at the director's discretion."
 - **`Start consolation bracket`** appears once ≥8 racers are eliminated (§4.6).
 - Tapping a racer anywhere in the director view offers **Re-link** — a QR carrying that
   racer's existing token, for someone who cleared their browser or switched phones (§3.5).

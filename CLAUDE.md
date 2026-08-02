@@ -67,6 +67,12 @@ stays inspectable.
   the shorthand, so it resets `background-color` and the tinted end composites onto the page
   instead of the card. Always `linear-gradient(…, transparent 60%), var(--surface)`. Four
   rules have had this bug; grep before adding a fifth.
+- **A snap column narrower than its scroller can never be the last one.** The bracket strip
+  shows a sliver of the next column on purpose, so the final column's start edge sits past
+  the end of the scroll range and `scroll-snap-align: start` has nothing to land on — you
+  rest a sliver short and the strip looks like it snaps only sometimes. `.rc-columns::after`
+  is the runway that fixes it, sized `calc(100% - var(--rc-col))` off the same custom
+  property the column width uses. Don't restate the width in two places.
 - **The bracket columns are one component** (`components/Bracket.tsx`), used by the racer
   view, the director's next-heat sheet and `/history`. Their CSS still carries the `rc-`
   prefix it was born with in the racer view but lives in `components.css`. Adding a fourth

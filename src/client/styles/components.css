@@ -96,6 +96,8 @@
 }
 
 .rc-columns {
+  --rc-col: min(76vw, 300px);
+
   display: flex;
   min-width: 0;
   gap: var(--s-3);
@@ -103,9 +105,23 @@
   scroll-snap-type: x mandatory;
 }
 
+/*
+ * A column is narrower than the box — that gap on the right is the peek that says
+ * there's more bracket — which means the *last* column's start edge sits past the
+ * end of the scroll range and can never be snapped to. Scrolled to the end you'd
+ * rest a sliver short of it, so whether the strip locked depended on whether you
+ * hit the end: five columns in the winners bracket, eight in the losers, which is
+ * what made it look sporadic. This is the runway that lets the last one come home.
+ */
+.rc-columns::after {
+  content: "";
+  flex: none;
+  inline-size: calc(100% - var(--rc-col));
+}
+
 .rc-column {
   flex: none;
-  width: min(76vw, 300px);
+  width: var(--rc-col);
   scroll-snap-align: start;
 }
 
@@ -129,9 +145,10 @@
  * scrolled right and down is empty space. Left always leads back, because the
  * first column is the one that set the scroll height.
  */
+/* `top` comes from the component — the middle of however much of the strip is on
+   screen, which on a tall one is nowhere near the middle of the strip itself. */
 .rc-adrift {
   position: absolute;
-  top: 50%;
   left: var(--s-3);
   z-index: 3;
   display: flex;
