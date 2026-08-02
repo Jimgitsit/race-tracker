@@ -8,16 +8,21 @@ import { MatchCard } from "./MatchCard.tsx";
  * The bracket, as columns of round. Shared because two views draw it for different
  * reasons — a racer reading where they are, a director choosing what races next —
  * and the one thing that must not drift between them is what the brackets are
- * called. Every label is qualified ("Winners bracket", never "Winners").
+ * called.
+ *
+ * These are the one place the names go bare. Everywhere else it is "Winners
+ * bracket", never "Winners", but this control always sits directly under a label
+ * that says Bracket — so the tab would be reading it back to you. The tablist is
+ * pointed at that label, so it is still qualified for anyone who can't see it.
  */
 /** Which bracket was last looked at. Shared by both views on purpose — same person. */
 export const GROUP_KEY = "race-tracker.bracketGroup";
 
 export const GROUPS: { key: string; label: string; brackets: string[] }[] = [
-  { key: "W", label: "Winners bracket", brackets: ["W"] },
-  { key: "L", label: "Losers bracket", brackets: ["L"] },
+  { key: "W", label: "Winners", brackets: ["W"] },
+  { key: "L", label: "Losers", brackets: ["L"] },
   { key: "F", label: "Finals", brackets: ["GF", "GFR"] },
-  { key: "C", label: "Consolation bracket", brackets: ["C"] },
+  { key: "C", label: "Consolation", brackets: ["C"] },
 ];
 
 /** Consolation only exists once the director starts it. */
@@ -47,10 +52,16 @@ export function GroupTabs({
   state: StatePayload;
   group: string;
   onPick: (key: string) => void;
+  /** The visible "Bracket" label, where there is one to point at. */
   labelledBy?: string;
 }) {
   return (
-    <div className="rc-seg" role="tablist" aria-labelledby={labelledBy}>
+    <div
+      className="rc-seg"
+      role="tablist"
+      aria-label={labelledBy ? undefined : "Bracket"}
+      aria-labelledby={labelledBy}
+    >
       {groupsIn(state).map((g) => (
         <button
           key={g.key}

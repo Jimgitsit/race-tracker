@@ -114,7 +114,8 @@ URL stays typeable (`jimmcgowen.com/race-tracker/display`). All in-app links mus
 
 **`Bracket`** — the mobile bracket. **Do not attempt the classic connector-line tree here**;
 it is unreadable on a phone. Instead:
-- A `Winners bracket / Losers bracket / Finals / Consolation bracket` segmented toggle at the top.
+- A `Winners / Losers / Finals / Consolation` segmented toggle under a `Bracket` label — the
+  one place the names go bare, because that label already qualifies them (§ terminology).
 - Rounds as horizontally scrollable columns, snap-scrolling, round name in a sticky header
   (`Winners Round 2`). Each column is a vertical list of match cards. A column is narrower
   than the screen — that sliver of the next one is the only thing saying there *is* a next
@@ -306,6 +307,13 @@ bracket" names the half of the draw. The same for the losers and consolation bra
 **Finals** is the exception and stays bare: those matches conclude the draw rather than being
 a bracket of their own. "Consolation" is never a synonym for the losers bracket here — this
 event has a real, separate consolation bracket, and the collision would be genuine.
+
+The **bracket picker is the other exception**, and only because it doesn't need the help: it
+always sits directly under a label reading `Bracket` — the eyebrow on the racer's tab, the
+selected mode in the director's sheet — so a tab saying "Winners bracket" reads the label
+back to you and pushes three long names onto two lines each. The tabs go bare there and the
+tablist points at that label, so it is still qualified for anyone who can't see it. Nowhere
+else.
 
 **Bracket titles.** Each bracket carries a quiet heading — `WINNERS BRACKET`, `LOSERS
 BRACKET`, `FINALS`, `CONSOLATION BRACKET` — above its columns, with the hairline separator
