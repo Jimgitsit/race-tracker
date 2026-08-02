@@ -75,6 +75,10 @@ stays inspectable.
   wanted it, and CSS merges silently: the new rule won `display` and the old one kept
   `align-items: center`, so the sheet's controls shrank to their content and the columns
   overflowed instead of scrolling. Grep the stylesheet before naming a class.
+- **The contrast ramp assumes a card lands on `--ground`.** `.mc` and `.sheet` are both
+  `var(--surface)` — the same hex — so a match card put straight into a sheet has a 1px
+  border and its left rail and nothing else. Any surface-coloured container that holds cards
+  has to re-establish the ~12 ΔL* step with a `--ground` well of its own.
 - **Colour lives in `tokens.css`.** Two hardcoded copies exist on purpose and drift silently
   when the ramp moves: `QR.tsx` (the encoder takes hex, not `var()`) and the `.disp` vignette
   in `display.css`, hand-tuned to sit ~2 L\* over `--ground`. Change a token, check both.
