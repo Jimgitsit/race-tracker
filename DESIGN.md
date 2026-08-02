@@ -190,8 +190,13 @@ holding a phone, so it has to work with one thumb and no reading.
   touched; in a bracket the live heat isn't in, the first pickable heat stands in. Then it
   leaves the scroll alone — a result landing mid-look must not move the view under your
   finger. The columns scroll in their own box rather than scrolling the sheet, so the tabs
-  stay put. Once the consolation bracket exists, its matches appear in both — that is the
-  whole of "mix it in at the director's discretion."
+  stay put. Because every column is as tall as the tallest but a fifth round holds a
+  sixteenth of the heats, scrolled right *and* down lands on nothing at all: when no card is
+  on screen a **`← Back to the heats`** pill fades in with a nudging arrow, and tapping it
+  returns to the live heat. Left is always the right way to point — the scroll height is set
+  by the first column, so it is the one column with a card at every scroll position. Once
+  the consolation bracket exists, its matches appear in both — that is the whole of "mix it
+  in at the director's discretion."
 - **`Start consolation bracket`** appears once ≥8 racers are eliminated (§4.6).
 - Tapping a racer anywhere in the director view offers **Re-link** — a QR carrying that
   racer's existing token, for someone who cleared their browser or switched phones (§3.5).

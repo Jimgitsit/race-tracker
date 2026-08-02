@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { roundsOf } from "../lib/derive.ts";
 import type { PublicMatch, StatePayload } from "../lib/api.ts";
@@ -93,6 +93,7 @@ export function BracketColumns({
   openOn?: number | null;
 }) {
   const strip = useRef<HTMLDivElement>(null);
+  const [adrift, setAdrift] = useState(false);
   const columns = roundsOf(state, brackets);
   const key = brackets.join(",");
 
@@ -103,7 +104,7 @@ export function BracketColumns({
   const target = useRef(openOn);
   target.current = openOn;
 
-  useLayoutEffect(() => {
+  const bringIntoView = useCallback((smooth = false) => {
     const box = strip.current;
     if (!box) {
       return;
@@ -112,7 +113,9 @@ export function BracketColumns({
     const card =
       (target.current !== null
         ? box.querySelector<HTMLElement>(`[data-match="${target.current}"]`)
-        : null) ?? box.querySelector<HTMLElement>("button.mc");
+        : null) ??
+      box.querySelector<HTMLElement>("button.mc") ??
+      box.querySelector<HTMLElement>(".mc");
     const column = card?.closest<HTMLElement>(".rc-column");
     if (!card || !column) {
       return;
@@ -124,31 +127,86 @@ export function BracketColumns({
     const frame = box.getBoundingClientRect();
     const seen = card.getBoundingClientRect();
 
-    box.scrollLeft += seen.left - frame.left;
-    box.scrollTop += seen.top - frame.top - strut;
-  }, [key]);
+    box.scrollTo({
+      left: box.scrollLeft + seen.left - frame.left,
+      top: box.scrollTop + seen.top - frame.top - strut,
+      behavior: smooth ? "smooth" : "auto",
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    bringIntoView();
+  }, [key, bringIntoView]);
+
+  /**
+   * Later rounds hold a quarter of the heats the first one does, but every column
+   * is as tall as the tallest, so scrolled right *and* down lands on nothing at
+   * all. Watch whether any card is in the box and offer the way back when none is.
+   *
+   * Left is always the way back: the scroll height is set by the *first* column,
+   * so it is the one column with a card at every scroll position.
+   */
+  const cardKey = columns.flatMap((column) => column.matches.map((m) => m.id)).join(",");
+
+  useEffect(() => {
+    const box = strip.current;
+    if (!box) {
+      return;
+    }
+
+    const onScreen = new Set<Element>();
+    const watch = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            onScreen.add(entry.target);
+          } else {
+            onScreen.delete(entry.target);
+          }
+        }
+        setAdrift(onScreen.size === 0);
+      },
+      { root: box },
+    );
+
+    for (const card of box.querySelectorAll(".mc")) {
+      watch.observe(card);
+    }
+    return () => watch.disconnect();
+  }, [cardKey]);
 
   return (
-    <div className="rc-columns scroll-x" ref={strip}>
-      {columns.map((column) => (
-        <section className="rc-column" key={column.key}>
-          <h2 className="rc-column-head">{column.label}</h2>
-          <div className="stack rc-column-body">
-            {column.matches.map((match) => (
-              <MatchCard
-                key={match.id}
-                state={state}
-                match={match}
-                // Gated on the phase as well as the id: an archived year can still
-                // name a current match, and history has no heat that is racing.
-                current={state.event.phase === "racing" && match.id === state.event.currentMatch}
-                showRound={false}
-                {...card(match)}
-              />
-            ))}
-          </div>
-        </section>
-      ))}
+    <div className="rc-strip">
+      <div className="rc-columns scroll-x" ref={strip}>
+        {columns.map((column) => (
+          <section className="rc-column" key={column.key}>
+            <h2 className="rc-column-head">{column.label}</h2>
+            <div className="stack rc-column-body">
+              {column.matches.map((match) => (
+                <MatchCard
+                  key={match.id}
+                  state={state}
+                  match={match}
+                  // Gated on the phase as well as the id: an archived year can still
+                  // name a current match, and history has no heat that is racing.
+                  current={state.event.phase === "racing" && match.id === state.event.currentMatch}
+                  showRound={false}
+                  {...card(match)}
+                />
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+
+      {adrift ? (
+        <button type="button" className="rc-adrift" onClick={() => bringIntoView(true)}>
+          <span className="rc-adrift-arrow" aria-hidden="true">
+            ←
+          </span>
+          Back to the heats
+        </button>
+      ) : null}
     </div>
   );
 }

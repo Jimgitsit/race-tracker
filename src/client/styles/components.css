@@ -88,6 +88,13 @@
   color: var(--ink);
 }
 
+/* Holds the way-back button still while the columns scroll under it: an absolutely
+   positioned child of the scroller would scroll away with the content. */
+.rc-strip {
+  position: relative;
+  min-width: 0;
+}
+
 .rc-columns {
   display: flex;
   min-width: 0;
@@ -115,6 +122,53 @@
 
 .rc-column-body {
   gap: var(--s-2);
+}
+
+/*
+ * Shown only when the scroller is looking at nothing — later rounds are short, so
+ * scrolled right and down is empty space. Left always leads back, because the
+ * first column is the one that set the scroll height.
+ */
+.rc-adrift {
+  position: absolute;
+  top: 50%;
+  left: var(--s-3);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-4);
+  transform: translateY(-50%);
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--ink-dim);
+  cursor: pointer;
+  animation: adrift-in 160ms ease;
+}
+
+/* The nudge is the whole signal, so the arrow has to read with the animation
+   stripped out — base.css kills every animation under prefers-reduced-motion. */
+.rc-adrift-arrow {
+  font-size: 1.15rem;
+  line-height: 1;
+  color: var(--track-rail);
+  animation: adrift-nudge 1.2s ease-in-out infinite;
+}
+
+@keyframes adrift-nudge {
+  50% {
+    transform: translateX(-6px);
+  }
+}
+
+@keyframes adrift-in {
+  from {
+    opacity: 0;
+  }
 }
 
 /* --- match card -------------------------------------------------------------- */
