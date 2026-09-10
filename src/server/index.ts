@@ -176,6 +176,31 @@ const json = (body: unknown, status = 200) =>
     headers: { "content-type": "application/json; charset=utf-8" },
   });
 
+/**
+ * The full snapshot, with an ETag so an idle client (useRace's 24h fallback) can ask
+ * "anything new?" every few minutes and get a 304 instead of 24 KB. The payload has
+ * no volatile fields — it changes only when something is mutated — so a content hash
+ * is a faithful version.
+ */
+function stateResponse(req: Request): Response {
+  const payload = JSON.stringify(snapshot());
+  const etag = `"${Bun.hash(payload).toString(16)}"`;
+
+  // nginx gzips JSON and downgrades the tag to `W/"…"` on the way out, so the browser
+  // hands back the weak form. Same content, so match it.
+  const offered = (req.headers.get("if-none-match") ?? "")
+    .split(",")
+    .map((tag) => tag.trim().replace(/^W\//, ""));
+
+  if (offered.includes(etag)) {
+    return new Response(null, { status: 304, headers: { etag } });
+  }
+
+  return new Response(payload, {
+    headers: { "content-type": "application/json; charset=utf-8", etag },
+  });
+}
+
 /** Mutate, push the new state to every connected client, and answer. */
 function mutate(work: () => unknown): Response {
   const result = work();
@@ -249,7 +274,7 @@ async function handle(req: Request): Promise<Response> {
 
   // ---- API -----------------------------------------------------------------------
   if (path === "/api/state") {
-    return json(snapshot());
+    return stateResponse(req);
   }
 
   if (path === "/api/stream") {

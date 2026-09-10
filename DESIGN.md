@@ -39,7 +39,7 @@ multiple *concurrent* events, a single/double-elimination format toggle (double,
 | Server | single `server.ts` using `Bun.serve` | One file is enough; matches `bandsaw-tensioner`, `or-name`. |
 | DB | SQLite via `bun:sqlite`, file `data/race.db`, **WAL** | Single-box, single-event, tiny. **Not Neon** — a shared autosuspending compute is the wrong tool for something this small and this latency-sensitive on race day. |
 | Frontend | React 19 + Vite → `dist/`, served static by `server.ts` | Real interactive state across three views. |
-| Live updates | SSE (`EventSource`) | One-way server→client, auto-reconnects for free, no polling. |
+| Live updates | SSE (`EventSource`) | One-way server→client, auto-reconnects for free. Polling only as the 24h-idle fallback (§6). |
 | Photos | files on disk under `data/photos/<year>/`, resized **client-side** | No server-side image library. Local disk, so a flaky uplink can't break race day. |
 | Archive backup | **AWS S3**, written once per year | Offsite copy of an accumulating archive. Off the race-day path entirely. |
 | QR | `qrcode` npm, rendered to canvas | Small, standard; not worth hand-rolling an encoder. |
@@ -807,7 +807,7 @@ to match on for a hall-of-fame line; their cars aren't, and accounts are out of 
 ## 6. API
 
 ```
-GET   /api/state                     → { event, racers, matches, edges }  (full snapshot)
+GET   /api/state                     → { event, racers, matches, edges }  (full snapshot; ETag, 304 on If-None-Match)
 GET   /api/stream                    → SSE; pushes the same payload on every change
 
 GET   /api/me                                      → { id, name }           (token header)
@@ -846,6 +846,17 @@ delta plus a refetch — 30 racers and 62 matches is a few KB, and it removes an
 of "client got a nudge but raced the refetch" bugs. Send a heartbeat comment every 20s so
 proxies don't reap the connection, and make sure the nginx route sets
 `proxy_buffering off;` — buffered SSE just silently doesn't arrive.
+
+**Idle fallback.** A client that has seen no change in the payload for **24 hours** closes
+the stream and instead polls `/api/state` with `If-None-Match` every **5 minutes**, getting a
+304 while nothing has happened. The first 200 — or any pointer, key, focus or
+tab-becomes-visible event — reopens the stream at once. The case this serves is a `/display`
+tab forgotten on a laptop: it held a connection indefinitely, and when the laptop slept and
+woke it re-pulled the full snapshot on every wake. Polling is cheaper than that, but a live
+race is never served by polling: the idle screen is at most one poll behind, and a hand on
+the keyboard makes it current immediately. `useRace` owns this; the payload has no volatile
+fields, so "unchanged" is a string compare on the client and a content-hash ETag on the
+server.
 
 ---
 
