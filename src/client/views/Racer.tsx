@@ -217,6 +217,9 @@ function Join({
           maxLength={24}
           autoFocus
         />
+        <p className="rc-join-note">
+          Your name goes up on the big board, and there are kids here. Keep it clean.
+        </p>
         {error ? <p className="error-msg">{error}</p> : null}
         <button className="btn btn-primary btn-lg btn-block" disabled={busy || !name.trim()}>
           {busy ? "Signing you up…" : "I'm racing"}

@@ -177,6 +177,8 @@ Password screen first (§7). One password, hard-coded, no username.
   *"30 racers → 32-slot bracket, 2 byes. Registration closes."* The sheet also carries a
   **review-names nudge**: self-registration plus drinking produces names you may not want
   six feet tall on a TV with kids in the room, and this is the last moment it's actionable.
+  The sign-up form carries the same warning under the name field, so the first line of
+  defence is the racer, and the director's nudge is the backstop.
 
 **Racing phase** — this is the screen that matters. The director is standing at a track
 holding a phone, so it has to work with one thumb and no reading.

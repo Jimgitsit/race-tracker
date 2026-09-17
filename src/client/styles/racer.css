@@ -108,6 +108,11 @@
   color: var(--ink-dim);
 }
 
+.rc-join-note {
+  font-size: var(--t-sm);
+  color: var(--ink-dim);
+}
+
 /* --- now --------------------------------------------------------------------- */
 
 .rc-now {
