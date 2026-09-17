@@ -86,15 +86,18 @@
   justify-content: center;
 }
 
-/* The event poster leads the page. It is a portrait flyer, so it is capped by
-   height rather than width — on a phone the form still has to land on the first
-   screen beneath it, and on a wide screen it must not become a wall. */
+/* The event poster leads the page. On a phone it takes the full content width
+   and the form sits below the fold — that's the poster's job, and the name field
+   is one flick away. The height cap only bites on a wide screen, where a
+   full-width portrait flyer would be a wall. */
 .rc-join-poster {
   align-self: center;
   flex-shrink: 0;
-  width: auto;
-  max-width: 100%;
-  max-height: 44dvh;
+  /* Full content width on a phone; on a wide screen, the width at which a 2:3
+     flyer stands 72dvh tall — sizing the box, not the image inside it, so the
+     frame and shadow always hug the artwork. */
+  width: min(100%, calc(72dvh * 2 / 3));
+  height: auto;
   border-radius: var(--r-lg);
   border: 1px solid var(--line);
   box-shadow: 0 12px 32px rgb(0 0 0 / 45%);
