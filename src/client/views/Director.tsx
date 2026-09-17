@@ -233,17 +233,34 @@ function MessageSheet({
 // Registration
 // ---------------------------------------------------------------------------------
 
+/** Which racers the roster shows: everyone, or only those still owed a check. */
+type RosterFilter = "all" | "inspected" | "paid";
+
 function Roster({ state }: { state: StatePayload }) {
   const [confirming, setConfirming] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [showMessage, setShowMessage] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [relink, setRelink] = useState<PublicRacer | null>(null);
+  const [filter, setFilter] = useState<RosterFilter>("all");
   const [error, setError] = useState<string | null>(null);
 
   const count = state.racers.length;
   const bracketSize = Math.max(4, 2 ** Math.ceil(Math.log2(Math.max(count, 4))));
   const byes = bracketSize - count;
+  const inspected = state.racers.filter((racer) => racer.inspected).length;
+  const paid = state.racers.filter((racer) => racer.paid).length;
+
+  const shown =
+    filter === "all" ? state.racers : state.racers.filter((racer) => !racer[filter]);
+  const outstanding = [
+    count - inspected > 0 ? `${count - inspected} not inspected` : null,
+    count - paid > 0 ? `${count - paid} ${count - paid === 1 ? "hasn't" : "haven't"} paid` : null,
+  ].filter((line) => line !== null);
+
+  const toggleFilter = (next: RosterFilter) => {
+    setFilter((current) => (current === next ? "all" : next));
+  };
 
   const lock = async () => {
     try {
@@ -280,11 +297,42 @@ function Roster({ state }: { state: StatePayload }) {
       </header>
 
       <main className="dir-roster">
+        {count > 0 ? (
+          <div className="dir-tally" role="group" aria-label="Filter the roster">
+            <button
+              type="button"
+              className={`dir-tally-btn${filter === "inspected" ? " dir-tally-on" : ""}`}
+              aria-pressed={filter === "inspected"}
+              onClick={() => toggleFilter("inspected")}
+            >
+              <span className="dir-tally-num tabular">
+                {inspected}/{count}
+              </span>
+              <span className="dir-tally-label">inspected</span>
+            </button>
+            <button
+              type="button"
+              className={`dir-tally-btn${filter === "paid" ? " dir-tally-on" : ""}`}
+              aria-pressed={filter === "paid"}
+              onClick={() => toggleFilter("paid")}
+            >
+              <span className="dir-tally-num tabular">
+                {paid}/{count}
+              </span>
+              <span className="dir-tally-label">paid</span>
+            </button>
+          </div>
+        ) : null}
+
         {count === 0 ? (
           <p className="empty-note">Nobody has registered yet.</p>
+        ) : shown.length === 0 ? (
+          <p className="empty-note">
+            {filter === "inspected" ? "Every car is inspected." : "Everyone has paid."}
+          </p>
         ) : (
           <ul className="dir-list">
-            {state.racers.map((racer) => (
+            {shown.map((racer) => (
               <RosterRow key={racer.id} racer={racer} onRelink={() => setRelink(racer)} />
             ))}
           </ul>
@@ -308,6 +356,9 @@ function Roster({ state }: { state: StatePayload }) {
           {count} racers → {bracketSize}-slot bracket
           {byes > 0 ? `, ${byes} ${byes === 1 ? "bye" : "byes"}` : ""}. Registration closes.
         </p>
+        {outstanding.length > 0 ? (
+          <p className="dir-confirm-line dir-confirm-owed">{outstanding.join(", ")}.</p>
+        ) : null}
         <p className="dir-confirm-warn">
           Be sure to check all names for profanity first. They go on the big screen and there
           are kids around.
@@ -430,36 +481,82 @@ function RosterRow({ racer, onRelink }: { racer: PublicRacer; onRelink: () => vo
     }
   };
 
+  // No optimistic flip: the state stream answers within a frame, and a chip
+  // that shows a tick the server never recorded is worse than a short wait.
+  const setCheck = async (check: "inspected" | "paid", on: boolean) => {
+    setError(null);
+    try {
+      await api.director.setChecks(racer.id, { [check]: on });
+    } catch (problem) {
+      setError(problem instanceof ApiError ? problem.message : "Couldn't save that.");
+    }
+  };
+
   return (
-    <li className="dir-row">
+    <li className={`dir-row${racer.inspected && racer.paid ? " dir-row-cleared" : ""}`}>
       <Avatar racer={racer} size="md" />
 
-      {editing ? (
-        <input
-          className="field dir-rename"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          onBlur={() => setEditing(false)}
-          maxLength={24}
-          autoFocus
-        />
-      ) : (
-        <button type="button" className="dir-row-name racer-name" onClick={() => setEditing(true)}>
-          {racer.name}
-        </button>
-      )}
+      <div className="dir-row-main">
+        {editing ? (
+          <input
+            className="field dir-rename"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            onBlur={() => setEditing(false)}
+            maxLength={24}
+            autoFocus
+          />
+        ) : (
+          <button
+            type="button"
+            className="dir-row-name racer-name"
+            onClick={() => setEditing(true)}
+          >
+            {racer.name}
+          </button>
+        )}
 
-      <div className="dir-row-actions">
-        <button type="button" className="btn btn-ghost dir-mini" onClick={onRelink}>
-          Re-link
-        </button>
-        <button type="button" className="btn btn-danger dir-mini" onClick={remove}>
-          Remove
-        </button>
+        <div className="dir-row-actions">
+          <button type="button" className="dir-row-link" onClick={onRelink}>
+            Re-link
+          </button>
+          <button type="button" className="dir-row-link dir-row-link-danger" onClick={remove}>
+            Remove
+          </button>
+        </div>
       </div>
 
-      {error ? <p className="error-msg">{error}</p> : null}
+      <div className="dir-checks">
+        <CheckChip
+          label="Inspected"
+          on={racer.inspected}
+          onToggle={() => setCheck("inspected", !racer.inspected)}
+        />
+        <CheckChip label="Paid" on={racer.paid} onToggle={() => setCheck("paid", !racer.paid)} />
+      </div>
+
+      {error ? <p className="error-msg dir-row-error">{error}</p> : null}
     </li>
+  );
+}
+
+/**
+ * One sign-off. A big, thumbable toggle that reads at arm's length: filled green
+ * with a tick when done, an outline when not.
+ */
+function CheckChip({ label, on, onToggle }: { label: string; on: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      className={`dir-check${on ? " dir-check-on" : ""}`}
+      aria-pressed={on}
+      onClick={onToggle}
+    >
+      <span className="dir-check-box" aria-hidden="true">
+        {on ? "✓" : ""}
+      </span>
+      {label}
+    </button>
   );
 }
 

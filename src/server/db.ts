@@ -24,7 +24,9 @@ CREATE TABLE IF NOT EXISTS racers (
   photo       TEXT,
   thumb       TEXT,
   seed        INTEGER,
-  created_at  INTEGER NOT NULL
+  created_at  INTEGER NOT NULL,
+  inspected_at INTEGER,
+  paid_at      INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS matches (
@@ -107,6 +109,26 @@ const BYE_TOKEN = " bye-token";
 
 let database: Database | null = null;
 
+/**
+ * CREATE TABLE IF NOT EXISTS leaves an existing table alone, so columns added
+ * after the first deploy have to be bolted on here. Each entry is idempotent:
+ * it looks at the live table and only adds what is missing.
+ */
+function migrate(handle: Database): void {
+  const racerColumns = new Set(
+    handle
+      .query<{ name: string }, []>("PRAGMA table_info(racers)")
+      .all()
+      .map((column) => column.name),
+  );
+
+  for (const column of ["inspected_at", "paid_at"]) {
+    if (!racerColumns.has(column)) {
+      handle.exec(`ALTER TABLE racers ADD COLUMN ${column} INTEGER`);
+    }
+  }
+}
+
 export function db(): Database {
   if (database) {
     return database;
@@ -123,6 +145,7 @@ export function db(): Database {
   handle.exec("PRAGMA synchronous = NORMAL");
   handle.exec("PRAGMA foreign_keys = ON");
   handle.exec(SCHEMA);
+  migrate(handle);
 
   // A bye is a real row, not NULL. NULL means "not yet determined", and conflating
   // the two is a bug factory (DESIGN §5).
@@ -170,6 +193,8 @@ export type RacerRow = {
   thumb: string | null;
   seed: number | null;
   created_at: number;
+  inspected_at: number | null;
+  paid_at: number | null;
 };
 
 export type MatchRow = {

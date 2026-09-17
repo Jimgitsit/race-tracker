@@ -30,10 +30,12 @@ import {
   resetEvent,
   sendMessage,
   setCurrentMatch,
+  setRacerChecks,
   setRacerPhoto,
   snapshot,
   startConsolation,
   undoLast,
+  type RacerChecks,
 } from "./race.ts";
 import { backupYear } from "./s3.ts";
 
@@ -434,6 +436,17 @@ async function handle(req: Request): Promise<Response> {
     const racerMatch = path.match(/^\/api\/director\/racer\/(\d+)$/);
     if (racerMatch && req.method === "DELETE") {
       return mutate(() => removeRacer(Number(racerMatch[1])));
+    }
+    if (racerMatch && req.method === "PATCH") {
+      const body = await readJson(req);
+      const checks: RacerChecks = {};
+      if (typeof body.inspected === "boolean") {
+        checks.inspected = body.inspected;
+      }
+      if (typeof body.paid === "boolean") {
+        checks.paid = body.paid;
+      }
+      return mutate(() => setRacerChecks(Number(racerMatch[1]), checks));
     }
 
     const tokenMatch = path.match(/^\/api\/director\/racer\/(\d+)\/token$/);

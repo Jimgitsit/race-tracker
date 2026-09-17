@@ -73,6 +73,54 @@
   list-style: none;
 }
 
+/* --- the two sign-offs ---------------------------------------------------------
+   Inspection and entry fee are the director's job at the sign-up table, done
+   thirty-odd times per event, so the two toggles are the row's primary controls
+   and get thumb-sized targets. Re-link and Remove are rare and drop to text
+   links under the name. */
+
+.dir-tally {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-2);
+  margin-bottom: var(--s-3);
+}
+
+/* Progress counter that is also the filter: tap "12/35 inspected" to see the
+   23 who aren't. Tapping it again shows everyone. */
+.dir-tally-btn {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: var(--s-2);
+  min-height: 40px;
+  padding: var(--s-1) var(--s-3);
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-soft);
+  background: var(--surface);
+  color: var(--ink-dim);
+}
+
+.dir-tally-num {
+  font-family: var(--display);
+  font-size: var(--t-lg);
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.dir-tally-label {
+  font-family: var(--mono);
+  font-size: var(--t-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.dir-tally-on {
+  border-color: var(--track-rail);
+  background: rgb(232 83 28 / 15%);
+  color: var(--ink);
+}
+
 .dir-row {
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -82,6 +130,24 @@
   border-radius: var(--r-md);
   background: var(--surface);
   border: 1px solid var(--line-soft);
+}
+
+/* A fully signed-off car quietens down so the ones still owed something stand
+   out when scanning the list. */
+.dir-row-cleared {
+  border-color: rgb(99 194 87 / 35%);
+}
+
+.dir-row-cleared .avatar,
+.dir-row-cleared .dir-row-name {
+  opacity: 0.7;
+}
+
+.dir-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  min-width: 0;
 }
 
 .dir-row-name {
@@ -98,7 +164,69 @@
 
 .dir-row-actions {
   display: flex;
+  gap: var(--s-3);
+}
+
+.dir-row-link {
+  min-height: 28px;
+  font-size: var(--t-xs);
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+}
+
+.dir-row-link-danger {
+  color: var(--danger);
+}
+
+.dir-checks {
+  display: flex;
+  flex-direction: column;
   gap: var(--s-2);
+}
+
+.dir-check {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: 40px;
+  padding: 0 var(--s-3) 0 var(--s-2);
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: transparent;
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--ink-dim);
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.dir-check-box {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1.5px solid var(--ink-faint);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.dir-check-on {
+  border-color: var(--win);
+  background: rgb(99 194 87 / 18%);
+  color: var(--ink);
+}
+
+.dir-check-on .dir-check-box {
+  border-color: var(--win);
+  background: var(--win);
+  color: #10200e;
+}
+
+.dir-row-error {
+  grid-column: 1 / -1;
 }
 
 .dir-mini {
@@ -129,6 +257,11 @@
 .dir-confirm-line {
   font-size: var(--t-md);
   color: var(--ink);
+}
+
+.dir-confirm-owed {
+  margin-top: var(--s-2);
+  color: var(--sun);
 }
 
 .dir-confirm-warn {

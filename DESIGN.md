@@ -170,6 +170,16 @@ Password screen first (§7). One password, hard-coded, no username.
 - Live roster list: photo, name, joined-at. Swipe or tap to remove a racer (mis-entries,
   duplicates). Inline rename.
 - Racer count, big and obvious. A **Show join QR** button, always reachable.
+- **Sign-offs.** Registering is the racer's half; the director's half is looking at the
+  car and taking the money. Each row carries two toggles, **Inspected** and **Paid**, sized
+  for a thumb and green with a tick once done — they are the row's primary controls, since
+  they get pressed thirty-odd times an event, and Re-link / Remove drop to text links under
+  the name. A row with both ticked quietens down so the ones still owed something stand
+  out. Above the list, **`9/35 inspected` · `5/35 paid`** are the running tallies and also
+  the filter: tap one to see only who is still outstanding, tap again for everyone. The
+  flags ride the public state payload, so every director phone sees a tick the moment it
+  lands, and the lock sheet states what is still owed (*"26 not inspected, 30 haven't
+  paid."*) without blocking — the director decides whether that matters.
 - **Add racer** — a name field for people who turn up without a phone. Same validation as
   self-registration, and the row gets a token like any other, so **Re-link** is how they get
   a phone later if one appears. The sheet stays open between adds; walk-ups come in groups.
@@ -730,7 +740,9 @@ CREATE TABLE racers (
   photo       TEXT,                      -- 'data/photos/<year>/<id>.jpg', nullable
   thumb       TEXT,                      -- 'data/photos/<year>/<id>-t.jpg', nullable
   seed        INTEGER,                   -- assigned at lock
-  created_at  INTEGER NOT NULL
+  created_at  INTEGER NOT NULL,
+  inspected_at INTEGER,                  -- director sign-offs, §3.2; NULL = not yet
+  paid_at      INTEGER
 );
 
 CREATE TABLE matches (
@@ -830,6 +842,7 @@ POST  /api/director/message {body, racerId|null}   → null racerId broadcasts
 POST  /api/director/current {matchId}
 POST  /api/director/racer   {name}                 → { id, name }          (registration only; same rules as /register)
 DELETE /api/director/racer/:id                     → registration phase only
+PATCH /api/director/racer/:id {inspected?, paid?}  → flip either sign-off; any phase
 POST  /api/director/consolation {racerIds}         → build the 'C' bracket
 POST  /api/director/archive                        → freeze year, back to registration
 POST  /api/director/reset                          → wipe; refuses if unarchived+complete

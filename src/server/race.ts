@@ -58,6 +58,8 @@ export type PublicRacer = {
   beatenBy: number[];
   nextMatch: number | null;
   inConsolation: boolean;
+  inspected: boolean;
+  paid: boolean;
 };
 
 export type PublicMatch = {
@@ -338,6 +340,8 @@ export function snapshot(): StatePayload {
       beatenBy: beatenBy.get(racer.id) ?? [],
       nextMatch: nextMatch.get(racer.id) ?? null,
       inConsolation: consolationEntrants.has(racer.id),
+      inspected: racer.inspected_at !== null,
+      paid: racer.paid_at !== null,
     };
   });
 
@@ -493,6 +497,35 @@ export function renameRacer(id: number, rawName: string): void {
 
 export function setRacerPhoto(id: number, photo: string, thumb: string): void {
   db().query("UPDATE racers SET photo = ?, thumb = ? WHERE id = ?").run(photo, thumb, id);
+}
+
+export type RacerChecks = { inspected?: boolean; paid?: boolean };
+
+/**
+ * The director's sign-off on a car: inspected, and entry fee collected. Each
+ * flag is a timestamp so the row says when, not just whether; unset is NULL.
+ * Not phase-gated — a late payer mid-race is still a fee to collect.
+ */
+export function setRacerChecks(id: number, checks: RacerChecks): void {
+  const exists = db()
+    .query<{ id: number }, [number, number]>("SELECT id FROM racers WHERE id = ? AND id != ?")
+    .get(id, BYE_ID);
+
+  if (!exists) {
+    throw new RaceError("No such racer.", 404);
+  }
+
+  const now = Date.now();
+  if (checks.inspected !== undefined) {
+    db()
+      .query("UPDATE racers SET inspected_at = ? WHERE id = ?")
+      .run(checks.inspected ? now : null, id);
+  }
+  if (checks.paid !== undefined) {
+    db()
+      .query("UPDATE racers SET paid_at = ? WHERE id = ?")
+      .run(checks.paid ? now : null, id);
+  }
 }
 
 export function removeRacer(id: number): void {

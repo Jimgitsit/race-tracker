@@ -23,6 +23,7 @@ import {
   registerRacer,
   removeRacer,
   sendMessage,
+  setRacerChecks,
   resetEvent,
   snapshot,
   startConsolation,
@@ -92,6 +93,30 @@ describe("registration", () => {
     registerRacer("Temporary");
     removeRacer(snapshot().racers.find((r) => r.name === "Temporary")!.id);
     expect(snapshot().event.racerCount).toBe(FIELD);
+  });
+
+  test("inspection and entry fee are separate sign-offs that toggle both ways", () => {
+    const racer = snapshot().racers[0]!;
+    expect(racer.inspected).toBe(false);
+    expect(racer.paid).toBe(false);
+
+    setRacerChecks(racer.id, { inspected: true });
+    let after = snapshot().racers.find((r) => r.id === racer.id)!;
+    expect(after.inspected).toBe(true);
+    expect(after.paid).toBe(false);
+
+    setRacerChecks(racer.id, { paid: true, inspected: false });
+    after = snapshot().racers.find((r) => r.id === racer.id)!;
+    expect(after.inspected).toBe(false);
+    expect(after.paid).toBe(true);
+
+    // An empty patch is a no-op, not an error; a missing racer is.
+    setRacerChecks(racer.id, {});
+    expect(snapshot().racers.find((r) => r.id === racer.id)!.paid).toBe(true);
+    expect(() => setRacerChecks(999_999, { paid: true })).toThrow(RaceError);
+    expect(() => setRacerChecks(BYE_ID, { paid: true })).toThrow(RaceError);
+
+    setRacerChecks(racer.id, { paid: false });
   });
 });
 
