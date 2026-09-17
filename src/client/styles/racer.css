@@ -86,6 +86,20 @@
   justify-content: center;
 }
 
+/* The event poster leads the page. It is a portrait flyer, so it is capped by
+   height rather than width — on a phone the form still has to land on the first
+   screen beneath it, and on a wide screen it must not become a wall. */
+.rc-join-poster {
+  align-self: center;
+  flex-shrink: 0;
+  width: auto;
+  max-width: 100%;
+  max-height: 44dvh;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 45%);
+}
+
 .rc-join-title {
   font-size: var(--t-3xl);
   color: var(--ink);

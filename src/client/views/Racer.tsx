@@ -27,6 +27,7 @@ import { MatchCard } from "../components/MatchCard.tsx";
 import { JoinQR } from "../components/QR.tsx";
 import { ShareLink } from "../components/ShareLink.tsx";
 import { Sheet } from "../components/Sheet.tsx";
+import posterUrl from "../assets/y-not-nationals-2026.jpg";
 
 type Tab = "now" | "bracket" | "racers" | "rules";
 
@@ -191,6 +192,11 @@ function Join({
   return (
     <main className="rc-join">
       <TrackRule />
+      <img
+        className="rc-join-poster"
+        src={posterUrl}
+        alt="The 3rd Annual Y-Not Nationals. Friday October 2: test and tune all day. Saturday October 3: live racing begins at noon."
+      />
       <p className="eyebrow">{state.event.year}</p>
       <h1 className="rc-join-title">{state.event.name}</h1>
       <p className="rc-join-sub">
