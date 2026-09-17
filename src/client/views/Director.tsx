@@ -255,7 +255,7 @@ function Roster({ state }: { state: StatePayload }) {
     filter === "all" ? state.racers : state.racers.filter((racer) => !racer[filter]);
   const outstanding = [
     count - inspected > 0 ? `${count - inspected} not inspected` : null,
-    count - paid > 0 ? `${count - paid} ${count - paid === 1 ? "entry" : "entries"} unpaid` : null,
+    count - paid > 0 ? `${count - paid} ${count - paid === 1 ? "entry fee" : "entry fees"} owed` : null,
   ].filter((line) => line !== null);
 
   const toggleFilter = (next: RosterFilter) => {
@@ -319,7 +319,7 @@ function Roster({ state }: { state: StatePayload }) {
               <span className="dir-tally-num tabular">
                 {paid}/{count}
               </span>
-              <span className="dir-tally-label">entry</span>
+              <span className="dir-tally-label">entry fee</span>
             </button>
           </div>
         ) : null}
@@ -328,7 +328,7 @@ function Roster({ state }: { state: StatePayload }) {
           <p className="empty-note">Nobody has registered yet.</p>
         ) : shown.length === 0 ? (
           <p className="empty-note">
-            {filter === "inspected" ? "Every car is inspected." : "Every entry is paid."}
+            {filter === "inspected" ? "Every car is inspected." : "Every entry fee is in."}
           </p>
         ) : (
           <ul className="dir-list">
@@ -532,7 +532,7 @@ function RosterRow({ racer, onRelink }: { racer: PublicRacer; onRelink: () => vo
           on={racer.inspected}
           onToggle={() => setCheck("inspected", !racer.inspected)}
         />
-        <CheckChip label="Entry" on={racer.paid} onToggle={() => setCheck("paid", !racer.paid)} />
+        <CheckChip label="Entry fee" on={racer.paid} onToggle={() => setCheck("paid", !racer.paid)} />
       </div>
 
       {error ? <p className="error-msg dir-row-error">{error}</p> : null}

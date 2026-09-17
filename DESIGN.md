@@ -171,15 +171,15 @@ Password screen first (§7). One password, hard-coded, no username.
   duplicates). Inline rename.
 - Racer count, big and obvious. A **Show join QR** button, always reachable.
 - **Sign-offs.** Registering is the racer's half; the director's half is looking at the
-  car and taking the money. Each row carries two toggles, **Inspected** and **Entry**, sized
+  car and taking the money. Each row carries two toggles, **Inspected** and **Entry fee**, sized
   for a thumb and green with a tick once done — they are the row's primary controls, since
   they get pressed thirty-odd times an event, and Re-link / Remove drop to text links under
   the name. A row with both ticked quietens down so the ones still owed something stand
-  out. Above the list, **`9/35 inspected` · `5/35 entry`** are the running tallies and also
+  out. Above the list, **`9/35 inspected` · `5/35 entry fee`** are the running tallies and also
   the filter: tap one to see only who is still outstanding, tap again for everyone. The
   flags ride the public state payload, so every director phone sees a tick the moment it
-  lands, and the lock sheet states what is still owed (*"26 not inspected, 30 entries
-  unpaid."*) without blocking — the director decides whether that matters.
+  lands, and the lock sheet states what is still owed (*"26 not inspected, 30 entry fees
+  owed."*) without blocking — the director decides whether that matters.
 - **Add racer** — a name field for people who turn up without a phone. Same validation as
   self-registration, and the row gets a token like any other, so **Re-link** is how they get
   a phone later if one appears. The sheet stays open between adds; walk-ups come in groups.
