@@ -196,7 +196,6 @@ function Join({
         src={posterUrl}
         alt="The 3rd Annual Y-Not Nationals. Friday October 2: test and tune all day. Saturday October 3: live racing begins at noon."
       />
-      <p className="eyebrow">{state.event.year}</p>
       <p className="rc-join-sub">
         {state.event.racerCount === 0
           ? "Be the first car on the grid."
