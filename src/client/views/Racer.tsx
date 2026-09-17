@@ -191,7 +191,6 @@ function Join({
 
   return (
     <main className="rc-join">
-      <TrackRule />
       <img
         className="rc-join-poster"
         src={posterUrl}
@@ -231,10 +230,6 @@ function Join({
       </button>
     </main>
   );
-}
-
-function TrackRule() {
-  return <div className="track-rule" aria-hidden="true" />;
 }
 
 // ---------------------------------------------------------------------------------
