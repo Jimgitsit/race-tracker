@@ -116,6 +116,16 @@
   background: var(--ground-deep);
 }
 
+.dir-add-note {
+  font-size: var(--t-sm);
+  color: var(--ink-dim);
+}
+
+.dir-add-done {
+  font-size: var(--t-sm);
+  color: var(--win);
+}
+
 .dir-confirm-line {
   font-size: var(--t-md);
   color: var(--ink);

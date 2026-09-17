@@ -84,6 +84,7 @@ export const api = {
     message: (body: string, racerId: number | null) =>
       post<{ id: number }>("director/message", { body, racerId }),
     setCurrent: (matchId: number) => post("director/current", { matchId }),
+    addRacer: (name: string) => post<{ id: number; name: string }>("director/racer", { name }),
     removeRacer: (id: number) => request(`director/racer/${id}`, { method: "DELETE" }),
     racerToken: (id: number) => request<{ token: string }>(`director/racer/${id}/token`),
     consolationCandidates: () => request<PublicRacer[]>("director/consolation"),

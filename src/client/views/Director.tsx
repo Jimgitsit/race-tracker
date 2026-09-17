@@ -237,6 +237,7 @@ function Roster({ state }: { state: StatePayload }) {
   const [confirming, setConfirming] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [showMessage, setShowMessage] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
   const [relink, setRelink] = useState<PublicRacer | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -264,6 +265,9 @@ function Roster({ state }: { state: StatePayload }) {
         <div className="dir-head-actions">
           <button type="button" className="btn btn-ghost dir-mini" onClick={() => setShowQR(true)}>
             Join QR
+          </button>
+          <button type="button" className="btn btn-ghost dir-mini" onClick={() => setShowAdd(true)}>
+            Add racer
           </button>
           <button
             type="button"
@@ -343,7 +347,73 @@ function Roster({ state }: { state: StatePayload }) {
       </Sheet>
 
       <MessageSheet state={state} open={showMessage} onClose={() => setShowMessage(false)} />
+      <AddRacerSheet open={showAdd} onClose={() => setShowAdd(false)} />
     </>
+  );
+}
+
+/**
+ * For the people who turn up without a phone. The sheet stays open after each
+ * add and clears the field, because they tend to arrive as a group and the
+ * director is typing one-thumbed at a track.
+ */
+function AddRacerSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [added, setAdded] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setName("");
+      setError(null);
+      setAdded(null);
+    }
+  }, [open]);
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setError(null);
+
+    try {
+      const racer = await api.director.addRacer(name);
+      setAdded(racer.name);
+      setName("");
+    } catch (problem) {
+      setError(problem instanceof ApiError ? problem.message : "Couldn't add them.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Sheet open={open} title="Add a racer" onClose={onClose}>
+      <form className="stack" onSubmit={submit}>
+        <p className="dir-add-note">
+          For someone without a phone. They can be linked to one later from their row.
+        </p>
+        <label className="visually-hidden" htmlFor="dir-add-name">
+          Racer name
+        </label>
+        <input
+          id="dir-add-name"
+          className="field"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Their name"
+          autoComplete="off"
+          enterKeyHint="done"
+          maxLength={24}
+          autoFocus
+        />
+        {error ? <p className="error-msg">{error}</p> : null}
+        {added && !error ? <p className="dir-add-done">Added {added}.</p> : null}
+        <button className="btn btn-primary btn-lg btn-block" disabled={busy || !name.trim()}>
+          {busy ? "Adding…" : "Add to the grid"}
+        </button>
+      </form>
+    </Sheet>
   );
 }
 

@@ -421,6 +421,16 @@ async function handle(req: Request): Promise<Response> {
       return mutate(() => resetEvent(body.force === true));
     }
 
+    // Walk-ups without a phone. Same validation as self-registration; the row
+    // still gets a token, so Re-link can hand it to a phone if one turns up.
+    if (path === "/api/director/racer" && req.method === "POST") {
+      const body = await readJson(req);
+      return mutate(() => {
+        const { racer } = registerRacer(String(body.name ?? ""));
+        return { id: racer.id, name: racer.name };
+      });
+    }
+
     const racerMatch = path.match(/^\/api\/director\/racer\/(\d+)$/);
     if (racerMatch && req.method === "DELETE") {
       return mutate(() => removeRacer(Number(racerMatch[1])));
