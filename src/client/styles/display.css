@@ -33,18 +33,29 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
   gap: var(--s-4);
+  /* Poster and QR share one width, chosen so a 2:3 poster (1.5w) plus a square
+     QR (1w) plus the prompt and gaps (~6rem) stack inside the screen height. */
+  --join-w: min(100%, calc((100dvh - 2 * var(--s-6) - 6rem) / 2.5));
 }
 
-/* The poster takes whatever height the CTA and QR leave, letterboxed inside
-   its box rather than framed, so the column can be any shape without the
-   frame outrunning the artwork. */
 .disp-join-poster {
-  flex: 1 1 0;
-  min-height: 0;
-  width: 100%;
-  object-fit: contain;
-  object-position: center bottom;
+  width: var(--join-w);
+  height: auto;
+}
+
+/* The QR shell sizes itself inline from its `size` prop, which is right on a
+   phone sheet; here it must track the poster, and only !important beats an
+   inline style. */
+.disp-join-left .qr-block {
+  width: var(--join-w);
+}
+
+.disp-join-left .qr-shell {
+  width: 100% !important;
+  height: auto !important;
+  aspect-ratio: 1;
 }
 
 .disp-join-cta {
