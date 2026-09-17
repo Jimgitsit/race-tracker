@@ -7,6 +7,7 @@ import { playLaunch, unlockAudio } from "../lib/sound.ts";
 import { timeAgo, useNow } from "../lib/time.ts";
 import { Avatar } from "../components/Avatar.tsx";
 import { JoinQR } from "../components/QR.tsx";
+import posterUrl from "../assets/y-not-nationals-2026.jpg";
 
 /**
  * Which brackets are drawn. Orthogonal to detail — the two used to be one five-way
@@ -274,8 +275,11 @@ function Registration({ state }: { state: StatePayload }) {
   return (
     <main className="disp disp-join">
       <section className="disp-join-left">
-        <p className="disp-eyebrow">{state.event.year}</p>
-        <h1 className="disp-join-title">{state.event.name}</h1>
+        <img
+          className="disp-join-poster"
+          src={posterUrl}
+          alt="The 3rd Annual Y-Not Nationals. Friday October 2: test and tune all day. Saturday October 3: live racing begins at noon."
+        />
         <p className="disp-join-cta">Scan to get your car on the board</p>
         <JoinQR url={joinUrl()} size={420} label="" />
       </section>
