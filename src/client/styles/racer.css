@@ -103,11 +103,6 @@
   box-shadow: 0 12px 32px rgb(0 0 0 / 45%);
 }
 
-.rc-join-title {
-  font-size: var(--t-3xl);
-  color: var(--ink);
-}
-
 .rc-join-sub {
   margin-bottom: var(--s-3);
   color: var(--ink-dim);

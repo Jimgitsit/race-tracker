@@ -197,7 +197,6 @@ function Join({
         alt="The 3rd Annual Y-Not Nationals. Friday October 2: test and tune all day. Saturday October 3: live racing begins at noon."
       />
       <p className="eyebrow">{state.event.year}</p>
-      <h1 className="rc-join-title">{state.event.name}</h1>
       <p className="rc-join-sub">
         {state.event.racerCount === 0
           ? "Be the first car on the grid."
