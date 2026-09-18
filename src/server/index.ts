@@ -11,7 +11,7 @@ import { mkdirSync } from "node:fs";
 import { stat } from "node:fs/promises";
 
 import { DIRECTOR_PASSWORD, PHOTOS_DIR, SESSION_TTL_MS } from "../config.ts";
-import { BASE_PATH, MAX_UPLOAD_BYTES, PORT } from "../shared/config.ts";
+import { BASE_PATH, BYE_ID, MAX_UPLOAD_BYTES, PORT } from "../shared/config.ts";
 import { db } from "./db.ts";
 import {
   RaceError,
@@ -459,6 +459,22 @@ async function handle(req: Request): Promise<Response> {
         return json({ error: "No such racer." }, 404);
       }
       return json({ token: row.token });
+    }
+
+    // The director's phone stands in for a racer who has none. Same handler as
+    // /api/me/photo, so the files, the cache-busting version and the broadcast
+    // are identical whichever phone took the picture.
+    const photoMatch = path.match(/^\/api\/director\/racer\/(\d+)\/photo$/);
+    if (photoMatch && req.method === "POST") {
+      const id = Number(photoMatch[1]);
+      const row = db()
+        .query<{ id: number }, [number, number]>("SELECT id FROM racers WHERE id = ? AND id != ?")
+        .get(id, BYE_ID);
+
+      if (!row) {
+        return json({ error: "No such racer." }, 404);
+      }
+      return await uploadPhoto(req, id);
     }
   }
 

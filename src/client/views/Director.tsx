@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 
 import {
   ApiError,
@@ -10,6 +10,7 @@ import {
   type StatePayload,
 } from "../lib/api.ts";
 import { matchById, racerById, recordOf } from "../lib/derive.ts";
+import { preparePhoto } from "../lib/photo.ts";
 import { Avatar } from "../components/Avatar.tsx";
 import {
   BracketColumns,
@@ -411,7 +412,7 @@ function Roster({ state }: { state: StatePayload }) {
 function AddRacerSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [added, setAdded] = useState<string | null>(null);
+  const [added, setAdded] = useState<{ id: number; name: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -429,7 +430,7 @@ function AddRacerSheet({ open, onClose }: { open: boolean; onClose: () => void }
 
     try {
       const racer = await api.director.addRacer(name);
-      setAdded(racer.name);
+      setAdded(racer);
       setName("");
     } catch (problem) {
       setError(problem instanceof ApiError ? problem.message : "Couldn't add them.");
@@ -459,12 +460,77 @@ function AddRacerSheet({ open, onClose }: { open: boolean; onClose: () => void }
           autoFocus
         />
         {error ? <p className="error-msg">{error}</p> : null}
-        {added && !error ? <p className="dir-add-done">Added {added}.</p> : null}
         <button className="btn btn-primary btn-lg btn-block" disabled={busy || !name.trim()}>
           {busy ? "Adding…" : "Add to the grid"}
         </button>
       </form>
+
+      {/* Outside the form so the picker can't submit it. Optional: the next
+          walk-up's name can be typed while this one's car is still being found. */}
+      {added && !error ? (
+        <div className="dir-add-photo">
+          <p className="dir-add-done">Added {added.name}.</p>
+          <PhotoPicker racerId={added.id} className="btn btn-ghost btn-block dir-add-photo-btn">
+            Add a photo of {added.name}'s car
+          </PhotoPicker>
+        </div>
+      ) : null}
     </Sheet>
+  );
+}
+
+/**
+ * A file input dressed as whatever the caller wants it to look like, that
+ * resizes on the phone and uploads as the director on the racer's behalf.
+ * Children are the idle label; busy and error states are its own.
+ */
+function PhotoPicker({
+  racerId,
+  className,
+  children,
+}: {
+  racerId: number;
+  className: string;
+  children: ReactNode;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const upload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+
+    try {
+      const { full, thumb } = await preparePhoto(file);
+      await api.director.uploadPhoto(racerId, full, thumb);
+    } catch (problem) {
+      setError(problem instanceof ApiError ? problem.message : "That photo didn't upload.");
+    } finally {
+      setBusy(false);
+      event.target.value = "";
+    }
+  };
+
+  return (
+    <>
+      <label className={className}>
+        {busy ? "Uploading…" : children}
+        <input
+          className="visually-hidden"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={upload}
+          disabled={busy}
+        />
+      </label>
+      {error ? <p className="error-msg">{error}</p> : null}
+    </>
   );
 }
 
@@ -517,6 +583,9 @@ function RosterRow({ racer, onRelink }: { racer: PublicRacer; onRelink: () => vo
         )}
 
         <div className="dir-row-actions">
+          <PhotoPicker racerId={racer.id} className="dir-row-link">
+            {racer.photo ? "Photo ↻" : "Photo"}
+          </PhotoPicker>
           <button type="button" className="dir-row-link" onClick={onRelink}>
             Re-link
           </button>

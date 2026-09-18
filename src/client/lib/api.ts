@@ -89,6 +89,15 @@ export const api = {
     setChecks: (id: number, checks: { inspected?: boolean; paid?: boolean }) =>
       request(`director/racer/${id}`, { method: "PATCH", body: JSON.stringify(checks) }),
     racerToken: (id: number) => request<{ token: string }>(`director/racer/${id}/token`),
+    uploadPhoto: async (id: number, full: Blob, thumb: Blob) => {
+      const form = new FormData();
+      form.append("full", full, "full.jpg");
+      form.append("thumb", thumb, "thumb.jpg");
+      return request<{ photo: string; thumb: string }>(`director/racer/${id}/photo`, {
+        method: "POST",
+        body: form,
+      });
+    },
     consolationCandidates: () => request<PublicRacer[]>("director/consolation"),
     startConsolation: (racerIds: number[]) => post("director/consolation", { racerIds }),
     reset: (options: { keepRacers: boolean; save: boolean }) =>

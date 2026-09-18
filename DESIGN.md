@@ -183,6 +183,10 @@ Password screen first (§7). One password, hard-coded, no username.
 - **Add racer** — a name field for people who turn up without a phone. Same validation as
   self-registration, and the row gets a token like any other, so **Re-link** is how they get
   a phone later if one appears. The sheet stays open between adds; walk-ups come in groups.
+  After an add the sheet offers **a photo of their car**, taken on the director's phone and
+  uploaded on the racer's behalf through the same resize-and-thumb path the racer view uses;
+  every roster row has a **Photo** link for the same thing, so a walk-up already on the grid
+  can get a car too.
 - **`Lock roster & start race`** — confirm sheet first, stating what's about to happen:
   *"30 racers → 32-slot bracket, 2 byes. Registration closes."* The sheet also carries a
   **review-names nudge**: self-registration plus drinking produces names you may not want
@@ -851,6 +855,7 @@ POST  /api/director/undo                           → pops results_log, LIFO
 POST  /api/director/message {body, racerId|null}   → null racerId broadcasts
 POST  /api/director/current {matchId}
 POST  /api/director/racer   {name}                 → { id, name }          (registration only; same rules as /register)
+POST  /api/director/racer/:id/photo  multipart: full, thumb → { photo, thumb }  (same handler as /me/photo)
 DELETE /api/director/racer/:id                     → registration phase only
 PATCH /api/director/racer/:id {inspected?, paid?}  → flip either sign-off; any phase
 POST  /api/director/consolation {racerIds}         → build the 'C' bracket

@@ -168,12 +168,15 @@
 }
 
 .dir-row-link {
+  display: inline-flex;
+  align-items: center;
   min-height: 28px;
   font-size: var(--t-xs);
   font-family: var(--mono);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--ink-faint);
+  cursor: pointer;
 }
 
 .dir-row-link-danger {
@@ -252,6 +255,19 @@
 .dir-add-done {
   font-size: var(--t-sm);
   color: var(--win);
+}
+
+.dir-add-photo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin-top: var(--s-4);
+  padding-top: var(--s-4);
+  border-top: 1px solid var(--line-soft);
+}
+
+.dir-add-photo-btn {
+  cursor: pointer;
 }
 
 .dir-confirm-line {
