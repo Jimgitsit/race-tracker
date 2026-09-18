@@ -34,7 +34,7 @@ function Index() {
       {rows === null && !error ? <p className="empty-note">Loading…</p> : null}
       {rows !== null && rows.length === 0 ? (
         <p className="empty-note">
-          No races archived yet. The first one shows up here once the director archives it.
+          No races saved yet. Each year's race lands here when the director starts the next one.
         </p>
       ) : null}
 

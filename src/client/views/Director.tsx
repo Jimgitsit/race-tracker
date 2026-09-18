@@ -923,13 +923,18 @@ function ConsolationPicker({ onDone }: { onDone: () => void }) {
 // ---------------------------------------------------------------------------------
 
 function Complete({ state }: { state: StatePayload }) {
-  const [confirmArchive, setConfirmArchive] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
-  const [override, setOverride] = useState(false);
   // Default on: a false start almost never means the roster was wrong, and
   // re-typing thirty names is the expensive half of starting over.
   const [keepRacers, setKeepRacers] = useState(true);
+  const [save, setSave] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // What the save would replace, if anything. Fetched when the sheet opens so
+  // the director sees "this replaces the race already saved for 2026" before
+  // confirming, rather than finding out on the history page.
+  const [existing, setExisting] = useState<{ champion: string | null; racer_count: number } | null>(
+    null,
+  );
 
   const podium = useMemo(
     () =>
@@ -941,37 +946,31 @@ function Complete({ state }: { state: StatePayload }) {
     [state],
   );
 
-  const run = async (work: () => Promise<unknown>, close: () => void) => {
-    try {
-      await work();
-      close();
-      setError(null);
-    } catch (problem) {
-      setError(problem instanceof ApiError ? problem.message : "That didn't work.");
+  useEffect(() => {
+    if (!confirmReset) {
+      return;
     }
-  };
+    api.archives
+      .list()
+      .then((rows) => setExisting(rows.find((row) => row.year === state.event.year) ?? null))
+      .catch(() => setExisting(null));
+  }, [confirmReset, state.event.year]);
 
   const closeReset = () => {
     setConfirmReset(false);
-    setOverride(false);
     setError(null);
   };
 
-  /**
-   * A refused reset is the server asking whether this was really meant, not a
-   * dead end — a false start that reached "complete" is exactly what the archive
-   * guard blocks, and reset is the documented way out of a false start. So the
-   * first refusal arms the override and says plainly what goes with it.
-   */
-  const wipe = async () => {
+  const reset = async () => {
     try {
-      await api.director.reset(override, keepRacers);
+      await api.director.reset({ keepRacers, save });
       closeReset();
     } catch (problem) {
       setError(problem instanceof ApiError ? problem.message : "That didn't work.");
-      setOverride(true);
     }
   };
+
+  const racerNoun = state.racers.length === 1 ? "racer" : "racers";
 
   return (
     <>
@@ -1010,41 +1009,26 @@ function Complete({ state }: { state: StatePayload }) {
         <button
           type="button"
           className="btn btn-primary btn-lg btn-block"
-          onClick={() => setConfirmArchive(true)}
+          onClick={() => setConfirmReset(true)}
         >
-          Archive &amp; start next year
-        </button>
-        <button type="button" className="btn btn-danger btn-block" onClick={() => setConfirmReset(true)}>
-          Reset event
+          Start the next race
         </button>
       </footer>
 
-      <Sheet open={confirmArchive} title="Archive this year?" onClose={() => setConfirmArchive(false)}>
+      <Sheet open={confirmReset} title="Start the next race?" onClose={closeReset}>
         <p className="dir-confirm-line">
-          {state.event.year} gets saved to the history page — bracket, photos and all — and
-          registration reopens for {state.event.year + 1}.
+          {save
+            ? `${state.event.year} gets saved to the history page — bracket, photos and all — and registration reopens.`
+            : "Nothing is saved. Registration reopens."}
         </p>
-        {error ? <p className="error-msg">{error}</p> : null}
 
-        <div className="sheet-actions">
-          <button type="button" className="btn" onClick={() => setConfirmArchive(false)}>
-            Not yet
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => run(api.director.archive, () => setConfirmArchive(false))}
-          >
-            Archive
-          </button>
-        </div>
-      </Sheet>
-
-      <Sheet open={confirmReset} title="Start this race over?" onClose={closeReset}>
-        <p className="dir-confirm-warn">
-          This throws away {state.event.year}'s bracket without saving it. Archive first unless
-          this race was a false start.
-        </p>
+        {save && existing ? (
+          <p className="dir-confirm-warn">
+            This replaces the {state.event.year} race already saved
+            {existing.champion ? `, won by ${existing.champion}` : ""} with {existing.racer_count}{" "}
+            {existing.racer_count === 1 ? "racer" : "racers"}.
+          </p>
+        ) : null}
 
         <label className="dir-keep">
           <input
@@ -1053,36 +1037,32 @@ function Complete({ state }: { state: StatePayload }) {
             onChange={(event) => setKeepRacers(event.target.checked)}
           />
           <span>
-            Keep the {state.racers.length} {state.racers.length === 1 ? "racer" : "racers"},
-            their photos and sign-offs. Registration reopens with them already on the grid.
+            Keep the {state.racers.length} {racerNoun}, their photos and sign-offs, already on
+            the grid for the next race.
           </span>
+        </label>
+
+        <label className="dir-keep">
+          <input
+            type="checkbox"
+            checked={!save}
+            onChange={(event) => setSave(!event.target.checked)}
+          />
+          <span>This was a test run. Don't save it to the history page.</span>
         </label>
 
         {error ? <p className="error-msg">{error}</p> : null}
 
-        {override ? (
-          <p className="dir-confirm-warn">
-            Going ahead anyway loses {state.event.heatsDone} recorded{" "}
-            {state.event.heatsDone === 1 ? "heat" : "heats"}
-            {keepRacers
-              ? ""
-              : `, ${state.racers.length} ${state.racers.length === 1 ? "racer" : "racers"} and every uploaded photo`}
-            . There is no undo.
-          </p>
-        ) : null}
-
         <div className="sheet-actions">
           <button type="button" className="btn" onClick={closeReset}>
-            Cancel
+            Not yet
           </button>
-          <button type="button" className="btn btn-danger" onClick={wipe}>
-            {override
-              ? keepRacers
-                ? "Reset without archiving"
-                : "Delete without archiving"
-              : keepRacers
-                ? "Reset, keep racers"
-                : "Delete everything"}
+          <button
+            type="button"
+            className={`btn ${save ? "btn-primary" : "btn-danger"}`}
+            onClick={reset}
+          >
+            {save ? "Save & reset" : "Reset without saving"}
           </button>
         </div>
       </Sheet>

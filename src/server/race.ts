@@ -1,5 +1,5 @@
 /**
- * Domain logic: registration, locking, results, undo, consolation, archiving.
+ * Domain logic: registration, locking, results, undo, consolation, reset + archive.
  *
  * The matches/edges tables carry stable ids, sources and playing order, and are
  * written back after every mutation so the DB is a truthful record. But the
@@ -7,9 +7,7 @@
  * pure engine (DESIGN §4.3). That is what makes undo a one-liner.
  */
 import { randomUUID } from "node:crypto";
-import { mkdirSync } from "node:fs";
 
-import { PHOTOS_DIR } from "../config.ts";
 import {
   ARCHIVE_SCHEMA_VERSION,
   BYE_ID,
@@ -762,12 +760,13 @@ export function consolationCandidates(): PublicRacer[] {
     .slice(0, CONSOLATION_SIZE);
 }
 
-export function archiveYear(): ArchiveRow {
-  const event = eventRow();
-  if (event.phase !== "complete") {
-    throw new RaceError("Finish the race before archiving it.", 409);
-  }
-
+/**
+ * Freeze the finished race as one row per calendar year. Saving again in the
+ * same year replaces the earlier row outright — every column, not just the
+ * blob — so a test run from September is gone the moment the real race in
+ * October is saved. That is the whole of "account for testing".
+ */
+function writeArchive(event: EventRow): ArchiveRow {
   const state = snapshot();
   const nameOf = (id: number | null) => state.racers.find((r) => r.id === id)?.name ?? null;
 
@@ -784,75 +783,69 @@ export function archiveYear(): ArchiveRow {
     state: JSON.stringify(state),
   };
 
-  db().transaction(() => {
-    db()
-      .query(
-        `INSERT INTO archives
-           (year, name, archived_at, racer_count, champion, runner_up, third,
-            consolation_champion, schema_version, state)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT (year) DO UPDATE SET
-           archived_at = excluded.archived_at,
-           state = excluded.state`,
-      )
-      .run(
-        row.year,
-        row.name,
-        row.archived_at,
-        row.racer_count,
-        row.champion,
-        row.runner_up,
-        row.third,
-        row.consolation_champion,
-        row.schema_version,
-        row.state,
-      );
+  db()
+    .query(
+      `INSERT INTO archives
+         (year, name, archived_at, racer_count, champion, runner_up, third,
+          consolation_champion, schema_version, state)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT (year) DO UPDATE SET
+         name = excluded.name,
+         archived_at = excluded.archived_at,
+         racer_count = excluded.racer_count,
+         champion = excluded.champion,
+         runner_up = excluded.runner_up,
+         third = excluded.third,
+         consolation_champion = excluded.consolation_champion,
+         schema_version = excluded.schema_version,
+         state = excluded.state`,
+    )
+    .run(
+      row.year,
+      row.name,
+      row.archived_at,
+      row.racer_count,
+      row.champion,
+      row.runner_up,
+      row.third,
+      row.consolation_champion,
+      row.schema_version,
+      row.state,
+    );
 
-    clearEventTables();
-    db()
-      .query("UPDATE event SET year = ?, phase = 'registration' WHERE id = 1")
-      .run(event.year + 1);
-  })();
-
-  mkdirSync(`${PHOTOS_DIR}/${event.year + 1}`, { recursive: true });
   return row;
 }
 
+export type ResetOptions = {
+  /** Leave the roster — names, photos, sign-offs — in place with seeds cleared. */
+  keepRacers?: boolean;
+  /** Skip the archive even though the race finished. For a test run. Default: save. */
+  save?: boolean;
+};
+
 /**
- * Wipe the event back to registration.
- *
- * `force` is the escape hatch, and it has to exist: reset is documented as the
- * way out of a false start, but a false start that reaches `complete` is exactly
- * what the archive guard below refuses — so without an override the one case
- * reset was written for is the one case it cannot do. The guard stays the
- * default, and the director has to ask a second time to get past it.
+ * Back to registration. A finished race is archived on the way out unless told
+ * not to; there is no separate archive step for the director to remember. The
+ * next event's year is the calendar year, so however many test runs get reset
+ * before race day they all file under the same year and the last one stands.
+ * Returns the archive row written, if any.
  */
-/**
- * Back to registration. `keepRacers` drops only the bracket and its results and
- * leaves the roster — names, photos, sign-offs — in place with seeds cleared,
- * which is what a false start actually needs: the field is right, the race isn't.
- */
-export function resetEvent(force = false, keepRacers = false): void {
+export function resetEvent(options: ResetOptions = {}): ArchiveRow | null {
   const event = eventRow();
-
-  // Resetting a finished-but-unarchived race would eat a whole year.
-  if (!force && event.phase === "complete") {
-    const archived = db()
-      .query<{ n: number }, [number]>("SELECT COUNT(*) AS n FROM archives WHERE year = ?")
-      .get(event.year)!;
-
-    if (archived.n === 0) {
-      throw new RaceError(
-        "This race is finished but not archived. Archive it first — reset would delete it.",
-        409,
-      );
-    }
-  }
+  const save = options.save ?? true;
+  let row: ArchiveRow | null = null;
 
   db().transaction(() => {
-    clearEventTables(keepRacers);
-    db().query("UPDATE event SET phase = 'registration' WHERE id = 1").run();
+    if (event.phase === "complete" && save) {
+      row = writeArchive(event);
+    }
+    clearEventTables(options.keepRacers === true);
+    db()
+      .query("UPDATE event SET phase = 'registration', year = ? WHERE id = 1")
+      .run(new Date().getFullYear());
   })();
+
+  return row;
 }
 
 function clearEventTables(keepRacers = false): void {

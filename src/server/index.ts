@@ -15,7 +15,6 @@ import { BASE_PATH, MAX_UPLOAD_BYTES, PORT } from "../shared/config.ts";
 import { db } from "./db.ts";
 import {
   RaceError,
-  archiveYear,
   consolationCandidates,
   currentYear,
   getArchive,
@@ -397,30 +396,31 @@ async function handle(req: Request): Promise<Response> {
       return mutate(() => startConsolation(ids));
     }
 
-    if (path === "/api/director/archive" && req.method === "POST") {
-      const row = archiveYear();
+    if (path === "/api/director/reset" && req.method === "POST") {
+      // Tolerates a missing body: a page cached from before the options existed
+      // posts nothing, and "Expected a JSON body" is a baffling answer to
+      // "start over". No body means the defaults: save, don't keep.
+      const body = await readJson(req).catch(() => ({}) as Record<string, unknown>);
+      const row = resetEvent({
+        keepRacers: body.keepRacers === true,
+        save: body.save !== false,
+      });
       broadcast();
 
-      // Deliberately not awaited: the race is over, the archive is already safe
-      // on local disk, and the director should not watch a spinner while photos
-      // go to S3. Failures are logged and can be retried by hand.
-      void backupYear(row.year, row.state).then((result) => {
-        console.log(
-          result.ok
-            ? `archived ${row.year} → ${result.detail}`
-            : `archived ${row.year} locally; offsite backup skipped: ${result.detail}`,
-        );
-      });
+      if (row) {
+        // Deliberately not awaited: the race is over, the archive is already safe
+        // on local disk, and the director should not watch a spinner while photos
+        // go to S3. Failures are logged and can be retried by hand.
+        void backupYear(row.year, row.state).then((result) => {
+          console.log(
+            result.ok
+              ? `archived ${row.year} → ${result.detail}`
+              : `archived ${row.year} locally; offsite backup skipped: ${result.detail}`,
+          );
+        });
+      }
 
-      return json({ year: row.year, champion: row.champion });
-    }
-
-    if (path === "/api/director/reset" && req.method === "POST") {
-      // Tolerates a missing body: a page cached from before `force` existed posts
-      // nothing, and "Expected a JSON body" is a baffling answer to "delete this".
-      // No body means no override, which is the safe reading anyway.
-      const body = await readJson(req).catch(() => ({}) as Record<string, unknown>);
-      return mutate(() => resetEvent(body.force === true, body.keepRacers === true));
+      return json({ archived: row ? { year: row.year, champion: row.champion } : null });
     }
 
     // Walk-ups without a phone. Same validation as self-registration; the row

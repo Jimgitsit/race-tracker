@@ -1,7 +1,8 @@
 /**
  * End-to-end exercise of the domain layer against a scratch database: register,
- * lock, race, undo, run a consolation bracket, archive, and refuse a destructive
- * reset. Runs the real 30-racer field the event will actually have.
+ * lock, race, undo, run a consolation bracket, and reset — which archives a
+ * finished race on the way out. Runs the real 30-racer field the event will
+ * actually have.
  *
  *   RACE_TRACKER_DATA_DIR=.test-data bun test
  */
@@ -13,7 +14,6 @@ import { BYE_ID } from "../src/shared/config.ts";
 import { closeDb } from "../src/server/db.ts";
 import {
   RaceError,
-  archiveYear,
   consolationCandidates,
   listArchives,
   lockRoster,
@@ -363,24 +363,20 @@ describe("finishing", () => {
     expect(state.queue.length).toBe(0);
   });
 
-  test("reset refuses to eat an unarchived year", () => {
-    expect(() => resetEvent()).toThrow(RaceError);
-    expect(snapshot().event.phase).toBe("complete");
-  });
-
-  test("archiving freezes the year and reopens registration", () => {
+  test("reset archives a finished race under its year and reopens registration", () => {
     const finished = snapshot();
     const year = finished.event.year;
     const championName = finished.racers.find((r) => r.id === finished.event.champion)!.name;
 
-    const row = archiveYear();
+    const row = resetEvent()!;
+    expect(row).not.toBeNull();
     expect(row.year).toBe(year);
     expect(row.champion).toBe(championName);
     expect(row.racer_count).toBe(FIELD);
 
     const after = snapshot();
     expect(after.event.phase).toBe("registration");
-    expect(after.event.year).toBe(year + 1);
+    expect(after.event.year).toBe(new Date().getFullYear());
     expect(after.event.racerCount).toBe(0);
     expect(after.matches.length).toBe(0);
     expect(after.event.consolation).toBe(false);
@@ -397,11 +393,52 @@ describe("finishing", () => {
     expect(frozen.event.champion).toBe(finished.event.champion);
   });
 
-  test("a fresh year starts clean and can be reset freely", () => {
+  test("saving again in the same year replaces the earlier race entirely", () => {
+    const before = listArchives()[0]!;
+    for (const name of ["Rerun A", "Rerun B", "Rerun C", "Rerun D"]) {
+      registerRacer(name);
+    }
+    lockRoster();
+    // Play every heat in order until the bracket is done.
+    for (let guard = 0; guard < 20 && snapshot().event.phase === "racing"; guard++) {
+      const heat = snapshot().matches.find((m) => m.state === "ready")!;
+      recordResult(heat.id, heat.a!);
+    }
+    const rerun = snapshot();
+    expect(rerun.event.phase).toBe("complete");
+    const rerunChampion = rerun.racers.find((r) => r.id === rerun.event.champion)!.name;
+
+    const row = resetEvent({ keepRacers: false })!;
+    expect(row.year).toBe(before.year);
+    const archives = listArchives();
+    expect(archives.length).toBe(1);
+    expect(archives[0].racer_count).toBe(4);
+    expect(archives[0].champion).toBe(rerunChampion);
+    expect(archives[0].champion).not.toBe(before.champion);
+  });
+
+  test("a test run can be reset without saving", () => {
+    for (const name of ["Test A", "Test B", "Test C", "Test D"]) {
+      registerRacer(name);
+    }
+    lockRoster();
+    for (let guard = 0; guard < 20 && snapshot().event.phase === "racing"; guard++) {
+      const heat = snapshot().matches.find((m) => m.state === "ready")!;
+      recordResult(heat.id, heat.b!);
+    }
+    expect(snapshot().event.phase).toBe("complete");
+
+    const saved = listArchives()[0]!;
+    expect(resetEvent({ save: false })).toBeNull();
+    expect(listArchives()[0]).toEqual(saved);
+    expect(snapshot().event.racerCount).toBe(0);
+  });
+
+  test("resetting from registration archives nothing", () => {
     registerRacer("Next Year Racer");
     expect(snapshot().event.racerCount).toBe(1);
 
-    resetEvent();
+    expect(resetEvent()).toBeNull();
     expect(snapshot().event.racerCount).toBe(0);
     expect(snapshot().event.phase).toBe("registration");
     expect(listArchives().length).toBe(1);
@@ -420,7 +457,7 @@ describe("finishing", () => {
     const heat = racing.matches.find((m) => m.state === "ready")!;
     recordResult(heat.id, heat.a!);
 
-    resetEvent(false, true);
+    resetEvent({ keepRacers: true });
     const after = snapshot();
     expect(after.event.phase).toBe("registration");
     expect(after.matches.length).toBe(0);

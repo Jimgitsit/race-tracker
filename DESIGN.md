@@ -224,15 +224,22 @@ holding a phone, so it has to work with one thumb and no reading.
   racer's existing token, for someone who cleared their browser or switched phones (§3.5).
 - A collapsed link to the full bracket.
 
-**Complete phase:** podium — 1st, 2nd, 3rd with photos, then two exits:
-- **`Archive & start next year`** — the normal path. Freezes this year (§5) and returns to
-  registration.
-- **`Reset event`** — for a mis-start. Double-confirm, and it **refuses outright while an
-  unarchived complete event exists**, so it can't eat a year. The sheet carries a **keep the
-  racers** checkbox, on by default: a false start almost never means the roster was wrong,
-  and re-typing thirty names is the expensive half of starting over. Kept means names,
-  photos and sign-offs stay and registration reopens with them on the grid; only the
-  bracket, its results, seeds and messages go.
+**Complete phase:** podium — 1st, 2nd, 3rd with photos, then one exit:
+- **`Start the next race`** — confirm sheet, then the finished race is **saved to the
+  history page automatically** and registration reopens. There is no separate archive step
+  for the director to remember; leaving a finished race is what saves it. The sheet carries
+  two checkboxes:
+  - **Keep the racers** (on by default): a false start almost never means the roster was
+    wrong, and re-typing thirty names is the expensive half of starting over. Kept means
+    names, photos and sign-offs stay and registration reopens with them on the grid; only
+    the bracket, its results, seeds and messages go.
+  - **This was a test run, don't save it** (off by default): the escape for rehearsals.
+- **Testing is accounted for by the year, not by the director.** Archives are one row per
+  calendar year and saving again in the same year **replaces the earlier row outright**, so
+  the September rehearsals vanish the moment the real October race is saved, whether or not
+  anyone ticked the test-run box. The sheet says when a save would replace something
+  (*"This replaces the 2026 race already saved, won by Madison with 30 racers."*) so the
+  one dangerous case — a rehearsal *after* the real race — is visible before the tap.
 
 ### 3.3 Big screen — `/display`
 
@@ -309,15 +316,13 @@ appeared to do nothing, and in "All rounds" it genuinely did nothing, because th
 forces every column compact before focus is consulted. Nobody missed it. Don't re-add a
 click target here without first making it survive both of those.
 
-**Reset needs an override, and the override is a second ask.** A finished race that hasn't
-been archived is refused, because a stray tap would eat a whole year. But reset is *the
-documented way out of a false start*, and a false start that reaches `complete` is exactly
-what that guard blocks — so without an escape hatch the one case reset exists for is the one
-case it cannot do. The guard stays the default; the first refusal arms an override, states
-what goes with it (racers, recorded heats, every photo) and relabels the button **"Delete
-without archiving"**. `resetEvent(force, keepRacers)` on the server, `{ force, keepRacers }`
-on the wire, tolerant of a missing body so a stale cached page reads as *no* override and
-*no* keep — the pre-existing behaviour — rather than erroring.
+**Reset never refuses; it saves instead.** An earlier version refused to reset a finished
+race that hadn't been archived, with a second-ask override to get past the guard. The guard
+existed because reset and archive were two buttons and a stray tap on the wrong one could
+eat a year. With one exit that archives on the way out there is nothing to guard: the only
+way to lose a finished race is to tick *test run* deliberately. The route still tolerates a
+missing body, so a page cached from before the options existed reads as the defaults —
+save, don't keep — rather than erroring.
 
 **Terminology: always "*X* bracket", never a bare "*X*".** Winners/losers is the most common
 naming for double elimination (Wikipedia also lists upper/lower, championship/elimination and
@@ -849,8 +854,8 @@ POST  /api/director/racer   {name}                 → { id, name }          (re
 DELETE /api/director/racer/:id                     → registration phase only
 PATCH /api/director/racer/:id {inspected?, paid?}  → flip either sign-off; any phase
 POST  /api/director/consolation {racerIds}         → build the 'C' bracket
-POST  /api/director/archive                        → freeze year, back to registration
-POST  /api/director/reset  {force?, keepRacers?}   → back to registration; refuses if unarchived+complete
+POST  /api/director/reset  {keepRacers?, save?}    → back to registration; a complete race is
+                                                     archived first unless save is false → { archived }
 
 GET   /api/archives                                → list, without the state blob
 GET   /api/archives/:year                          → the frozen state payload
@@ -925,9 +930,13 @@ Compare with a timing-safe equality check anyway (`crypto.timingSafeEqual`) — 
 
 ## 9. Archive and backup
 
-On **`Archive & start next year`**: build the current `/api/state` payload, write it to
-`archives` with the denormalised podium, then clear `racers` / `matches` / `edges` /
-`results_log` and return `event` to `registration` with `year + 1`.
+On **`Start the next race`** from a finished race (unless *test run* is ticked): build the
+current `/api/state` payload, upsert it into `archives` keyed by `event.year` with the
+denormalised podium — every column replaced, so a stale rehearsal podium can't survive under
+a fresh state blob — then clear `matches` / `edges` / `results_log` (and `racers`, unless
+kept) and return `event` to `registration` with `year` set to the **calendar year**. Not
+`year + 1`: the next race after October's is next year's, and every rehearsal before it
+files under the same year as the real thing, which is what lets the real one replace them.
 
 Then, **off the critical path**, push `data/photos/<year>/` and the archive JSON to S3 under
 `race-tracker/<year>/`. If it fails, the event is unaffected and it can be retried — this
@@ -1000,7 +1009,7 @@ brand logo or the default "dark sports app with a neon accent."
 7. Photos and QR end to end.
 8. Consolation bracket (§4.6) — **last**, because it is strictly additive and the main
    bracket is the part that cannot fail.
-9. Archive + `/history` + S3 backup.
+9. Auto-archive on reset + `/history` + S3 backup.
 10. Deploy: launchd user agent `com.jim.race-tracker` on **58013** (`bun` lives at
     `/Users/doug/.bun/bin/bun`, *not* Homebrew's), nginx route
     `/race-tracker/` → `127.0.0.1:58013` with `proxy_buffering off`, apple-touch-icon via

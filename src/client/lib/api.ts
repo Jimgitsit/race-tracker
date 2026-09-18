@@ -91,9 +91,11 @@ export const api = {
     racerToken: (id: number) => request<{ token: string }>(`director/racer/${id}/token`),
     consolationCandidates: () => request<PublicRacer[]>("director/consolation"),
     startConsolation: (racerIds: number[]) => post("director/consolation", { racerIds }),
-    archive: () => post<{ year: number; champion: string | null }>("director/archive"),
-    reset: (force = false, keepRacers = false) =>
-      post("director/reset", { force, keepRacers }),
+    reset: (options: { keepRacers: boolean; save: boolean }) =>
+      post<{ archived: { year: number; champion: string | null } | null }>(
+        "director/reset",
+        options,
+      ),
   },
 
   archives: {
