@@ -406,4 +406,33 @@ describe("finishing", () => {
     expect(snapshot().event.phase).toBe("registration");
     expect(listArchives().length).toBe(1);
   });
+
+  test("reset can keep the roster and only drop the bracket", () => {
+    for (const name of ["Keep A", "Keep B", "Keep C", "Keep D"]) {
+      registerRacer(name);
+    }
+    const kept = snapshot().racers[0]!;
+    setRacerChecks(kept.id, { inspected: true, paid: true });
+    lockRoster();
+
+    const racing = snapshot();
+    expect(racing.event.phase).toBe("racing");
+    const heat = racing.matches.find((m) => m.state === "ready")!;
+    recordResult(heat.id, heat.a!);
+
+    resetEvent(false, true);
+    const after = snapshot();
+    expect(after.event.phase).toBe("registration");
+    expect(after.matches.length).toBe(0);
+    expect(after.event.heatsDone).toBe(0);
+    expect(after.event.racerCount).toBe(4);
+    expect(after.racers.every((r) => r.seed === null)).toBe(true);
+    expect(after.racers.find((r) => r.id === kept.id)).toMatchObject({
+      inspected: true,
+      paid: true,
+    });
+
+    resetEvent();
+    expect(snapshot().event.racerCount).toBe(0);
+  });
 });

@@ -827,7 +827,12 @@ export function archiveYear(): ArchiveRow {
  * reset was written for is the one case it cannot do. The guard stays the
  * default, and the director has to ask a second time to get past it.
  */
-export function resetEvent(force = false): void {
+/**
+ * Back to registration. `keepRacers` drops only the bracket and its results and
+ * leaves the roster — names, photos, sign-offs — in place with seeds cleared,
+ * which is what a false start actually needs: the field is right, the race isn't.
+ */
+export function resetEvent(force = false, keepRacers = false): void {
   const event = eventRow();
 
   // Resetting a finished-but-unarchived race would eat a whole year.
@@ -845,18 +850,22 @@ export function resetEvent(force = false): void {
   }
 
   db().transaction(() => {
-    clearEventTables();
+    clearEventTables(keepRacers);
     db().query("UPDATE event SET phase = 'registration' WHERE id = 1").run();
   })();
 }
 
-function clearEventTables(): void {
+function clearEventTables(keepRacers = false): void {
   db().query("DELETE FROM messages").run();
   db().query("DELETE FROM results_log").run();
   db().query("DELETE FROM edges").run();
   db().query("DELETE FROM matches").run();
   db().query("DELETE FROM consolation_entrants").run();
-  db().query("DELETE FROM racers WHERE id != ?").run(BYE_ID);
+  if (keepRacers) {
+    db().query("UPDATE racers SET seed = NULL WHERE id != ?").run(BYE_ID);
+  } else {
+    db().query("DELETE FROM racers WHERE id != ?").run(BYE_ID);
+  }
   db()
     .query(
       "UPDATE event SET bracket_size = NULL, current_match = NULL, consolation = 0 WHERE id = 1",

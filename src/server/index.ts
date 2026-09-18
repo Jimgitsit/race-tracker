@@ -420,7 +420,7 @@ async function handle(req: Request): Promise<Response> {
       // nothing, and "Expected a JSON body" is a baffling answer to "delete this".
       // No body means no override, which is the safe reading anyway.
       const body = await readJson(req).catch(() => ({}) as Record<string, unknown>);
-      return mutate(() => resetEvent(body.force === true));
+      return mutate(() => resetEvent(body.force === true, body.keepRacers === true));
     }
 
     // Walk-ups without a phone. Same validation as self-registration; the row

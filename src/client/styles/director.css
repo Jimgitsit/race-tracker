@@ -264,6 +264,30 @@
   color: var(--sun);
 }
 
+/* The keep-racers choice on the reset sheet. A whole-row label so the tap
+   target is the sentence, not the 22px box. */
+.dir-keep {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: var(--s-3);
+  margin-top: var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-sm);
+  background: var(--ground);
+  border: 1px solid var(--line-soft);
+  font-size: var(--t-sm);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.dir-keep input {
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  accent-color: var(--track);
+}
+
 .dir-confirm-warn {
   margin-top: var(--s-3);
   padding: var(--s-3);

@@ -228,7 +228,11 @@ holding a phone, so it has to work with one thumb and no reading.
 - **`Archive & start next year`** — the normal path. Freezes this year (§5) and returns to
   registration.
 - **`Reset event`** — for a mis-start. Double-confirm, and it **refuses outright while an
-  unarchived complete event exists**, so it can't eat a year.
+  unarchived complete event exists**, so it can't eat a year. The sheet carries a **keep the
+  racers** checkbox, on by default: a false start almost never means the roster was wrong,
+  and re-typing thirty names is the expensive half of starting over. Kept means names,
+  photos and sign-offs stay and registration reopens with them on the grid; only the
+  bracket, its results, seeds and messages go.
 
 ### 3.3 Big screen — `/display`
 
@@ -311,8 +315,9 @@ documented way out of a false start*, and a false start that reaches `complete` 
 what that guard blocks — so without an escape hatch the one case reset exists for is the one
 case it cannot do. The guard stays the default; the first refusal arms an override, states
 what goes with it (racers, recorded heats, every photo) and relabels the button **"Delete
-without archiving"**. `resetEvent(force)` on the server, `{ force }` on the wire, tolerant of
-a missing body so a stale cached page reads as *no* override rather than erroring.
+without archiving"**. `resetEvent(force, keepRacers)` on the server, `{ force, keepRacers }`
+on the wire, tolerant of a missing body so a stale cached page reads as *no* override and
+*no* keep — the pre-existing behaviour — rather than erroring.
 
 **Terminology: always "*X* bracket", never a bare "*X*".** Winners/losers is the most common
 naming for double elimination (Wikipedia also lists upper/lower, championship/elimination and
@@ -845,7 +850,7 @@ DELETE /api/director/racer/:id                     → registration phase only
 PATCH /api/director/racer/:id {inspected?, paid?}  → flip either sign-off; any phase
 POST  /api/director/consolation {racerIds}         → build the 'C' bracket
 POST  /api/director/archive                        → freeze year, back to registration
-POST  /api/director/reset                          → wipe; refuses if unarchived+complete
+POST  /api/director/reset  {force?, keepRacers?}   → back to registration; refuses if unarchived+complete
 
 GET   /api/archives                                → list, without the state blob
 GET   /api/archives/:year                          → the frozen state payload

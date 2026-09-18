@@ -926,6 +926,9 @@ function Complete({ state }: { state: StatePayload }) {
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [override, setOverride] = useState(false);
+  // Default on: a false start almost never means the roster was wrong, and
+  // re-typing thirty names is the expensive half of starting over.
+  const [keepRacers, setKeepRacers] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const podium = useMemo(
@@ -962,7 +965,7 @@ function Complete({ state }: { state: StatePayload }) {
    */
   const wipe = async () => {
     try {
-      await api.director.reset(override);
+      await api.director.reset(override, keepRacers);
       closeReset();
     } catch (problem) {
       setError(problem instanceof ApiError ? problem.message : "That didn't work.");
@@ -1037,19 +1040,34 @@ function Complete({ state }: { state: StatePayload }) {
         </div>
       </Sheet>
 
-      <Sheet open={confirmReset} title="Delete this race?" onClose={closeReset}>
+      <Sheet open={confirmReset} title="Start this race over?" onClose={closeReset}>
         <p className="dir-confirm-warn">
-          This wipes {state.event.year} without saving it. Archive first unless this race was a
-          false start.
+          This throws away {state.event.year}'s bracket without saving it. Archive first unless
+          this race was a false start.
         </p>
+
+        <label className="dir-keep">
+          <input
+            type="checkbox"
+            checked={keepRacers}
+            onChange={(event) => setKeepRacers(event.target.checked)}
+          />
+          <span>
+            Keep the {state.racers.length} {state.racers.length === 1 ? "racer" : "racers"},
+            their photos and sign-offs. Registration reopens with them already on the grid.
+          </span>
+        </label>
+
         {error ? <p className="error-msg">{error}</p> : null}
 
         {override ? (
           <p className="dir-confirm-warn">
-            Deleting anyway loses {state.racers.length}{" "}
-            {state.racers.length === 1 ? "racer" : "racers"}, {state.event.heatsDone} recorded{" "}
-            {state.event.heatsDone === 1 ? "heat" : "heats"} and every uploaded photo. There is
-            no undo.
+            Going ahead anyway loses {state.event.heatsDone} recorded{" "}
+            {state.event.heatsDone === 1 ? "heat" : "heats"}
+            {keepRacers
+              ? ""
+              : `, ${state.racers.length} ${state.racers.length === 1 ? "racer" : "racers"} and every uploaded photo`}
+            . There is no undo.
           </p>
         ) : null}
 
@@ -1058,7 +1076,13 @@ function Complete({ state }: { state: StatePayload }) {
             Cancel
           </button>
           <button type="button" className="btn btn-danger" onClick={wipe}>
-            {override ? "Delete without archiving" : "Delete it"}
+            {override
+              ? keepRacers
+                ? "Reset without archiving"
+                : "Delete without archiving"
+              : keepRacers
+                ? "Reset, keep racers"
+                : "Delete everything"}
           </button>
         </div>
       </Sheet>
