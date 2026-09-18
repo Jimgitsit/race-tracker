@@ -939,6 +939,18 @@ Compare with a timing-safe equality check anyway (`crypto.timingSafeEqual`) — 
 
 ## 9. Archive and backup
 
+**Live snapshot, seconds behind.** The running machine is the only copy of the event while
+it runs, so the server pushes a snapshot to S3 after every mutation (debounced a few seconds,
+so a burst of heats is one upload) and every 15 minutes regardless: a consistent copy of the
+database via `VACUUM INTO` (WAL included), any photo file not yet uploaded, and a manifest
+naming them all. Keys live under `race-tracker/live/`; `race.db` is always the latest and
+`history/race-<stamp>.db` keeps every one. **`bun run restore`** pulls the manifest, the
+database and the photos into `DATA_DIR` on any machine with the bucket and credentials
+(`--force` moves existing data aside first), and the server starts on it. The join QR is
+built from the page's own origin, so a restored server on a new address prints the right
+code on the big screen with no config. Off when no bucket is set, which is how tests run.
+Runbook: `wiki/notes/race-tracker-runbook.md`.
+
 On **`Start the next race`** from a finished race (unless *test run* is ticked): build the
 current `/api/state` payload, upsert it into `archives` keyed by `event.year` with the
 denormalised podium — every column replaced, so a stale rehearsal podium can't survive under

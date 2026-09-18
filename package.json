@@ -8,6 +8,7 @@
     "build": "vite build",
     "start": "bun run src/server/index.ts",
     "test": "RACE_TRACKER_DATA_DIR=.test-data bun test",
+    "restore": "bun run tools/restore.ts",
     "fonts": "bun run tools/fetch-fonts.ts",
     "icon": "bun run tools/gen-icon.ts"
   },

@@ -37,6 +37,7 @@ import {
   type RacerChecks,
 } from "./race.ts";
 import { backupYear } from "./s3.ts";
+import { scheduleSnapshot, startSnapshots } from "./snapshot.ts";
 
 const DIST = "dist";
 const SESSION_COOKIE = "rt_director";
@@ -54,6 +55,7 @@ function broadcast(): void {
   for (const send of listeners) {
     send(payload);
   }
+  scheduleSnapshot();
 }
 
 function streamResponse(): Response {
@@ -556,3 +558,4 @@ mkdirSync(photoDir, { recursive: true });
 await stat(photoDir);
 
 console.log(`race-tracker listening on http://127.0.0.1:${server.port}${BASE_PATH}/`);
+startSnapshots();

@@ -19,7 +19,7 @@ export const DATA_DIR = process.env.RACE_TRACKER_DATA_DIR ?? "data";
 export const DB_PATH = `${DATA_DIR}/race.db`;
 export const PHOTOS_DIR = `${DATA_DIR}/photos`;
 
-/** Archive backup (DESIGN §9). Off the race-day path entirely. */
+/** S3: the live snapshot and the yearly archive backup (DESIGN §9). Empty bucket = off. */
 export const S3_BUCKET = process.env.RACE_TRACKER_S3_BUCKET ?? "";
 export const S3_PREFIX = "race-tracker";
 export const S3_REGION = process.env.AWS_REGION ?? "us-west-2";
