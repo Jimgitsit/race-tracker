@@ -539,9 +539,22 @@ function RosterRow({ racer, onRelink }: { racer: PublicRacer; onRelink: () => vo
   const [name, setName] = useState(racer.name);
   const [error, setError] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  // The sheet's Remove is dead for a beat after opening, the same lockout the
+  // racing screen uses: a double-tap on the row's Remove otherwise lands on the
+  // sheet's Remove and sails straight through the confirm.
+  const [armed, setArmed] = useState(false);
 
-  // One guard: Remove sits a thumb-width from the sign-off chips, and a racer
-  // knocked off the grid by mistake has to be re-typed and re-photographed.
+  useEffect(() => {
+    if (!confirmRemove) {
+      setArmed(false);
+      return;
+    }
+    const timer = setTimeout(() => setArmed(true), TAP_LOCKOUT_MS);
+    return () => clearTimeout(timer);
+  }, [confirmRemove]);
+
+  // A racer knocked off the grid by mistake has to be re-typed and
+  // re-photographed, so this is the one roster action behind a confirm.
   const remove = async () => {
     try {
       await api.director.removeRacer(racer.id);
@@ -625,7 +638,7 @@ function RosterRow({ racer, onRelink }: { racer: PublicRacer; onRelink: () => vo
           <button type="button" className="btn" onClick={() => setConfirmRemove(false)}>
             Keep them
           </button>
-          <button type="button" className="btn btn-danger" onClick={remove}>
+          <button type="button" className="btn btn-danger" disabled={!armed} onClick={remove}>
             Remove
           </button>
         </div>

@@ -168,7 +168,8 @@ Password screen first (§7). One password, hard-coded, no username.
 
 **Registration phase:**
 - Live roster list: photo, name, joined-at. **Remove** (mis-entries, duplicates) behind a
-  one-tap confirm sheet — it sits a thumb-width from the sign-off chips. Inline rename.
+  confirm sheet whose Remove is dead for the first second, the racing screen's lockout — a
+  double-tap on the row otherwise lands on the sheet and sails through. Inline rename.
 - Racer count, big and obvious. A **Show join QR** button, always reachable.
 - **Sign-offs.** Registering is the racer's half; the director's half is looking at the
   car and taking the money. Each row carries two toggles, **Inspected** and **Entry fee**, sized
