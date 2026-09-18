@@ -583,9 +583,6 @@ function RosterRow({ racer, onRelink }: { racer: PublicRacer; onRelink: () => vo
         )}
 
         <div className="dir-row-actions">
-          <PhotoPicker racerId={racer.id} className="dir-row-link">
-            {racer.photo ? "Photo ↻" : "Photo"}
-          </PhotoPicker>
           <button type="button" className="dir-row-link" onClick={onRelink}>
             Re-link
           </button>

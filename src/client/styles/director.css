@@ -168,15 +168,12 @@
 }
 
 .dir-row-link {
-  display: inline-flex;
-  align-items: center;
   min-height: 28px;
   font-size: var(--t-xs);
   font-family: var(--mono);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--ink-faint);
-  cursor: pointer;
 }
 
 .dir-row-link-danger {

@@ -184,9 +184,8 @@ Password screen first (§7). One password, hard-coded, no username.
   self-registration, and the row gets a token like any other, so **Re-link** is how they get
   a phone later if one appears. The sheet stays open between adds; walk-ups come in groups.
   After an add the sheet offers **a photo of their car**, taken on the director's phone and
-  uploaded on the racer's behalf through the same resize-and-thumb path the racer view uses;
-  every roster row has a **Photo** link for the same thing, so a walk-up already on the grid
-  can get a car too.
+  uploaded on the racer's behalf through the same resize-and-thumb path the racer view uses.
+  Only there: a racer with a phone adds their own, and the roster rows stay two links.
 - **`Lock roster & start race`** — confirm sheet first, stating what's about to happen:
   *"30 racers → 32-slot bracket, 2 byes. Registration closes."* The sheet also carries a
   **review-names nudge**: self-registration plus drinking produces names you may not want
