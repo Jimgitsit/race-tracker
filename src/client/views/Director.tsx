@@ -538,10 +538,14 @@ function RosterRow({ racer, onRelink }: { racer: PublicRacer; onRelink: () => vo
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(racer.name);
   const [error, setError] = useState<string | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState(false);
 
+  // One guard: Remove sits a thumb-width from the sign-off chips, and a racer
+  // knocked off the grid by mistake has to be re-typed and re-photographed.
   const remove = async () => {
     try {
       await api.director.removeRacer(racer.id);
+      setConfirmRemove(false);
     } catch (problem) {
       setError(problem instanceof ApiError ? problem.message : "Couldn't remove them.");
     }
@@ -586,7 +590,11 @@ function RosterRow({ racer, onRelink }: { racer: PublicRacer; onRelink: () => vo
           <button type="button" className="dir-row-link" onClick={onRelink}>
             Re-link
           </button>
-          <button type="button" className="dir-row-link dir-row-link-danger" onClick={remove}>
+          <button
+            type="button"
+            className="dir-row-link dir-row-link-danger"
+            onClick={() => setConfirmRemove(true)}
+          >
             Remove
           </button>
         </div>
@@ -602,6 +610,26 @@ function RosterRow({ racer, onRelink }: { racer: PublicRacer; onRelink: () => vo
       </div>
 
       {error ? <p className="error-msg dir-row-error">{error}</p> : null}
+
+      <Sheet
+        open={confirmRemove}
+        title={`Remove ${racer.name}?`}
+        onClose={() => setConfirmRemove(false)}
+      >
+        <p className="dir-confirm-line">
+          They come off the grid{racer.photo ? " and their car photo goes with them" : ""}. If
+          they signed up on a phone, they can sign up again.
+        </p>
+        {error ? <p className="error-msg">{error}</p> : null}
+        <div className="sheet-actions">
+          <button type="button" className="btn" onClick={() => setConfirmRemove(false)}>
+            Keep them
+          </button>
+          <button type="button" className="btn btn-danger" onClick={remove}>
+            Remove
+          </button>
+        </div>
+      </Sheet>
     </li>
   );
 }

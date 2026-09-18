@@ -167,8 +167,8 @@ with `meId: null`.
 Password screen first (§7). One password, hard-coded, no username.
 
 **Registration phase:**
-- Live roster list: photo, name, joined-at. Swipe or tap to remove a racer (mis-entries,
-  duplicates). Inline rename.
+- Live roster list: photo, name, joined-at. **Remove** (mis-entries, duplicates) behind a
+  one-tap confirm sheet — it sits a thumb-width from the sign-off chips. Inline rename.
 - Racer count, big and obvious. A **Show join QR** button, always reachable.
 - **Sign-offs.** Registering is the racer's half; the director's half is looking at the
   car and taking the money. Each row carries two toggles, **Inspected** and **Entry fee**, sized
