@@ -37,9 +37,12 @@ export async function backupYear(year: number, archiveJson: string): Promise<Bac
     });
     uploaded += 1;
 
+    // The archive's own frozen copies, not the live year directory: the live one
+    // is overwritten by the next race's uploads and may hold strays from wipes.
+    const dir = `${PHOTOS_DIR}/archive/${year}`;
     let photos: string[] = [];
     try {
-      photos = await readdir(`${PHOTOS_DIR}/${year}`);
+      photos = await readdir(dir);
     } catch {
       // A year with no uploaded photos is perfectly normal.
     }
@@ -48,7 +51,7 @@ export async function backupYear(year: number, archiveJson: string): Promise<Bac
       if (!name.endsWith(".jpg")) {
         continue;
       }
-      const file = Bun.file(`${PHOTOS_DIR}/${year}/${name}`);
+      const file = Bun.file(`${dir}/${name}`);
       await client.write(`${base}/photos/${name}`, file, { type: "image/jpeg" });
       uploaded += 1;
     }

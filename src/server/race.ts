@@ -7,7 +7,9 @@
  * pure engine (DESIGN §4.3). That is what makes undo a one-liner.
  */
 import { randomUUID } from "node:crypto";
+import { copyFileSync, existsSync, mkdirSync, rmSync } from "node:fs";
 
+import { PHOTOS_DIR } from "../config.ts";
 import {
   ARCHIVE_SCHEMA_VERSION,
   BYE_ID,
@@ -767,7 +769,7 @@ export function consolationCandidates(): PublicRacer[] {
  * October is saved. That is the whole of "account for testing".
  */
 function writeArchive(event: EventRow): ArchiveRow {
-  const state = snapshot();
+  const state = freezePhotos(snapshot(), event.year);
   const nameOf = (id: number | null) => state.racers.find((r) => r.id === id)?.name ?? null;
 
   const row: ArchiveRow = {
@@ -814,6 +816,44 @@ function writeArchive(event: EventRow): ArchiveRow {
     );
 
   return row;
+}
+
+/**
+ * Racer ids restart after a wipe, so the next race's racer 1 writes over
+ * `photos/<year>/1.jpg` — and if that file is what the saved race points at,
+ * a rehearsal after race day (or the real race after a rehearsal it didn't
+ * replace) quietly swaps the cars in the history page. The archive therefore
+ * owns its own copies under `photos/archive/<year>/`, replaced wholesale on
+ * each save, and the frozen payload points there. Live uploads never touch it.
+ */
+function freezePhotos(state: StatePayload, year: number): StatePayload {
+  const live = `${PHOTOS_DIR}/${year}`;
+  const frozen = `${PHOTOS_DIR}/archive/${year}`;
+  rmSync(frozen, { recursive: true, force: true });
+  mkdirSync(frozen, { recursive: true });
+
+  const move = (url: string | null): string | null => {
+    if (url === null) {
+      return null;
+    }
+    // "photos/2026/7-t.jpg?v=123" → file "7-t.jpg", keep the cache-busting query.
+    const [path, query] = url.split("?");
+    const file = path!.slice(path!.lastIndexOf("/") + 1);
+    if (!existsSync(`${live}/${file}`)) {
+      return null;
+    }
+    copyFileSync(`${live}/${file}`, `${frozen}/${file}`);
+    return `photos/archive/${year}/${file}${query ? `?${query}` : ""}`;
+  };
+
+  return {
+    ...state,
+    racers: state.racers.map((racer) => ({
+      ...racer,
+      photo: move(racer.photo),
+      thumb: move(racer.thumb),
+    })),
+  };
 }
 
 export type ResetOptions = {

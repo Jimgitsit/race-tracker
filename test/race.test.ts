@@ -7,9 +7,9 @@
  *   RACE_TRACKER_DATA_DIR=.test-data bun test
  */
 import { beforeAll, describe, expect, test } from "bun:test";
-import { rmSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 
-import { DATA_DIR } from "../src/config.ts";
+import { DATA_DIR, PHOTOS_DIR } from "../src/config.ts";
 import { BYE_ID } from "../src/shared/config.ts";
 import { closeDb } from "../src/server/db.ts";
 import {
@@ -24,6 +24,7 @@ import {
   removeRacer,
   sendMessage,
   setRacerChecks,
+  setRacerPhoto,
   resetEvent,
   snapshot,
   startConsolation,
@@ -368,6 +369,13 @@ describe("finishing", () => {
     const year = finished.event.year;
     const championName = finished.racers.find((r) => r.id === finished.event.champion)!.name;
 
+    // Give the champion a car so the archive has a photo to freeze.
+    const champ = finished.event.champion!;
+    mkdirSync(`${PHOTOS_DIR}/${year}`, { recursive: true });
+    writeFileSync(`${PHOTOS_DIR}/${year}/${champ}.jpg`, "full");
+    writeFileSync(`${PHOTOS_DIR}/${year}/${champ}-t.jpg`, "thumb");
+    setRacerPhoto(champ, `photos/${year}/${champ}.jpg?v=1`, `photos/${year}/${champ}-t.jpg?v=1`);
+
     const row = resetEvent()!;
     expect(row).not.toBeNull();
     expect(row.year).toBe(year);
@@ -386,11 +394,18 @@ describe("finishing", () => {
     expect(archives[0].year).toBe(year);
     expect(archives[0].consolation_champion).not.toBeNull();
 
-    // The frozen payload is exactly what the live client renders.
+    // The frozen payload is exactly what the live client renders — except the
+    // photos, which point at the archive's own copies so later uploads can't
+    // overwrite them.
     const frozen = JSON.parse(row.state);
     expect(frozen.racers.length).toBe(FIELD);
     expect(frozen.matches.length).toBeGreaterThan(60);
     expect(frozen.event.champion).toBe(finished.event.champion);
+    const frozenChamp = frozen.racers.find((r: { id: number }) => r.id === champ);
+    expect(frozenChamp.photo).toBe(`photos/archive/${year}/${champ}.jpg?v=1`);
+    expect(frozenChamp.thumb).toBe(`photos/archive/${year}/${champ}-t.jpg?v=1`);
+    expect(existsSync(`${PHOTOS_DIR}/archive/${year}/${champ}.jpg`)).toBe(true);
+    expect(existsSync(`${PHOTOS_DIR}/archive/${year}/${champ}-t.jpg`)).toBe(true);
   });
 
   test("saving again in the same year replaces the earlier race entirely", () => {

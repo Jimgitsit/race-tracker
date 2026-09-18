@@ -920,9 +920,13 @@ Compare with a timing-safe equality check anyway (`crypto.timingSafeEqual`) — 
   screen is loading 30 of them and when 30 people are on the same wifi.
 - Server writes **`data/photos/<year>/<racerId>.jpg`** and `<racerId>-t.jpg`, serves them
   under `/race-tracker/photos/`, and appends `?v=<mtime>` to bust caches on re-upload.
-- **The year in that path is not optional.** Racer ids restart at 1 each year, so a flat
-  `data/photos/` means next year's registration silently overwrites this year's cars. With
-  the year in the path each archive is also self-contained — one directory plus one row.
+- **The year in that path is not optional, and it is not enough.** Racer ids restart at 1
+  after every wipe, not just every year, so with rehearsals and the real race sharing a
+  year directory, the next race's racer 1 writes over the last one's car. The live
+  directory is therefore scratch: a save copies each racer's files to
+  **`data/photos/archive/<year>/`** (replaced wholesale per save) and the frozen payload
+  points there, so nothing uploaded later can reach a saved race. S3 backs up the frozen
+  copies, not the live directory.
 - No photo → render a generated placeholder (first initial on a colour derived from the
   racer id). The bracket must never have a ragged hole where a photo isn't.
 - Cap the upload at 2 MB server-side and reject non-image content types.
