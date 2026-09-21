@@ -1,0 +1,31 @@
+# One machine, one volume, never sleeps. Two machines would be two separate
+# events: the database is a SQLite file on the volume, and a volume belongs to
+# one machine. See wiki/notes/race-tracker-runbook.md.
+app = "ynot-race-tracker"
+primary_region = "sjc"
+
+[env]
+  RACE_TRACKER_DATA_DIR = "/data"
+  AWS_REGION = "us-west-2"
+
+[mounts]
+  source = "race_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 58013
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/api/state"
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "15s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

@@ -1,7 +1,17 @@
 // Settings shared by the server, the client bundle, and the Vite config.
 // Nothing secret belongs here — see src/config.ts for server-only settings.
 
-export const BASE_PATH = "/race-tracker";
+/**
+ * The path prefix the app is mounted under: "/race-tracker" behind the Mac mini's
+ * nginx, "" on a hostname of its own (Fly). Read from the environment by the
+ * Vite config at build time and the server at run time; the browser bundle never
+ * sees `process`, takes the default, and doesn't use it — the client's base is
+ * Vite's `import.meta.env.BASE_URL`.
+ */
+const basePathFromEnv =
+  typeof process !== "undefined" ? process.env.RACE_TRACKER_BASE_PATH : undefined;
+
+export const BASE_PATH = basePathFromEnv ?? "/race-tracker";
 export const PORT = 58013;
 
 /** Bracket sizes we design and test against. */

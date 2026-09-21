@@ -1031,7 +1031,9 @@ brand logo or the default "dark sports app with a neon accent."
 8. Consolation bracket (§4.6) — **last**, because it is strictly additive and the main
    bracket is the part that cannot fail.
 9. Auto-archive on reset + `/history` + S3 backup.
-10. Deploy: launchd user agent `com.jim.race-tracker` on **58013** (`bun` lives at
+10. Deploy (2026-09: moving to **Fly.io**, app `ynot-race-tracker`, one machine + one volume in
+    `sjc`, served from the root of `y-not-race.jimmcgowen.com` via `RACE_TRACKER_BASE_PATH=""`;
+    `Dockerfile` + `fly.toml` in the repo, `fly deploy --ha=false`). Originally: launchd user agent `com.jim.race-tracker` on **58013** (`bun` lives at
     `/Users/doug/.bun/bin/bun`, *not* Homebrew's), nginx route
     `/race-tracker/` → `127.0.0.1:58013` with `proxy_buffering off`, apple-touch-icon via
     `tools/gen-icon.ts`.
