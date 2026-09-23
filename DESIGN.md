@@ -73,6 +73,12 @@ column and centred above 760px wide. There is no second column of work to put be
 stretched full width it only moves the two tap targets further apart. The director will be
 on a phone; the laptop is the backup, and the same layout has to serve both.
 
+`/` (racer and spectator) is the same idea, wider: a 900px column, centred above 940px.
+Spectators open the link on whatever they have, and stretched to a desktop it was two car
+photos the size of the window. The extra width over the director's column buys a third
+bracket round in view and a racers grid that fills the row (`auto-fill`, 160px floor — still
+2-up on a phone) rather than a fixed pair.
+
 Routing is path-based with a catch-all → `index.html` fallback in `server.ts`, so the TV
 URL stays typeable (`jimmcgowen.com/race-tracker/display`). All in-app links must be
 **relative** — the app is mounted under a prefix (Vite `base: '/race-tracker/'`).
@@ -88,7 +94,12 @@ URL stays typeable (`jimmcgowen.com/race-tracker/display`). All in-app links mus
 3. Store the returned token in `localStorage`. That token is the racer's identity forever
    after — no password.
 
-**Returning visit:** straight to the main screen. Three tabs, sticky bottom nav:
+**Returning visit:** straight to the main screen. The header names who this phone is
+(`Dale Jr Jr`, or `Spectating`) under the event name — a handed-over phone or a re-link is
+exactly when nobody is sure, and two people at one event have already argued with the app
+about it. On every load the client asks the server who the token is (`GET /api/me`) and
+takes that answer over the cached id; a definite 401/404 signs the phone out, a dropped
+request on track wifi does not. Three tabs, sticky bottom nav:
 
 **`Now`** — the default tab, and the one people will actually stare at.
 - Big card: **NOW RACING**, the two cars side by side (photo, name), a `VS` between them.
@@ -102,7 +113,11 @@ URL stays typeable (`jimmcgowen.com/race-tracker/display`). All in-app links mus
   and "this car won" remain two separate statements rather than one ring changing meaning.
   Driven by the same `useResultFlash` the big screen uses, and byes are `state: "bye"`, never
   `"done"`, so a bye cascading off the back of the result can't be mistaken for it.
-- Below: **On deck** — the next two matches, compact.
+- At the very bottom, under the photo card: **`Not Dale Jr Jr? Sign out`** — clears token
+  and cached id, so the next visit is a first visit (sign-up while registration is open,
+  spectating after). Named, so the button doubles as the answer to "who am I here?".
+- Below: **On deck** — the next three matches, compact — the same three the big screen's
+  corner shows, so the phone and the TV never disagree about who's up.
 - Below that: **Your status** — one line, always answerable:
   - `Your next race: vs Emma — Winners Round 2`
   - `Your next race: vs TBD — Losers Round 1`
@@ -121,6 +136,10 @@ it is unreadable on a phone. Instead:
   than the screen — that sliver of the next one is the only thing saying there *is* a next
   one — which means the strip needs trailing runway equal to that sliver, or the last column
   can never reach the start edge and the scroll simply stops looking snapped.
+- **Byes are not drawn**, ever, on the phone (§4.2). A field of 36 is a 64-slot bracket whose
+  first round is 28 byes and four heats; a bye is not a heat, and drawing one as a card
+  (`Lil Debbie vs Bye`) made the phone disagree with the big screen about what a racer had
+  raced. A round that is nothing but byes goes with them. Same in the director's bracket.
 - Every column is as tall as the tallest, so a fifth round with two heats leaves a screenful
   of nothing under it, and scrolled down there you are looking at a blank page with no clue
   which way anything is. When no card is on screen a **`← Back to the heats`** pill appears
@@ -227,8 +246,12 @@ holding a phone, so it has to work with one thumb and no reading.
   heat. Once the consolation bracket exists, its matches appear in both — that is the whole
   of "mix it in at the director's discretion."
 - **`Start consolation bracket`** appears once ≥8 racers are eliminated (§4.6).
-- Tapping a racer anywhere in the director view offers **Re-link** — a QR carrying that
-  racer's existing token, for someone who cleared their browser or switched phones (§3.5).
+- **QR codes**, a small button in the header, opens a sheet with the join QR (spectators
+  still arrive after the lock) and every racer's name beneath it; a name opens that racer's
+  **Re-link** QR — their existing token, for someone who cleared their browser or switched
+  phones (§3.5). Registration has both on its own screen (header button, roster rows); this
+  is how they stay reachable once that screen is gone. Also offered on the "no heat is
+  ready" screen, which has no header.
 - A collapsed link to the full bracket.
 
 **Complete phase:** podium — 1st, 2nd, 3rd with photos, then one exit:
@@ -324,7 +347,9 @@ view from a third scale to full:
 - **Byes are not drawn.** A field of 35 draws a 64-slot bracket whose first round is 29 byes
   and three heats; a bye is a row of nothing that real rounds shrink to make room for. The
   next round's cards name the car that walked through. A round that is nothing but byes goes
-  with them, and a losers-bracket slot fed by a bye reads `Bye`, not "Loser of W1".
+  with them, and a losers-bracket slot fed by a bye reads `Bye`, not "Loser of W1". The phone
+  bracket does this unconditionally (§3.1); only the big screen keeps a byes-and-all drawing,
+  behind Compress off.
 - **A round taller than 8 rows folds**: two heats to a row, interleaved so
   the pair on row *j* is exactly the two that feed match *j* of the next round, boxed
   together so the one track leaving them reads as "this pair feeds that". Readable from a
@@ -335,8 +360,11 @@ view from a third scale to full:
   and gap of their own; eight stubs side by side was most of a screen.
 - **Cards are a fixed width, not a minimum,** so one long name — or a "Lead Foot Lou or Cheryl
   From HR" slot — ellipsizes instead of widening its whole column. On the big screen an
-  unfilled slot names the two cars it could be (`Kenny or Lil Debbie`) or the round code it
-  waits on (`Winner of L1`), italic and faint; the phone keeps the longer "Winner of …" form.
+  unfilled slot names the two cars it could be (`Kenny or Lil Debbie`) or the round it
+  waits on — the code for a numbered round (`Winner of L1`, matching its column stub), the
+  name for a named one (`Winner of Losers Final`, since "L10" appears nowhere else on
+  screen and read as an off-by-one) — italic and faint; the phone keeps the longer
+  "Winner of …" form.
 
 **Focus is automatic and stays automatic.** It follows the current match, and the arrow keys
 can step it while fitted. Clicking a column to focus it was built and removed: with Follow
@@ -588,6 +616,10 @@ reflow into a phone layout, because the phone layout already exists one tap away
 - A **Back** control appears *only* when a phone navigated here in-app, never on a TV opened
   straight at the URL. In portrait it also carries a "turn your phone sideways" hint and the
   banner gets a lane so the two don't overlap.
+- The **toolbar stays, sized to the phone** (under 900px wide): smaller buttons, no
+  "pinch to zoom" hint and no zoom steps — a thumb pinches — and it wraps to two rows in
+  portrait. It used to be hidden on `hover: none` devices, but iOS showed it anyway as a
+  1000px pill cut off at both ends; gating on width is what the phone actually honours.
 
 ### 3.4 Messages and alerts
 
