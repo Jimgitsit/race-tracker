@@ -65,8 +65,6 @@ function storedNumber(key: string): number {
 /** Long enough to cross the screen to a button, short enough that the room never
     notices the chrome was there. */
 const CHROME_IDLE_MS = 2500;
-/** On the dev mount the toolbar stays up, so it can be looked at and screenshotted. */
-const CHROME_PINNED = import.meta.env.BASE_URL.includes("-dev");
 const ZOOM_STEP = 1.15;
 
 /** Divisor on a trackpad pinch's `deltaY`. Bigger is gentler; this is about one
@@ -343,7 +341,7 @@ function Racing({ state }: { state: StatePayload }) {
   const [sound, setSound] = useState(() => localStorage.getItem(KEY.sound) !== "0");
   const [fit, setFit] = useState(1);
   const [dismissed, setDismissed] = useState(() => storedNumber(KEY.dismissed));
-  const [chrome, setChrome] = useState(CHROME_PINNED);
+  const [chrome, setChrome] = useState(false);
   const idle = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const clock = useNow();
 
@@ -437,9 +435,6 @@ function Racing({ state }: { state: StatePayload }) {
   const wake = useCallback(() => {
     setChrome(true);
     clearTimeout(idle.current);
-    if (CHROME_PINNED) {
-      return;
-    }
     idle.current = setTimeout(() => setChrome(false), CHROME_IDLE_MS);
   }, []);
 
