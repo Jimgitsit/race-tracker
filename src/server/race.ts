@@ -357,9 +357,12 @@ export function snapshot(): StatePayload {
 
   const heatSeed = heatSeedOf(racers);
   const queue = [...(state.main?.queue ?? []), ...(state.consolation?.queue ?? [])]
-    .map((m) => ({ id: state.idByRef.get(m.ref), rank: bracketRank(m.bracket) }))
-    .filter((m): m is { id: number; rank: number } => m.id !== undefined)
-    .sort((x, y) => x.rank - y.rank || mix(heatSeed, x.id) - mix(heatSeed, y.id))
+    .map((m) => ({ id: state.idByRef.get(m.ref), rank: bracketRank(m.bracket), round: m.round }))
+    .filter((m): m is { id: number; rank: number; round: number } => m.id !== undefined)
+    .sort(
+      (x, y) =>
+        x.rank - y.rank || x.round - y.round || mix(heatSeed, x.id) - mix(heatSeed, y.id),
+    )
     .map((m) => m.id);
 
   const heatsDone = matches.filter((m) => m.state === "done").length;
@@ -682,10 +685,12 @@ function refreshDerived(): void {
 
 /**
  * Heat order (DESIGN §4.4): the whole winners bracket first, then the losers
- * bracket, then the finals, and within a bracket a shuffle rather than the
- * structural order. Ranks rather than `orderIndex`, whose interleaving of W and L
- * rounds is the layout order, not the running order. Consolation runs with the
- * losers, which is "mix it into the last part of the race".
+ * bracket, then the finals; within a bracket round by round, and within a round
+ * a shuffle rather than slot order. Round by round is what keeps a car that just
+ * won from being called straight back to the track — its next heat is in the next
+ * round. Ranks rather than `orderIndex`, whose interleaving of W and L rounds is
+ * the layout order, not the running order. Consolation runs with the losers,
+ * which is "mix it into the last part of the race".
  */
 function bracketRank(bracket: string): number {
   switch (bracket) {

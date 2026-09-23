@@ -261,7 +261,7 @@ describe("recording results", () => {
     expect(loser.beatenBy).toEqual([match.a!]);
   });
 
-  test("the queue runs the winners bracket first, shuffled but stable", () => {
+  test("the queue runs the winners bracket first, round by round, shuffled but stable", () => {
     // Play winners heats until a losers heat becomes ready (its two feeders are
     // whichever winners heats the shuffle put together, so this takes a few).
     let played = 0;
@@ -282,9 +282,13 @@ describe("recording results", () => {
     expect(brackets).toContain("L");
     expect(brackets.lastIndexOf("W")).toBeLessThan(brackets.indexOf("L"));
 
-    // Not slot order within the bracket, but the same order on every read.
+    // Rounds in order, so a fresh winner can't be called straight back; within a
+    // round not slot order; and the same order on every read.
     const winners = state.queue.filter((id) => byId.get(id)!.bracket === "W");
-    const slots = winners.map((id) => byId.get(id)!.orderIndex);
+    const rounds = winners.map((id) => byId.get(id)!.round);
+    expect(rounds).toEqual([...rounds].sort((x, y) => x - y));
+    const firstRound = winners.filter((id) => byId.get(id)!.round === rounds[0]);
+    const slots = firstRound.map((id) => byId.get(id)!.slot);
     expect(slots).not.toEqual([...slots].sort((x, y) => x - y));
     expect(snapshot().queue).toEqual(state.queue);
 
