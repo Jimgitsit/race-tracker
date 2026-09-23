@@ -261,6 +261,39 @@ describe("recording results", () => {
     expect(loser.beatenBy).toEqual([match.a!]);
   });
 
+  test("the queue runs the winners bracket first, shuffled but stable", () => {
+    // Play winners heats until a losers heat becomes ready (its two feeders are
+    // whichever winners heats the shuffle put together, so this takes a few).
+    let played = 0;
+    const losersReady = () => {
+      const s = snapshot();
+      return s.queue.some((id) => s.matches.find((m) => m.id === id)!.bracket === "L");
+    };
+    while (!losersReady()) {
+      const state = snapshot();
+      const match = state.matches.find((m) => m.id === state.event.currentMatch)!;
+      recordResult(match.id, match.a!);
+      played += 1;
+    }
+
+    const state = snapshot();
+    const byId = new Map(state.matches.map((m) => [m.id, m]));
+    const brackets = state.queue.map((id) => byId.get(id)!.bracket);
+    expect(brackets).toContain("L");
+    expect(brackets.lastIndexOf("W")).toBeLessThan(brackets.indexOf("L"));
+
+    // Not slot order within the bracket, but the same order on every read.
+    const winners = state.queue.filter((id) => byId.get(id)!.bracket === "W");
+    const slots = winners.map((id) => byId.get(id)!.orderIndex);
+    expect(slots).not.toEqual([...slots].sort((x, y) => x - y));
+    expect(snapshot().queue).toEqual(state.queue);
+
+    // Leave the log as the next tests expect it: one result.
+    for (let i = 0; i < played; i += 1) {
+      undoLast();
+    }
+  });
+
   test("the same heat cannot be recorded twice", () => {
     const state = snapshot();
     const done = state.matches.find((m) => m.state === "done")!;

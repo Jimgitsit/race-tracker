@@ -725,8 +725,18 @@ finally: GF (and GFR if needed)
 ```
 
 For `B=32`: `W1, L1, W2, L2, L3, W3, L4, L5, W4, L6, L7, W5, L8, GF`. Within a round, order
-by slot. Every dependency is satisfied by construction. The director can override the
-current match at any time, so this is a default, not a constraint.
+by slot. Every dependency is satisfied by construction, and the display lays columns out in
+this order.
+
+**The running order is different (2026-09-23).** The ready queue the director is pointed at
+is ranked *whole winners bracket first, then the losers bracket (consolation with it), then
+the grand final*, and within a bracket it is a **shuffle**, not slot order — so the room
+doesn't watch the same corner of the bracket for an hour. The shuffle is seeded from the
+roster's seeds (drawn at lock), so it is the same shuffle on every read and on-deck doesn't
+reshuffle with each push; a re-lock draws a new one. The losers bracket therefore waits until
+the winners bracket is done, which it can: every losers heat's inputs are winners-bracket
+losers, all of which exist by then. The director can still pick any ready heat from the Ready
+list or the Bracket tab at any time — this is the default, not a constraint.
 
 ### 4.5 Placements
 

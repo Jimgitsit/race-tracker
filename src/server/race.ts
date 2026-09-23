@@ -355,10 +355,12 @@ export function snapshot(): StatePayload {
       toSlot: edge.to_slot as SlotName,
     }));
 
+  const heatSeed = heatSeedOf(racers);
   const queue = [...(state.main?.queue ?? []), ...(state.consolation?.queue ?? [])]
-    .sort((x, y) => x.orderIndex - y.orderIndex)
-    .map((m) => state.idByRef.get(m.ref))
-    .filter((id): id is number => id !== undefined);
+    .map((m) => ({ id: state.idByRef.get(m.ref), rank: bracketRank(m.bracket) }))
+    .filter((m): m is { id: number; rank: number } => m.id !== undefined)
+    .sort((x, y) => x.rank - y.rank || mix(heatSeed, x.id) - mix(heatSeed, y.id))
+    .map((m) => m.id);
 
   const heatsDone = matches.filter((m) => m.state === "done").length;
 
@@ -676,6 +678,48 @@ function refreshDerived(): void {
     // An undo can un-finish a finished race.
     db().query("UPDATE event SET phase = 'racing' WHERE id = 1").run();
   }
+}
+
+/**
+ * Heat order (DESIGN §4.4): the whole winners bracket first, then the losers
+ * bracket, then the finals, and within a bracket a shuffle rather than the
+ * structural order. Ranks rather than `orderIndex`, whose interleaving of W and L
+ * rounds is the layout order, not the running order. Consolation runs with the
+ * losers, which is "mix it into the last part of the race".
+ */
+function bracketRank(bracket: string): number {
+  switch (bracket) {
+    case "W":
+      return 0;
+    case "L":
+    case "C":
+      return 1;
+    case "GF":
+      return 2;
+    default:
+      return 3;
+  }
+}
+
+/**
+ * The shuffle has to be the same shuffle every time the state is read, or the
+ * on-deck list would reshuffle on every push. Seeded from the roster's seeds,
+ * which are drawn at lock — so it is fixed for the event and fresh for the next.
+ */
+function heatSeedOf(racers: RacerRow[]): number {
+  let seed = 0x9e3779b9;
+  for (const racer of racers) {
+    seed = Math.imul(seed ^ (racer.id * 31 + (racer.seed ?? 0)), 0x85ebca6b) >>> 0;
+  }
+  return seed;
+}
+
+function mix(seed: number, id: number): number {
+  let h = (seed ^ Math.imul(id, 0x27d4eb2d)) >>> 0;
+  h ^= h >>> 15;
+  h = Math.imul(h, 0x2c1b3c6d) >>> 0;
+  h ^= h >>> 12;
+  return h;
 }
 
 /** Point the director at the next raceable heat, preferring the one they're on. */
