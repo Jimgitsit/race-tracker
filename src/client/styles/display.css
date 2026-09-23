@@ -980,11 +980,57 @@
   white-space: nowrap;
 }
 
-/* No mouse, no toolbar worth the width. A phone that flipped to the big screen
-   gets the bracket and the back button, nothing else. */
-@media (hover: none) {
+/* "Winners bracket" on the TV, "Winners" on a phone, where the toolbar sits
+   directly on the bracket and the width is the whole budget. */
+.disp-ctl-short {
+  display: none;
+}
+
+/* A phone that flipped to the big screen gets the same toolbar, sized to the
+   phone: it was a 1000px pill and ran off both ends of a landscape screen. The
+   hint goes (a thumb already knows to pinch) and so do the zoom steps, which the
+   pinch replaces; what's left wraps to a second row in portrait. Gated on width,
+   not `hover: none` — iOS was showing the bar regardless, and a phone that can
+   show it should be able to read it. */
+@media (max-width: 900px) {
+  /* Centred by auto margins between the two gutters, not `left: 50%` + translate:
+     an absolute box only gets the room between its left edge and the container,
+     so anchored at 50% it had half the screen to lay out in and wrapped at that. */
   .disp-controls {
+    bottom: var(--s-3);
+    left: var(--s-3);
+    right: var(--s-3);
+    width: fit-content;
+    margin-inline: auto;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--s-2);
+    padding: var(--s-1) var(--s-2);
+    border-radius: 20px;
+    transform: none;
+  }
+
+  .disp-controls-off {
+    transform: translateY(8px);
+  }
+
+  .disp-ctl-btn {
+    min-height: 28px;
+    padding: 0 var(--s-2);
+    font-size: 0.7rem;
+  }
+
+  /* The zoom group is the third set. The rules go too: the pill groups already
+     separate, and a rule that wraps alone to the end of a row is a stray tick. */
+  .disp-ctl-set:nth-of-type(3),
+  .disp-ctl-rule,
+  .disp-ctl-hint,
+  .disp-ctl-full {
     display: none;
+  }
+
+  .disp-ctl-short {
+    display: inline;
   }
 }
 

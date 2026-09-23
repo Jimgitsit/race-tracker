@@ -22,11 +22,12 @@ type Density = "full" | "compact" | "collapsed";
 /** Pan offset plus scale, where a null scale means "whatever fits". */
 type View = { scale: number | null; x: number; y: number };
 
-const FILTERS: { key: Filter; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "main", label: "Winners bracket" },
-  { key: "losers", label: "Losers bracket" },
-  { key: "consolation", label: "Consolation bracket" },
+/** `short` is what a phone's toolbar shows, where the width is the whole budget. */
+const FILTERS: { key: Filter; label: string; short: string }[] = [
+  { key: "all", label: "All", short: "All" },
+  { key: "main", label: "Winners bracket", short: "Winners" },
+  { key: "losers", label: "Losers bracket", short: "Losers" },
+  { key: "consolation", label: "Consolation bracket", short: "Consolation" },
 ];
 
 const FIT: View = { scale: null, x: 0, y: 0 };
@@ -430,21 +431,14 @@ function Racing({ state }: { state: StatePayload }) {
   }, [filters, filter]);
 
   /**
-   * Compress drops the byes: a field of 35 draws a 64-slot bracket whose first
-   * round is 29 byes and three heats, and a bye is not a heat — it is a row of
-   * nothing that a real round has to shrink to make room for. The winners round
-   * 2 cards name the car that walked through, which is all a bye ever said. A
-   * round that is nothing but byes goes with them.
+   * Compress drops the byes: a bye is not a heat — it is a row of nothing that a
+   * real round has to shrink to make room for. Off, the tree is drawn exactly as
+   * it always was, byes and all.
    */
-  const columns = useMemo(() => {
-    const rounds = roundsOf(state, bracketsFor(filter, state.event.consolation));
-    if (!compress) {
-      return rounds;
-    }
-    return rounds
-      .map((column) => ({ ...column, matches: column.matches.filter((m) => m.state !== "bye") }))
-      .filter((column) => column.matches.length > 0);
-  }, [state, filter, compress]);
+  const columns = useMemo(
+    () => roundsOf(state, bracketsFor(filter, state.event.consolation), { byes: !compress }),
+    [state, filter, compress],
+  );
 
   /** Where the detail sits when nothing has been clicked: on the live heat. */
   const liveColumn = useMemo(() => {
@@ -814,7 +808,7 @@ function Controls({
   onFit,
 }: {
   shown: boolean;
-  filters: { key: Filter; label: string }[];
+  filters: { key: Filter; label: string; short: string }[];
   filter: Filter;
   detail: Detail;
   compress: boolean;
@@ -840,7 +834,8 @@ function Controls({
             className={`disp-ctl-btn ${filter === entry.key ? "is-on" : ""}`}
             onClick={() => onFilter(entry.key)}
           >
-            {entry.label}
+            <span className="disp-ctl-full">{entry.label}</span>
+            <span className="disp-ctl-short">{entry.short}</span>
           </button>
         ))}
       </div>
@@ -1558,9 +1553,14 @@ function displaySource(state: StatePayload, match: PublicMatch, side: "a" | "b")
     return `${a.name} or ${b.name}`;
   }
 
+  // Numbered rounds go by code, which is what their column stub shows. A named
+  // round — Winners Final, Losers Final — goes by name, because its code never
+  // appears anywhere else on screen: "Winner of L10" under a column labelled
+  // Losers Final read as an off-by-one.
   const code =
     from.bracket === "GF" || from.bracket === "GFR" ? from.bracket : `${from.bracket}${from.round}`;
-  return `${edge.outcome === "W" ? "Winner" : "Loser"} of ${code}`;
+  const name = /Round \d+$/.test(from.label) ? code : from.label;
+  return `${edge.outcome === "W" ? "Winner" : "Loser"} of ${name}`;
 }
 
 function Column({

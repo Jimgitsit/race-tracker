@@ -114,8 +114,20 @@ export type RoundColumn = {
   matches: PublicMatch[];
 };
 
-/** Group a bracket's matches into round columns, in playing order. */
-export function roundsOf(state: StatePayload, brackets: string[]): RoundColumn[] {
+/**
+ * Group a bracket's matches into round columns, in playing order.
+ *
+ * Byes are left out unless asked for (DESIGN §4.2: a bye-resolved match never
+ * appears on screen). A field of 36 draws a 64-slot bracket whose first round is
+ * 28 byes and four heats; a bye is not a heat, and the next round's cards already
+ * name the car that walked through. A round that is nothing but byes goes too.
+ * The big screen still draws them with Compress off, so that view is unchanged.
+ */
+export function roundsOf(
+  state: StatePayload,
+  brackets: string[],
+  { byes = false }: { byes?: boolean } = {},
+): RoundColumn[] {
   const columns = new Map<string, RoundColumn>();
 
   for (const match of state.matches) {
@@ -124,6 +136,9 @@ export function roundsOf(state: StatePayload, brackets: string[]): RoundColumn[]
     }
     // The reset only exists if it gets played.
     if (match.bracket === "GFR" && match.a === null) {
+      continue;
+    }
+    if (!byes && match.state === "bye") {
       continue;
     }
 

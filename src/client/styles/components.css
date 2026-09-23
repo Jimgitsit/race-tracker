@@ -212,11 +212,6 @@
   border-left-color: var(--sun);
 }
 
-.mc-bye {
-  border-left-color: var(--line);
-  opacity: 0.5;
-}
-
 .mc-dim {
   opacity: 0.24;
 }

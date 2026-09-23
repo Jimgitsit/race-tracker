@@ -71,9 +71,6 @@ export function MatchCard({
   if (match.bracket === "C") {
     classes.push("mc-consolation");
   }
-  if (match.state === "bye") {
-    classes.push("mc-bye");
-  }
   if (compact) {
     classes.push("mc-compact");
   }
@@ -83,7 +80,6 @@ export function MatchCard({
       {/* No match code: it only helps someone cross-referencing a chart. */}
       <div className="mc-head">
         <span className="code">{showRound ? match.label : ""}</span>
-        {match.state === "bye" ? <span className="mc-tag">bye</span> : null}
         {current ? <span className="mc-tag mc-tag-live">racing</span> : null}
       </div>
       <Side state={state} match={match} side="a" compact={compact} />
