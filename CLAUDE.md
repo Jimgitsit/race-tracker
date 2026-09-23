@@ -23,7 +23,9 @@ Double-elimination bracket tracker for an annual Hot Wheels race.
   are standalone and catch bracket regressions the UI won't show you. Tests run against
   `.test-data/`, not the live database.
 - **No PRs on this project.** Merge to local `main`, `bun run build`, then
-  `launchctl kickstart -k gui/501/com.jim.race-tracker`.
+  `launchctl kickstart -k gui/501/com.jim.race-tracker` — that's the **dev** server
+  (`jimmcgowen.com/race-tracker-dev/`). **Never `fly deploy` unless the user says to push
+  it live.** Fly is the live event.
 
 ## Deviating from the doc
 
