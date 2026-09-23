@@ -98,6 +98,7 @@ export const api = {
         body: form,
       });
     },
+    removePhoto: (id: number) => request(`director/racer/${id}/photo`, { method: "DELETE" }),
     consolationCandidates: () => request<PublicRacer[]>("director/consolation"),
     startConsolation: (racerIds: number[]) => post("director/consolation", { racerIds }),
     reset: (options: { keepRacers: boolean; save: boolean }) =>

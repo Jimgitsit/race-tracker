@@ -499,6 +499,33 @@ export function setRacerPhoto(id: number, photo: string, thumb: string): void {
   db().query("UPDATE racers SET photo = ?, thumb = ? WHERE id = ?").run(photo, thumb, id);
 }
 
+/**
+ * Drop a racer's photo: NULL the columns and delete the files they point at, so
+ * the next upload under a reused id can't be served from a stale file. Silently
+ * fine for a racer with no photo — a double-tap on Remove is not an error.
+ */
+export function clearRacerPhoto(id: number): void {
+  const row = db()
+    .query<{ photo: string | null; thumb: string | null }, [number, number]>(
+      "SELECT photo, thumb FROM racers WHERE id = ? AND id != ?",
+    )
+    .get(id, BYE_ID);
+  if (!row) {
+    throw new RaceError("No such racer.", 404);
+  }
+
+  db().query("UPDATE racers SET photo = NULL, thumb = NULL WHERE id = ?").run(id);
+
+  // Stored as "photos/<year>/<id>.jpg?v=<stamp>"; the files live under PHOTOS_DIR.
+  for (const stored of [row.photo, row.thumb]) {
+    if (!stored) {
+      continue;
+    }
+    const rel = stored.replace(/^photos\//, "").replace(/\?.*$/, "");
+    rmSync(`${PHOTOS_DIR}/${rel}`, { force: true });
+  }
+}
+
 export type RacerChecks = { inspected?: boolean; paid?: boolean };
 
 /**

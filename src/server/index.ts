@@ -15,6 +15,7 @@ import { BASE_PATH, BYE_ID, MAX_UPLOAD_BYTES, PORT } from "../shared/config.ts";
 import { db } from "./db.ts";
 import {
   RaceError,
+  clearRacerPhoto,
   consolationCandidates,
   currentYear,
   getArchive,
@@ -477,6 +478,9 @@ async function handle(req: Request): Promise<Response> {
         return json({ error: "No such racer." }, 404);
       }
       return await uploadPhoto(req, id);
+    }
+    if (photoMatch && req.method === "DELETE") {
+      return mutate(() => clearRacerPhoto(Number(photoMatch[1])));
     }
   }
 

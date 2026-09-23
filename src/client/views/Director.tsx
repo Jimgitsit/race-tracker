@@ -487,10 +487,12 @@ function AddRacerSheet({ open, onClose }: { open: boolean; onClose: () => void }
 function PhotoPicker({
   racerId,
   className,
+  onDone,
   children,
 }: {
   racerId: number;
   className: string;
+  onDone?: () => void;
   children: ReactNode;
 }) {
   const [busy, setBusy] = useState(false);
@@ -508,6 +510,7 @@ function PhotoPicker({
     try {
       const { full, thumb } = await preparePhoto(file);
       await api.director.uploadPhoto(racerId, full, thumb);
+      onDone?.();
     } catch (problem) {
       setError(problem instanceof ApiError ? problem.message : "That photo didn't upload.");
     } finally {
@@ -539,6 +542,7 @@ function RosterRow({ racer, onRelink }: { racer: PublicRacer; onRelink: () => vo
   const [name, setName] = useState(racer.name);
   const [error, setError] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [photoOpen, setPhotoOpen] = useState(false);
   // The sheet's Remove is dead for a beat after opening, the same lockout the
   // racing screen uses: a double-tap on the row's Remove otherwise lands on the
   // sheet's Remove and sails straight through the confirm.
@@ -577,7 +581,14 @@ function RosterRow({ racer, onRelink }: { racer: PublicRacer; onRelink: () => vo
 
   return (
     <li className={`dir-row${racer.inspected && racer.paid ? " dir-row-cleared" : ""}`}>
-      <Avatar racer={racer} size="md" />
+      <button
+        type="button"
+        className="dir-row-avatar"
+        aria-label={racer.photo ? `Change ${racer.name}'s photo` : `Add a photo for ${racer.name}`}
+        onClick={() => setPhotoOpen(true)}
+      >
+        <Avatar racer={racer} size="md" />
+      </button>
 
       <div className="dir-row-main">
         {editing ? (
@@ -624,6 +635,8 @@ function RosterRow({ racer, onRelink }: { racer: PublicRacer; onRelink: () => vo
 
       {error ? <p className="error-msg dir-row-error">{error}</p> : null}
 
+      <PhotoSheet racer={racer} open={photoOpen} onClose={() => setPhotoOpen(false)} />
+
       <Sheet
         open={confirmRemove}
         title={`Remove ${racer.name}?`}
@@ -644,6 +657,68 @@ function RosterRow({ racer, onRelink }: { racer: PublicRacer; onRelink: () => vo
         </div>
       </Sheet>
     </li>
+  );
+}
+
+/**
+ * Tap a car in the roster and it opens here, large, with the two things the
+ * director can do about it: take a new one, or take it away. Remove sits behind
+ * the same lockout as removing a racer — the row's avatar and the sheet's Remove
+ * are a double-tap apart, and a photo taken at the table is a pain to redo.
+ */
+function PhotoSheet({
+  racer,
+  open,
+  onClose,
+}: {
+  racer: PublicRacer;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [armed, setArmed] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setArmed(false);
+      setError(null);
+      return;
+    }
+    const timer = setTimeout(() => setArmed(true), TAP_LOCKOUT_MS);
+    return () => clearTimeout(timer);
+  }, [open]);
+
+  const remove = async () => {
+    setError(null);
+    try {
+      await api.director.removePhoto(racer.id);
+      onClose();
+    } catch (problem) {
+      setError(problem instanceof ApiError ? problem.message : "Couldn't remove the photo.");
+    }
+  };
+
+  return (
+    <Sheet open={open} title={`${racer.name}'s car`} onClose={onClose}>
+      <div className="dir-photo-preview">
+        {racer.photo ? (
+          <Avatar racer={racer} size="xl" full />
+        ) : (
+          <p className="empty-note">No photo yet.</p>
+        )}
+      </div>
+      {error ? <p className="error-msg">{error}</p> : null}
+      <div className="sheet-actions dir-photo-actions">
+        <PhotoPicker racerId={racer.id} className="btn btn-primary dir-add-photo-btn" onDone={onClose}>
+          {racer.photo ? "Change photo" : "Take a photo"}
+        </PhotoPicker>
+        {racer.photo ? (
+          <button type="button" className="btn btn-danger" disabled={!armed} onClick={remove}>
+            Remove photo
+          </button>
+        ) : null}
+      </div>
+    </Sheet>
   );
 }
 

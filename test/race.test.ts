@@ -14,6 +14,7 @@ import { BYE_ID } from "../src/shared/config.ts";
 import { closeDb } from "../src/server/db.ts";
 import {
   RaceError,
+  clearRacerPhoto,
   consolationCandidates,
   listArchives,
   lockRoster,
@@ -118,6 +119,28 @@ describe("registration", () => {
     expect(() => setRacerChecks(BYE_ID, { paid: true })).toThrow(RaceError);
 
     setRacerChecks(racer.id, { paid: false });
+  });
+
+  test("clearing a photo NULLs the columns and deletes the files", () => {
+    const racer = snapshot().racers[1]!;
+    const year = new Date().getFullYear();
+    mkdirSync(`${PHOTOS_DIR}/${year}`, { recursive: true });
+    writeFileSync(`${PHOTOS_DIR}/${year}/${racer.id}.jpg`, "full");
+    writeFileSync(`${PHOTOS_DIR}/${year}/${racer.id}-t.jpg`, "thumb");
+    setRacerPhoto(racer.id, `photos/${year}/${racer.id}.jpg?v=1`, `photos/${year}/${racer.id}-t.jpg?v=1`);
+    expect(snapshot().racers.find((r) => r.id === racer.id)!.photo).toContain(`${racer.id}.jpg`);
+
+    clearRacerPhoto(racer.id);
+    const after = snapshot().racers.find((r) => r.id === racer.id)!;
+    expect(after.photo).toBeNull();
+    expect(after.thumb).toBeNull();
+    expect(existsSync(`${PHOTOS_DIR}/${year}/${racer.id}.jpg`)).toBe(false);
+    expect(existsSync(`${PHOTOS_DIR}/${year}/${racer.id}-t.jpg`)).toBe(false);
+
+    // Clearing again is a no-op; a missing racer is an error.
+    clearRacerPhoto(racer.id);
+    expect(() => clearRacerPhoto(999_999)).toThrow(RaceError);
+    expect(() => clearRacerPhoto(BYE_ID)).toThrow(RaceError);
   });
 });
 

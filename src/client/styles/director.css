@@ -267,6 +267,33 @@
   cursor: pointer;
 }
 
+/* The roster avatar is the tap target for the photo sheet: a bare button so the
+   thumbnail keeps its own shape, with a ring on focus for keyboard users. */
+.dir-row-avatar {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+
+.dir-row-avatar:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.dir-photo-preview {
+  display: grid;
+  place-items: center;
+  min-height: 96px;
+}
+
+/* One action when there's no photo yet; the picker spans the full width then. */
+.dir-photo-actions .dir-add-photo-btn:only-child {
+  grid-column: 1 / -1;
+}
+
 .dir-confirm-line {
   font-size: var(--t-md);
   color: var(--ink);

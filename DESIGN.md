@@ -170,6 +170,9 @@ Password screen first (§7). One password, hard-coded, no username.
 - Live roster list: photo, name, joined-at. **Remove** (mis-entries, duplicates) behind a
   confirm sheet whose Remove is dead for the first second, the racing screen's lockout — a
   double-tap on the row otherwise lands on the sheet and sails through. Inline rename.
+  Tapping the car (photo or placeholder) opens a sheet with it large and two actions:
+  **Take/Change photo** (director's camera, same pipeline as the racer's own upload) and
+  **Remove photo**, the latter behind the same one-second lockout.
 - Racer count, big and obvious. A **Show join QR** button, always reachable.
 - **Sign-offs.** Registering is the racer's half; the director's half is looking at the
   car and taking the money. Each row carries two toggles, **Inspected** and **Entry fee**, sized
@@ -856,6 +859,7 @@ POST  /api/director/message {body, racerId|null}   → null racerId broadcasts
 POST  /api/director/current {matchId}
 POST  /api/director/racer   {name}                 → { id, name }          (registration only; same rules as /register)
 POST  /api/director/racer/:id/photo  multipart: full, thumb → { photo, thumb }  (same handler as /me/photo)
+DELETE /api/director/racer/:id/photo               → NULL photo/thumb and delete the files; any phase
 DELETE /api/director/racer/:id                     → registration phase only
 PATCH /api/director/racer/:id {inspected?, paid?}  → flip either sign-off; any phase
 POST  /api/director/consolation {racerIds}         → build the 'C' bracket
