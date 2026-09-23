@@ -1443,7 +1443,7 @@ function BracketCanvas({
                         column={column}
                         density={density}
                         compress={compress}
-                        fold={compress && detail === "auto"}
+                        fold={compress}
                         currentId={flash ?? state.event.currentMatch}
                         register={(id, el) => {
                           if (el) {
@@ -1575,10 +1575,10 @@ function Column({
   density: Density;
   compress: boolean;
   /**
-   * Folding trades height for width, which only pays when the tree is narrow —
-   * with most rounds collapsed to stubs. "All rounds" is already eighteen
-   * columns wide and width-bound; folding there shrinks it, so Compress skips
-   * the fold there and keeps the rest.
+   * Folding trades height for width, which pays when the tree is narrow — most
+   * rounds collapsed to stubs. In "All rounds" it measured ~15% smaller, and it
+   * folds there anyway: a Compress that visibly doesn't compress in one view
+   * cost more confusion than the 15% bought.
    */
   fold: boolean;
   currentId: number | null;

@@ -328,8 +328,9 @@ view from a third scale to full:
 - **A round taller than 8 rows folds**: two heats to a row, interleaved so
   the pair on row *j* is exactly the two that feed match *j* of the next round, boxed
   together so the one track leaving them reads as "this pair feeds that". Readable from a
-  couch is ~40px slots, which on a 1080p frame is eight matches per column. Not applied in
-  All rounds, which is eighteen columns wide and width-bound — folding there only shrinks it.
+  couch is ~40px slots, which on a 1080p frame is eight matches per column. It folds in All
+  rounds too, although that view is width-bound and measures ~15% smaller folded: a Compress
+  that visibly didn't compress in one view confused more than the 15% bought.
 - **Consecutive collapsed rounds stack** in one narrow column instead of each taking a column
   and gap of their own; eight stubs side by side was most of a screen.
 - **Cards are a fixed width, not a minimum,** so one long name — or a "Lead Foot Lou or Cheryl
