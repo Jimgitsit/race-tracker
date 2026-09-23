@@ -99,6 +99,9 @@ const FOLLOW_CARD_SHARE = 0.093;
  * shown to answer, and at this zoom there is room for both either side.
  */
 const FOLLOW_BIAS = 0.5;
+/** How far the zoom keys can push follow's card size either way. */
+const FOLLOW_ZOOM_MIN = 0.5;
+const FOLLOW_ZOOM_MAX = 3;
 
 /**
  * A round taller than this folds: its matches are laid out two to a row, each
@@ -338,6 +341,13 @@ function Racing({ state }: { state: StatePayload }) {
    */
   const [compress, setCompress] = useState(() => localStorage.getItem(KEY.compress) === "1");
   const [follow, setFollow] = useState(() => localStorage.getItem(KEY.follow) === "1");
+  /**
+   * Zoom under follow is a multiplier on the card size follow aims for, not a
+   * scale of its own: follow keeps re-aiming as the race moves, and a raw scale
+   * would be overwritten at the next heat. Resets to 1 whenever follow is
+   * switched on, so it always starts at the size it was tuned for.
+   */
+  const [followZoom, setFollowZoom] = useState(1);
   const [sound, setSound] = useState(() => localStorage.getItem(KEY.sound) !== "0");
   const [fit, setFit] = useState(1);
   const [dismissed, setDismissed] = useState(() => storedNumber(KEY.dismissed));
@@ -470,9 +480,17 @@ function Racing({ state }: { state: StatePayload }) {
     setFollow(false);
   }, []);
 
+  const toggleFollow = useCallback(() => {
+    setFollowZoom(1);
+    setFollow((f) => !f);
+  }, []);
+
   const zoomBy = useCallback(
     (steps: number) => {
-      setFollow(false);
+      if (follow) {
+        setFollowZoom((z) => clamp(z * ZOOM_STEP ** steps, FOLLOW_ZOOM_MIN, FOLLOW_ZOOM_MAX));
+        return;
+      }
       setView((v) => {
         const next = (v.scale ?? fit) * ZOOM_STEP ** steps;
         // Zooming back out through fit returns to fit proper, which also recentres.
@@ -480,7 +498,7 @@ function Racing({ state }: { state: StatePayload }) {
         return next <= fit ? FIT : { ...v, scale: Math.min(next, zoomCeiling(fit)) };
       });
     },
-    [fit],
+    [fit, follow],
   );
 
   // A laptop keyboard is right there, and the arrows still drive it from a remote
@@ -515,7 +533,7 @@ function Racing({ state }: { state: StatePayload }) {
           }
           break;
         case "a":
-          setFollow((f) => !f);
+          toggleFollow();
           break;
         case "s":
           setSound((s) => !s);
@@ -550,7 +568,7 @@ function Racing({ state }: { state: StatePayload }) {
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [view.scale, filters, columns.length, focusIndex, zoomBy, reset, manual, wake]);
+  }, [view.scale, filters, columns.length, focusIndex, zoomBy, reset, manual, wake, toggleFollow]);
 
   // A high-water mark, not an exact id: dismissing hides that message and anything
   // older, so a message being deleted server-side can't resurface one that was
@@ -620,10 +638,14 @@ function Racing({ state }: { state: StatePayload }) {
           view={view}
           focusIndex={focusIndex}
           follow={follow}
+          followZoom={followZoom}
           flash={flash}
           onView={setView}
           onFit={setFit}
           onManual={manual}
+          onFollowZoom={(factor) =>
+            setFollowZoom((z) => clamp(z * factor, FOLLOW_ZOOM_MIN, FOLLOW_ZOOM_MAX))
+          }
         />
 
         <Controls
@@ -639,7 +661,7 @@ function Racing({ state }: { state: StatePayload }) {
           onFilter={pickFilter}
           onDetail={() => setDetail((d) => (d === "all" ? "auto" : "all"))}
           onCompress={() => setCompress((c) => !c)}
-          onFollow={() => setFollow((f) => !f)}
+          onFollow={toggleFollow}
           onSound={() => setSound((s) => !s)}
           onZoom={zoomBy}
           onFit={() => {
@@ -915,10 +937,12 @@ function BracketCanvas({
   view,
   focusIndex,
   follow,
+  followZoom,
   flash,
   onView,
   onFit,
   onManual,
+  onFollowZoom,
 }: {
   state: StatePayload;
   columns: RoundColumn[];
@@ -927,10 +951,13 @@ function BracketCanvas({
   view: View;
   focusIndex: number;
   follow: boolean;
+  followZoom: number;
   flash: number | null;
   onView: (view: View) => void;
   onFit: (fit: number) => void;
   onManual: () => void;
+  /** A pinch under follow scales what follow aims for rather than dropping it. */
+  onFollowZoom: (factor: number) => void;
 }) {
   const viewport = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLDivElement>(null);
@@ -1208,13 +1235,13 @@ function BracketCanvas({
     // keeps the heat the same size on screen all evening. Floored at fit because
     // there is nothing to see below it, capped absolutely so a short card in a
     // one-column filter can't fill the screen.
-    const next = clamp((frame.h * FOLLOW_CARD_SHARE) / box.offsetHeight, fit, 3);
+    const next = clamp((frame.h * FOLLOW_CARD_SHARE * followZoom) / box.offsetHeight, fit, 3);
     onView({
       scale: next,
       x: frame.w * FOLLOW_BIAS - (box.offsetLeft + box.offsetWidth / 2) * next,
       y: frame.h / 2 - (box.offsetTop + box.offsetHeight / 2) * next,
     });
-  }, [follow, target, fit, size, frame, ordered, onView]);
+  }, [follow, followZoom, target, fit, size, frame, ordered, onView]);
 
   /**
    * Zoom to `next`, holding the content under (px, py) still. Anchored off the
@@ -1255,6 +1282,10 @@ function BracketCanvas({
       }
 
       event.preventDefault();
+      if (follow) {
+        onFollowZoom(Math.exp(-event.deltaY / PINCH_FEEL));
+        return;
+      }
       onManual();
 
       const next = clamp(scale * Math.exp(-event.deltaY / PINCH_FEEL), fit, zoomCeiling(fit));
@@ -1268,7 +1299,7 @@ function BracketCanvas({
 
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
-  }, [scale, fit, offsetX, offsetY, zoomAt, onManual]);
+  }, [scale, fit, offsetX, offsetY, zoomAt, onManual, follow, onFollowZoom]);
 
   /** Midpoint and separation of the two active touches. */
   const spread = () => {
