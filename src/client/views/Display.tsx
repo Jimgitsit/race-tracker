@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { joinUrl, type PublicMatch, type StatePayload } from "../lib/api.ts";
-import { matchById, racerById, roundsOf, type RoundColumn } from "../lib/derive.ts";
+import { matchById, racerById, roundsOf, sourceLabel, type RoundColumn } from "../lib/derive.ts";
 import { FLASH_MS, useResultFlash } from "../lib/useRace.ts";
 import { playLaunch, unlockAudio } from "../lib/sound.ts";
 import { timeAgo, useNow } from "../lib/time.ts";
@@ -15,12 +15,8 @@ import posterUrl from "../assets/y-not-nationals-2026.jpg";
  * in density, which is the part nobody could hold in their head.
  */
 type Filter = "all" | "main" | "losers" | "consolation";
-/**
- * How much of each round is drawn: collapse what's settled; the same, but with
- * tall rounds folded and collapsed rounds stacked so a 32-car field fits
- * ("compress"); or every round at one size.
- */
-type Detail = "auto" | "compress" | "all";
+/** How much of each round is drawn: collapse what's settled, or show all of it. */
+type Detail = "auto" | "all";
 type Density = "full" | "compact" | "collapsed";
 
 /** Pan offset plus scale, where a null scale means "whatever fits". */
@@ -47,6 +43,7 @@ const FIT: View = { scale: null, x: 0, y: 0 };
 const KEY = {
   filter: "race-tracker.disp.filter",
   detail: "race-tracker.disp.detail",
+  compress: "race-tracker.disp.compress",
   follow: "race-tracker.disp.follow",
   sound: "race-tracker.disp.sound",
   dismissed: "race-tracker.disp.msgDismissed",
@@ -54,7 +51,7 @@ const KEY = {
 
 
 const FILTER_KEYS: Filter[] = ["all", "main", "losers", "consolation"];
-const DETAIL_KEYS: Detail[] = ["auto", "compress", "all"];
+const DETAIL_KEYS: Detail[] = ["auto", "all"];
 
 function stored<T extends string>(key: string, allowed: T[], fallback: T): T {
   const found = localStorage.getItem(key);
@@ -333,6 +330,13 @@ function Racing({ state }: { state: StatePayload }) {
   const [detail, setDetail] = useState<Detail>(() => stored(KEY.detail, DETAIL_KEYS, "auto"));
   const [view, setView] = useState<View>(FIT);
   const [focus, setFocus] = useState<number | null>(null);
+  /**
+   * Compress is orthogonal to detail, like follow: it changes how a round is
+   * drawn (byes dropped, tall rounds folded, stubs stacked, cards a fixed width)
+   * so a 32-car field fits, in either detail. Off, the tree is drawn as it always
+   * was.
+   */
+  const [compress, setCompress] = useState(() => localStorage.getItem(KEY.compress) === "1");
   const [follow, setFollow] = useState(() => localStorage.getItem(KEY.follow) === "1");
   const [sound, setSound] = useState(() => localStorage.getItem(KEY.sound) !== "0");
   const [fit, setFit] = useState(1);
@@ -347,6 +351,7 @@ function Racing({ state }: { state: StatePayload }) {
   // come back on the next refresh.
   useEffect(() => localStorage.setItem(KEY.filter, filter), [filter]);
   useEffect(() => localStorage.setItem(KEY.detail, detail), [detail]);
+  useEffect(() => localStorage.setItem(KEY.compress, compress ? "1" : "0"), [compress]);
   useEffect(() => localStorage.setItem(KEY.follow, follow ? "1" : "0"), [follow]);
   useEffect(() => localStorage.setItem(KEY.sound, sound ? "1" : "0"), [sound]);
   useEffect(() => localStorage.setItem(KEY.dismissed, String(dismissed)), [dismissed]);
@@ -403,19 +408,21 @@ function Racing({ state }: { state: StatePayload }) {
   }, [filters, filter]);
 
   /**
-   * Byes are dropped: a field of 35 draws a 64-slot bracket whose first round is
-   * 29 byes and three heats, and a bye is not a heat — it is a row of nothing
-   * that a real round has to shrink to make room for. The winners round 2 cards
-   * name the car that walked through, which is all a bye ever said. A round that
-   * is nothing but byes goes with them.
+   * Compress drops the byes: a field of 35 draws a 64-slot bracket whose first
+   * round is 29 byes and three heats, and a bye is not a heat — it is a row of
+   * nothing that a real round has to shrink to make room for. The winners round
+   * 2 cards name the car that walked through, which is all a bye ever said. A
+   * round that is nothing but byes goes with them.
    */
-  const columns = useMemo(
-    () =>
-      roundsOf(state, bracketsFor(filter, state.event.consolation))
-        .map((column) => ({ ...column, matches: column.matches.filter((m) => m.state !== "bye") }))
-        .filter((column) => column.matches.length > 0),
-    [state, filter],
-  );
+  const columns = useMemo(() => {
+    const rounds = roundsOf(state, bracketsFor(filter, state.event.consolation));
+    if (!compress) {
+      return rounds;
+    }
+    return rounds
+      .map((column) => ({ ...column, matches: column.matches.filter((m) => m.state !== "bye") }))
+      .filter((column) => column.matches.length > 0);
+  }, [state, filter, compress]);
 
   /** Where the detail sits when nothing has been clicked: on the live heat. */
   const liveColumn = useMemo(() => {
@@ -444,6 +451,7 @@ function Racing({ state }: { state: StatePayload }) {
   const reset = useCallback(() => {
     setFilter("all");
     setDetail("auto");
+    setCompress(false);
     setView(FIT);
     setFocus(null);
     setFollow(false);
@@ -518,7 +526,10 @@ function Racing({ state }: { state: StatePayload }) {
           setView(FIT);
           break;
         case "d":
-          setDetail((d) => DETAIL_KEYS[(DETAIL_KEYS.indexOf(d) + 1) % DETAIL_KEYS.length]!);
+          setDetail((d) => (d === "all" ? "auto" : "all"));
+          break;
+        case "c":
+          setCompress((c) => !c);
           break;
         case "f":
           manual();
@@ -605,6 +616,7 @@ function Racing({ state }: { state: StatePayload }) {
           state={state}
           columns={columns}
           detail={detail}
+          compress={compress}
           view={view}
           focusIndex={focusIndex}
           follow={follow}
@@ -619,12 +631,14 @@ function Racing({ state }: { state: StatePayload }) {
           filters={filters}
           filter={filter}
           detail={detail}
+          compress={compress}
           follow={follow}
           sound={sound}
           scale={view.scale}
           fit={fit}
           onFilter={pickFilter}
-          onDetail={(mode) => setDetail((d) => (d === mode ? "auto" : mode))}
+          onDetail={() => setDetail((d) => (d === "all" ? "auto" : "all"))}
+          onCompress={() => setCompress((c) => !c)}
           onFollow={() => setFollow((f) => !f)}
           onSound={() => setSound((s) => !s)}
           onZoom={zoomBy}
@@ -754,12 +768,14 @@ function Controls({
   filters,
   filter,
   detail,
+  compress,
   follow,
   sound,
   scale,
   fit,
   onFilter,
   onDetail,
+  onCompress,
   onFollow,
   onSound,
   onZoom,
@@ -769,12 +785,14 @@ function Controls({
   filters: { key: Filter; label: string }[];
   filter: Filter;
   detail: Detail;
+  compress: boolean;
   follow: boolean;
   sound: boolean;
   scale: number | null;
   fit: number;
   onFilter: (key: Filter) => void;
-  onDetail: (mode: Detail) => void;
+  onDetail: () => void;
+  onCompress: () => void;
   onFollow: () => void;
   onSound: () => void;
   onZoom: (steps: number) => void;
@@ -800,8 +818,8 @@ function Controls({
       <div className="disp-ctl-set">
         <button
           type="button"
-          className={`disp-ctl-btn ${detail === "compress" ? "is-on" : ""}`}
-          onClick={() => onDetail("compress")}
+          className={`disp-ctl-btn ${compress ? "is-on" : ""}`}
+          onClick={onCompress}
           title="Fold tall rounds two heats to a row and stack the collapsed ones, so a big field fits"
         >
           Compress
@@ -809,7 +827,7 @@ function Controls({
         <button
           type="button"
           className={`disp-ctl-btn ${detail === "all" ? "is-on" : ""}`}
-          onClick={() => onDetail("all")}
+          onClick={onDetail}
           title="Draw every round at the same size instead of collapsing what's settled"
         >
           All rounds
@@ -893,6 +911,7 @@ function BracketCanvas({
   state,
   columns,
   detail,
+  compress,
   view,
   focusIndex,
   follow,
@@ -904,6 +923,7 @@ function BracketCanvas({
   state: StatePayload;
   columns: RoundColumn[];
   detail: Detail;
+  compress: boolean;
   view: View;
   focusIndex: number;
   follow: boolean;
@@ -928,8 +948,8 @@ function BracketCanvas({
   const [frame, setFrame] = useState({ w: 0, h: 0 });
 
   const densities = useMemo(
-    () => columns.map((column, index) => densityOf(column, index, focusIndex, detail)),
-    [columns, focusIndex, detail],
+    () => columns.map((column, index) => densityOf(column, index, focusIndex, detail, compress)),
+    [columns, focusIndex, detail, compress],
   );
 
   /**
@@ -1001,12 +1021,7 @@ function BracketCanvas({
       // side is most of a screen, and width is what the fit is short of once the
       // tall rounds are folded. Stacked, they read as "the rounds ahead".
       const run = group.runs[group.runs.length - 1];
-      if (
-        detail === "compress" &&
-        run &&
-        entry.density === "collapsed" &&
-        run[0]!.density === "collapsed"
-      ) {
+      if (compress && run && entry.density === "collapsed" && run[0]!.density === "collapsed") {
         run.push(entry);
       } else {
         group.runs.push([entry]);
@@ -1014,7 +1029,7 @@ function BracketCanvas({
     }
 
     return out;
-  }, [ordered, detail]);
+  }, [ordered, compress]);
 
   // Measure in layout coordinates (offsetLeft/Top), which the scale transform on
   // the wrapper does not affect — so connectors stay correct at any zoom.
@@ -1373,7 +1388,7 @@ function BracketCanvas({
 
         {/* The wrapping divs are all static, so match boxes still measure their
             offsets against .disp-scale and the connectors are unaffected. */}
-        <div className="disp-tree" ref={tree}>
+        <div className={`disp-tree${compress ? " disp-tree-compress" : ""}`} ref={tree}>
           {groups.map((group) => (
             <section className="disp-group" key={group.key}>
               <h2 className="disp-group-title">{group.label}</h2>
@@ -1386,7 +1401,8 @@ function BracketCanvas({
                         state={state}
                         column={column}
                         density={density}
-                        fold={detail === "compress"}
+                        compress={compress}
+                        fold={compress && detail === "auto"}
                         currentId={state.event.currentMatch}
                         register={(id, el) => {
                           if (el) {
@@ -1437,16 +1453,21 @@ function elbow(x1: number, y1: number, x2: number, y2: number): string {
   ].join(" ");
 }
 
-function densityOf(column: RoundColumn, index: number, focus: number, detail: Detail): Density {
+function densityOf(
+  column: RoundColumn,
+  index: number,
+  focus: number,
+  detail: Detail,
+  compress: boolean,
+): Density {
   if (detail === "all") {
     return "compact";
   }
 
-  // Full cards on a round that is more than a screen of rows (after folding, if
-  // compressed) would drag the fit down for every other column; keep it compact.
-  const rows =
-    detail === "compress" ? Math.ceil(column.matches.length / 2) : column.matches.length;
-  const full: Density = rows > FOLD_AT ? "compact" : "full";
+  // Compress: full cards on a round that is more than a screen of rows even after
+  // folding would drag the fit down for every other column; keep it compact.
+  const full: Density =
+    compress && Math.ceil(column.matches.length / 2) > FOLD_AT ? "compact" : "full";
 
   if (index === focus) {
     return full;
@@ -1471,11 +1492,11 @@ function densityOf(column: RoundColumn, index: number, focus: number, detail: De
 }
 
 /**
- * What an unfilled slot says. `sourceLabel` spells it out — "Winner of Kenny vs
- * Lil Debbie" — which is right on a phone and, sixteen times over, is what makes
- * every column on the big screen wide. Here the slot names the two cars it could
- * be, or the round code it waits on; which of them it gets is what the bracket
- * the card sits in already says.
+ * What an unfilled slot says under Compress. `sourceLabel` spells it out —
+ * "Winner of Kenny vs Lil Debbie" — which is right on a phone and, sixteen times
+ * over, is what makes every column on the big screen wide. Here the slot names
+ * the two cars it could be, or the round code it waits on; which of them it gets
+ * is what the bracket the card sits in already says.
  */
 function displaySource(state: StatePayload, match: PublicMatch, side: "a" | "b"): string {
   const edge = state.edges.find((e) => e.to === match.id && e.toSlot === side);
@@ -1503,6 +1524,7 @@ function Column({
   state,
   column,
   density,
+  compress,
   fold,
   currentId,
   register,
@@ -1510,10 +1532,12 @@ function Column({
   state: StatePayload;
   column: RoundColumn;
   density: Density;
+  compress: boolean;
   /**
    * Folding trades height for width, which only pays when the tree is narrow —
    * with most rounds collapsed to stubs. "All rounds" is already eighteen
-   * columns wide and width-bound; folding there shrinks it.
+   * columns wide and width-bound; folding there shrinks it, so Compress skips
+   * the fold there and keeps the rest.
    */
   fold: boolean;
   currentId: number | null;
@@ -1561,6 +1585,7 @@ function Column({
                   state={state}
                   match={match}
                   density={density}
+                  compress
                   current={match.id === currentId}
                   register={null}
                 />
@@ -1582,6 +1607,7 @@ function Column({
             state={state}
             match={match}
             density={density}
+            compress={compress}
             current={match.id === currentId}
             register={register}
           />
@@ -1595,12 +1621,15 @@ function DisplayMatch({
   state,
   match,
   density,
+  compress,
   current,
   register,
 }: {
   state: StatePayload;
   match: PublicMatch;
   density: Density;
+  /** Compress wording for an unfilled slot; otherwise the phone's. */
+  compress: boolean;
   current: boolean;
   /** Null inside a folded pair, where the pair is the box. */
   register: ((id: number, el: HTMLElement | null) => void) | null;
@@ -1626,14 +1655,14 @@ function DisplayMatch({
     <div className={classes.join(" ")} ref={register ? (el) => register(match.id, el) : undefined}>
       <DisplaySide
         racer={a}
-        source={displaySource(state, match, "a")}
+        source={compress ? displaySource(state, match, "a") : sourceLabel(state, match, "a")}
         won={match.winner !== null && match.winner === match.a}
         lost={match.winner !== null && match.winner !== match.a && a !== null}
         density={density}
       />
       <DisplaySide
         racer={b}
-        source={displaySource(state, match, "b")}
+        source={compress ? displaySource(state, match, "b") : sourceLabel(state, match, "b")}
         won={match.winner !== null && match.winner === match.b}
         lost={match.winner !== null && match.winner !== match.b && b !== null}
         density={density}

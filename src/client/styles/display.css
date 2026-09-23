@@ -533,16 +533,12 @@
 
 /* --- display match card -------------------------------------------------------- */
 
-/* A fixed width, not a minimum: the tree is laid out at max-content and then
-   scaled to fit, so one long name (or a "Lead Foot Lou or Cheryl From HR" slot)
-   widens its whole column and shrinks every card on the screen. A name that
-   doesn't fit ellipsizes instead. */
 .dm {
   display: flex;
   flex-direction: column;
   gap: 3px;
   padding: 7px 10px;
-  width: 200px;
+  min-width: 190px;
   border-radius: var(--r-md);
   background: var(--surface);
   border: 1px solid var(--line-soft);
@@ -550,8 +546,20 @@
 }
 
 .disp-col-compact .dm {
-  width: 160px;
+  min-width: 150px;
   padding: 5px 8px;
+}
+
+/* Compress: a fixed width, not a minimum. The tree is laid out at max-content
+   and then scaled to fit, so one long name (or a "Lead Foot Lou or Cheryl From
+   HR" slot) widens its whole column and shrinks every card on the screen. A name
+   that doesn't fit ellipsizes instead. */
+.disp-tree-compress .dm {
+  width: 200px;
+}
+
+.disp-tree-compress .disp-col-compact .dm {
+  width: 160px;
 }
 
 .dm-losers {
@@ -600,9 +608,9 @@
   font-size: 1rem;
 }
 
-/* A slot nobody has reached: quieter than a name, so a column of "or"s doesn't
-   read like a column of entrants. */
-.dm-tbd {
+/* Compress: a slot nobody has reached is quieter than a name, so a column of
+   "or"s doesn't read like a column of entrants. */
+.disp-tree-compress .dm-tbd {
   color: var(--ink-faint);
   font-style: italic;
   font-size: 0.95em;
