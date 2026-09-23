@@ -699,7 +699,7 @@ function PhotoSheet({
   };
 
   return (
-    <Sheet open={open} title={`${racer.name}'s car`} onClose={onClose}>
+    <Sheet open={open} title={`${racer.name}'s photo`} onClose={onClose}>
       <div className="dir-photo-preview">
         {racer.photo ? (
           <Avatar racer={racer} size="xl" full />
