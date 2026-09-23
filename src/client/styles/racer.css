@@ -6,6 +6,25 @@
   min-height: 100dvh;
 }
 
+/* A phone layout that stays a phone layout on a laptop, as the director's does,
+   but wider: a spectator gets a third bracket round and more racers per row for
+   the width, whereas the director only gets tap targets further apart. Stretched
+   to a full desktop it was two car photos the size of the window. */
+@media (min-width: 940px) {
+  .rc {
+    max-width: 900px;
+    margin-inline: auto;
+    border-inline: 1px solid var(--line-soft);
+  }
+
+  /* The message toast is fixed to the viewport, so it needs the same cap or it
+     runs the full desktop width over a column a third as wide. */
+  .rc-toast {
+    max-width: 900px;
+    margin-inline: auto;
+  }
+}
+
 .rc-top {
   display: flex;
   align-items: center;
@@ -20,8 +39,20 @@
   min-width: 0;
 }
 
+.rc-top-me {
+  margin-top: 2px;
+  font-size: var(--t-lg);
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
 .rc-count {
   margin-top: 2px;
+  color: var(--ink-dim);
+}
+
+.rc-signout {
+  margin-top: var(--s-2);
   color: var(--ink-dim);
 }
 
@@ -418,9 +449,11 @@
 
 /* --- racers ------------------------------------------------------------------ */
 
+/* 2-up on a phone (the 160px floor is just under half a 390px screen minus the
+   gutters), and as many as fit across the laptop column. */
 .rc-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: var(--s-3);
 }
 

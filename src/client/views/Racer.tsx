@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 
-import { ApiError, api, joinUrl, type PublicMatch, type StatePayload } from "../lib/api.ts";
+import {
+  ApiError,
+  api,
+  joinUrl,
+  type PublicMatch,
+  type PublicRacer,
+  type StatePayload,
+} from "../lib/api.ts";
 import { clearToken, getToken, setToken } from "../lib/identity.ts";
 import { preparePhoto } from "../lib/photo.ts";
 import {
@@ -71,9 +78,21 @@ export function RacerView({
   // refresh, rather than being dropped back on the sign-up form every time.
   const [watching, setWatching] = useState(() => localStorage.getItem(WATCH_KEY) === "1");
 
-  // A re-link QR delivers a token with no id attached, so ask the server who we are.
+  const signOut = () => {
+    localStorage.removeItem(ID_KEY);
+    clearToken();
+    setMeId(null);
+  };
+
+  // Ask the server who this token is, every load — not only when there is no
+  // cached id. The id is a cache of the token's answer, and the two drift: a
+  // re-link QR swaps the token under a cached id, and a restored database can
+  // hand a token to nobody. A phone showing one name while its uploads and
+  // messages go to another (or to a 401) is worse than a moment of "Finding your
+  // car". Only a definite "not a racer" signs out; a dropped request on track
+  // wifi must not.
   useEffect(() => {
-    if (meId !== null || getToken() === null) {
+    if (getToken() === null) {
       return;
     }
 
@@ -87,7 +106,11 @@ export function RacerView({
         localStorage.setItem(ID_KEY, String(racer.id));
         setMeId(racer.id);
       })
-      .catch(() => clearToken())
+      .catch((problem) => {
+        if (live && problem instanceof ApiError && (problem.status === 401 || problem.status === 404)) {
+          signOut();
+        }
+      })
       .finally(() => {
         if (live) {
           setResolving(false);
@@ -97,7 +120,9 @@ export function RacerView({
     return () => {
       live = false;
     };
-  }, [meId]);
+    // Once, on load: joining and re-linking set the id themselves.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const me = meId === null ? null : (state.racers.find((r) => r.id === meId) ?? null);
 
@@ -151,6 +176,7 @@ export function RacerView({
       meId={me?.id ?? null}
       onOpenDisplay={onOpenDisplay}
       onJoin={me === null && state.event.phase === "registration" ? stopWatching : undefined}
+      onSignOut={signOut}
     />
   );
 }
@@ -248,12 +274,15 @@ function Main({
   meId,
   onOpenDisplay,
   onJoin,
+  onSignOut,
 }: {
   state: StatePayload;
   meId: number | null;
   onOpenDisplay: () => void;
   onJoin?: () => void;
+  onSignOut: () => void;
 }) {
+  const me = racerById(state, meId);
   const [tab, setTab] = useState<Tab>(storedTab);
   const [inbox, setInbox] = useState(false);
   const messages = useMessages(state, meId);
@@ -277,6 +306,10 @@ function Main({
       <header className="rc-top">
         <div className="rc-top-id">
           <p className="eyebrow">{state.event.name}</p>
+          {/* Who this phone is, where every glance starts. A shared phone or a
+              re-link is exactly when it's least obvious, and two people at one
+              event have already argued with the app about it. */}
+          <p className="rc-top-me racer-name">{me ? me.name : "Spectating"}</p>
           <p className="rc-count code">
             {state.event.phase === "registration"
               ? `${state.event.racerCount} registered`
@@ -310,6 +343,7 @@ function Main({
             onDismissMessage={markRead}
             onExplain={() => setTab("rules")}
             onJoin={onJoin}
+            onSignOut={onSignOut}
           />
         ) : null}
         {tab === "bracket" ? <BracketTab state={state} meId={meId} /> : null}
@@ -413,6 +447,7 @@ function NowTab({
   onDismissMessage,
   onExplain,
   onJoin,
+  onSignOut,
 }: {
   state: StatePayload;
   meId: number | null;
@@ -422,6 +457,7 @@ function NowTab({
   onDismissMessage: () => void;
   onExplain: () => void;
   onJoin?: () => void;
+  onSignOut: () => void;
 }) {
   const messageSlot = (
     <MessageSlot
@@ -445,7 +481,7 @@ function NowTab({
 
   const onDeck = state.queue
     .filter((id) => id !== state.event.currentMatch)
-    .slice(0, 2)
+    .slice(0, 3)
     .map((id) => matchById(state, id))
     .filter((m): m is PublicMatch => m !== null);
 
@@ -465,6 +501,7 @@ function NowTab({
         {messageSlot}
         {me ? <AlertsCard /> : null}
         {me ? <PhotoCard racer={me} /> : null}
+        {me ? <SignOut racer={me} onSignOut={onSignOut} /> : null}
       </div>
     );
   }
@@ -523,7 +560,23 @@ function NowTab({
       {me ? <AlertsCard /> : null}
 
       {me ? <PhotoCard racer={me} /> : null}
+
+      {me ? <SignOut racer={me} onSignOut={onSignOut} /> : null}
     </div>
+  );
+}
+
+/**
+ * Last thing on the tab, under everything that is theirs. Named, so the button
+ * is also the answer to "wait, who does this phone think I am?" — a handed-over
+ * phone or a re-link is exactly when nobody is sure. Clears the token and the
+ * cached id; the next visit is a first visit.
+ */
+function SignOut({ racer, onSignOut }: { racer: PublicRacer; onSignOut: () => void }) {
+  return (
+    <button type="button" className="btn btn-ghost btn-block rc-signout" onClick={onSignOut}>
+      Not {racer.name}? Sign out
+    </button>
   );
 }
 
