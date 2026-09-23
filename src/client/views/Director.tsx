@@ -762,6 +762,61 @@ function RelinkSheet({ racer }: { racer: PublicRacer }) {
   return <RelinkQR url={relinkUrl(token)} name={racer.name} />;
 }
 
+/**
+ * The two QR codes, reachable once the race has started. Registration has the
+ * join QR in its header and Re-link on every roster row; racing has neither
+ * screen, and the questions don't stop when the roster locks — a spectator
+ * arrives late, a racer's phone dies. One sheet holds the join code and, under
+ * it, every racer's name; a name opens their re-link code in its own sheet, so the
+ * warning on it is the only thing next to it.
+ */
+function QRSheet({
+  state,
+  open,
+  onClose,
+}: {
+  state: StatePayload;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const [relink, setRelink] = useState<PublicRacer | null>(null);
+  const racers = [...state.racers].sort((x, y) => x.name.localeCompare(y.name));
+
+  return (
+    <>
+      <Sheet open={open && relink === null} title="QR codes" onClose={onClose}>
+        <div className="stack">
+          <JoinQR url={joinUrl()} size={200} label="Anyone can scan this to watch" />
+          <ShareLink
+            url={joinUrl()}
+            title={state.event.name}
+            text={`Follow the ${state.event.name}.`}
+          />
+          <p className="eyebrow dir-qr-head">Sign a racer back in</p>
+          <ul className="dir-qr-names">
+            {racers.map((racer) => (
+              <li key={racer.id}>
+                <button type="button" className="dir-qr-name" onClick={() => setRelink(racer)}>
+                  <Avatar racer={racer} size="sm" />
+                  <span className="racer-name">{racer.name}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </Sheet>
+
+      <Sheet
+        open={relink !== null}
+        title={relink ? `Sign ${relink.name} back in` : ""}
+        onClose={() => setRelink(null)}
+      >
+        {relink ? <RelinkSheet racer={relink} /> : null}
+      </Sheet>
+    </>
+  );
+}
+
 // ---------------------------------------------------------------------------------
 // Racing
 // ---------------------------------------------------------------------------------
@@ -773,6 +828,7 @@ function Racing({ state }: { state: StatePayload }) {
   const [showQueue, setShowQueue] = useState(false);
   const [showConsolation, setShowConsolation] = useState(false);
   const [showMessage, setShowMessage] = useState(false);
+  const [showQR, setShowQR] = useState(false);
 
   const current = matchById(state, state.event.currentMatch);
   const a = racerById(state, current?.a ?? null);
@@ -821,6 +877,13 @@ function Racing({ state }: { state: StatePayload }) {
         <button type="button" className="btn btn-block" onClick={() => setShowQueue(true)}>
           Pick a heat
         </button>
+        <button type="button" className="btn btn-ghost btn-block" onClick={() => setShowQR(true)}>
+          QR codes
+        </button>
+        <Sheet open={showQueue} title="Next heat" onClose={() => setShowQueue(false)}>
+          <HeatPicker state={state} upNext={upNext} onPicked={() => setShowQueue(false)} />
+        </Sheet>
+        <QRSheet state={state} open={showQR} onClose={() => setShowQR(false)} />
       </main>
     );
   }
@@ -829,9 +892,14 @@ function Racing({ state }: { state: StatePayload }) {
     <>
       <header className="dir-racing-head">
         <p className="eyebrow">{current.label}</p>
-        <p className="code">
-          heat {state.event.heatsDone + 1} of {state.event.heatsTotal}
-        </p>
+        <div className="dir-racing-head-right">
+          <p className="code">
+            heat {state.event.heatsDone + 1} of {state.event.heatsTotal}
+          </p>
+          <button type="button" className="btn btn-ghost dir-mini" onClick={() => setShowQR(true)}>
+            QR codes
+          </button>
+        </div>
       </header>
 
       <main className="dir-targets">
@@ -902,6 +970,7 @@ function Racing({ state }: { state: StatePayload }) {
       </Sheet>
 
       <MessageSheet state={state} open={showMessage} onClose={() => setShowMessage(false)} />
+      <QRSheet state={state} open={showQR} onClose={() => setShowQR(false)} />
     </>
   );
 }

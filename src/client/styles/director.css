@@ -350,6 +350,41 @@
   padding: calc(var(--safe-top) + var(--s-3)) var(--s-4) var(--s-2);
 }
 
+.dir-racing-head-right {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+/* --- QR sheet during racing ------------------------------------------------- */
+
+.dir-qr-head {
+  margin-top: var(--s-2);
+}
+
+.dir-qr-names {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  max-height: 40dvh;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.dir-qr-name {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  font-size: var(--t-md);
+  text-align: left;
+  color: var(--ink);
+}
+
 .dir-targets {
   display: grid;
   grid-template-rows: 1fr auto 1fr;
