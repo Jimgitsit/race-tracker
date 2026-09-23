@@ -113,6 +113,8 @@ const FOLLOW_ZOOM_MAX = 3;
  * shape the fold needs to draw well.
  */
 const FOLD_AT = 8;
+/** Half the `.trk-rail` stroke width, so a round cap ends flush with a card edge. */
+const TRACK_CAP = 5.5;
 
 function clamp(value: number, low: number, high: number): number {
   return Math.min(high, Math.max(low, value));
@@ -1096,9 +1098,12 @@ function BracketCanvas({
           continue;
         }
 
-        const x1 = from.offsetLeft + from.offsetWidth;
+        // Stand off by half the rail width: the strokes have round caps, so a
+        // path that starts on the card's edge puts half a cap under the card,
+        // which shows through anything translucent — a bye card, a pair box.
+        const x1 = from.offsetLeft + from.offsetWidth + TRACK_CAP;
         const y1 = from.offsetTop + from.offsetHeight / 2;
-        const x2 = to.offsetLeft;
+        const x2 = to.offsetLeft - TRACK_CAP;
         const y2 = to.offsetTop + to.offsetHeight / 2;
 
         if (x2 <= x1) {
