@@ -407,6 +407,13 @@ function Racing({ state }: { state: StatePayload }) {
   const current = matchById(state, state.event.currentMatch);
   const flashed = matchById(state, flash);
   const banner = flashed ?? current;
+  /**
+   * What the screen calls "current" lags the server by the celebration: the
+   * banner is still showing the result, so the bracket's pulsing card and the
+   * on-deck list hold on the heat that just ran, and the whole screen turns to
+   * the next heat on the same beat. (Follow already lags the same way.)
+   */
+  const shownCurrent = flash ?? state.event.currentMatch;
 
   const filters = useMemo(
     () => FILTERS.filter((f) => f.key !== "consolation" || state.event.consolation),
@@ -580,7 +587,7 @@ function Racing({ state }: { state: StatePayload }) {
   const announcement = latest !== null && latest.id > dismissed ? latest : null;
 
   const onDeck = state.queue
-    .filter((id) => id !== state.event.currentMatch)
+    .filter((id) => id !== shownCurrent)
     .slice(0, 3)
     .map((id) => matchById(state, id))
     .filter((m): m is PublicMatch => m !== null);
@@ -1437,7 +1444,7 @@ function BracketCanvas({
                         density={density}
                         compress={compress}
                         fold={compress && detail === "auto"}
-                        currentId={state.event.currentMatch}
+                        currentId={flash ?? state.event.currentMatch}
                         register={(id, el) => {
                           if (el) {
                             boxes.current.set(id, el);
