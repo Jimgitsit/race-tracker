@@ -1037,10 +1037,12 @@ brand logo or the default "dark sports app with a neon accent."
 9. Auto-archive on reset + `/history` + S3 backup.
 10. Deploy (2026-09: moving to **Fly.io**, app `ynot-race-tracker`, one machine + one volume in
     `sjc`, served from the root of `y-not-race.jimmcgowen.com` via `RACE_TRACKER_BASE_PATH=""`;
-    `Dockerfile` + `fly.toml` in the repo, `fly deploy --ha=false`). Originally: launchd user agent `com.jim.race-tracker` on **58013** (`bun` lives at
+    `Dockerfile` + `fly.toml` in the repo, `fly deploy --ha=false`). The Mac mini is now the
+    dev box: launchd user agent `com.jim.race-tracker` on **58013** (`bun` lives at
     `/Users/doug/.bun/bin/bun`, *not* Homebrew's), nginx route
-    `/race-tracker/` → `127.0.0.1:58013` with `proxy_buffering off`, apple-touch-icon via
-    `tools/gen-icon.ts`.
+    `/race-tracker-dev/` → `127.0.0.1:58013` with `proxy_buffering off`; `/race-tracker/`
+    301s to Fly. `RACE_TRACKER_BASE_PATH` defaults to `/race-tracker-dev`, so a plain
+    `bun run build` matches the plist. Apple-touch-icon via `tools/gen-icon.ts`.
 
 **Test the whole thing with two phones and a TV before race day.** A double-elim bracket
 that desyncs mid-event in front of a room of people is the failure mode that matters, and it
