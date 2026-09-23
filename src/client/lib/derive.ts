@@ -172,6 +172,9 @@ export function sourceLabel(
   if (!edge || !from) {
     return "TBD";
   }
+  if (from.state === "bye" && edge.outcome === "L") {
+    return "Bye";
+  }
 
   const verb = edge.outcome === "W" ? "Winner" : "Loser";
   const a = racerById(state, from.a);

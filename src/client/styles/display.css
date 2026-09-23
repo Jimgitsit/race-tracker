@@ -466,10 +466,19 @@
   min-height: 0;
 }
 
+/* One drawn round, or a stack of collapsed ones (see `groups` in Display.tsx). */
+.disp-run {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
 .disp-col {
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
+  flex: 1;
 }
 
 .disp-col-head {
@@ -488,11 +497,12 @@
 }
 
 .disp-col-collapsed {
-  align-self: center;
+  flex: none;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  padding: var(--s-2) var(--s-1);
+  gap: 6px;
+  padding: var(--s-1) var(--s-2);
   border-radius: var(--r-md);
   border: 1px dashed var(--line);
   background: rgb(255 255 255 / 3%);
@@ -510,14 +520,29 @@
   color: var(--track);
 }
 
+/* A folded round: two heats to a row, boxed as one so the track that leaves
+   them reads as "this pair feeds that match". */
+.disp-pair {
+  display: flex;
+  gap: 10px;
+  padding: 5px;
+  border-radius: var(--r-lg);
+  background: rgb(255 255 255 / 4%);
+  border: 1px solid var(--line-soft);
+}
+
 /* --- display match card -------------------------------------------------------- */
 
+/* A fixed width, not a minimum: the tree is laid out at max-content and then
+   scaled to fit, so one long name (or a "Lead Foot Lou or Cheryl From HR" slot)
+   widens its whole column and shrinks every card on the screen. A name that
+   doesn't fit ellipsizes instead. */
 .dm {
   display: flex;
   flex-direction: column;
   gap: 3px;
   padding: 7px 10px;
-  min-width: 190px;
+  width: 200px;
   border-radius: var(--r-md);
   background: var(--surface);
   border: 1px solid var(--line-soft);
@@ -525,7 +550,7 @@
 }
 
 .disp-col-compact .dm {
-  min-width: 150px;
+  width: 160px;
   padding: 5px 8px;
 }
 
@@ -573,6 +598,14 @@
 
 .disp-col-compact .dm-name {
   font-size: 1rem;
+}
+
+/* A slot nobody has reached: quieter than a name, so a column of "or"s doesn't
+   read like a column of entrants. */
+.dm-tbd {
+  color: var(--ink-faint);
+  font-style: italic;
+  font-size: 0.95em;
 }
 
 .dm-won .dm-name {

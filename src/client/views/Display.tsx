@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { joinUrl, type PublicMatch, type StatePayload } from "../lib/api.ts";
-import { matchById, racerById, roundsOf, sourceLabel, type RoundColumn } from "../lib/derive.ts";
+import { matchById, racerById, roundsOf, type RoundColumn } from "../lib/derive.ts";
 import { FLASH_MS, useResultFlash } from "../lib/useRace.ts";
 import { playLaunch, unlockAudio } from "../lib/sound.ts";
 import { timeAgo, useNow } from "../lib/time.ts";
@@ -98,6 +98,16 @@ const FOLLOW_CARD_SHARE = 0.093;
  * shown to answer, and at this zoom there is room for both either side.
  */
 const FOLLOW_BIAS = 0.5;
+
+/**
+ * A round taller than this folds: its matches are laid out two to a row, each
+ * pair beside the later match it feeds. Readable from a couch means ~40px slots,
+ * which on a 1080p frame is eight matches per column; a 32-car winners round 1
+ * is sixteen, and fitting it unfolded scales the whole bracket to a third. Only
+ * that round breaks the cap at 32 (L1 and L2 are eight), so this is the one
+ * shape the fold needs to draw well.
+ */
+const FOLD_AT = 8;
 
 function clamp(value: number, low: number, high: number): number {
   return Math.min(high, Math.max(low, value));
@@ -388,8 +398,18 @@ function Racing({ state }: { state: StatePayload }) {
     }
   }, [filters, filter]);
 
+  /**
+   * Byes are dropped: a field of 35 draws a 64-slot bracket whose first round is
+   * 29 byes and three heats, and a bye is not a heat — it is a row of nothing
+   * that a real round has to shrink to make room for. The winners round 2 cards
+   * name the car that walked through, which is all a bye ever said. A round that
+   * is nothing but byes goes with them.
+   */
   const columns = useMemo(
-    () => roundsOf(state, bracketsFor(filter, state.event.consolation)),
+    () =>
+      roundsOf(state, bracketsFor(filter, state.event.consolation))
+        .map((column) => ({ ...column, matches: column.matches.filter((m) => m.state !== "bye") }))
+        .filter((column) => column.matches.length > 0),
     [state, filter],
   );
 
@@ -954,16 +974,25 @@ function BracketCanvas({
    * brackets internally but "Finals" to anyone reading the screen.
    */
   const groups = useMemo(() => {
-    const out: { key: string; label: string; entries: typeof ordered }[] = [];
+    const out: { key: string; label: string; runs: (typeof ordered)[] }[] = [];
 
     for (const entry of ordered) {
       const { key, label } = bracketGroup(entry.column.matches[0]?.bracket ?? "W");
       const last = out[out.length - 1];
+      const group = last && last.key === key ? last : { key, label, runs: [] };
+      if (group !== last) {
+        out.push(group);
+      }
 
-      if (last && last.key === key) {
-        last.entries.push(entry);
+      // Consecutive collapsed rounds stack in one narrow column rather than each
+      // taking a column's width and gap of their own: eight stubs side by side is
+      // most of a screen, and the width is what the fit is short of once the tall
+      // rounds are folded. Stacked, they read as "the rounds ahead" at a glance.
+      const run = group.runs[group.runs.length - 1];
+      if (run && entry.density === "collapsed" && run[0]!.density === "collapsed") {
+        run.push(entry);
       } else {
-        out.push({ key, label, entries: [entry] });
+        group.runs.push([entry]);
       }
     }
 
@@ -1332,21 +1361,26 @@ function BracketCanvas({
             <section className="disp-group" key={group.key}>
               <h2 className="disp-group-title">{group.label}</h2>
               <div className="disp-group-cols">
-                {group.entries.map(({ column, density }) => (
-                  <Column
-                    key={column.key}
-                    state={state}
-                    column={column}
-                    density={density}
-                    currentId={state.event.currentMatch}
-                    register={(id, el) => {
-                      if (el) {
-                        boxes.current.set(id, el);
-                      } else {
-                        boxes.current.delete(id);
-                      }
-                    }}
-                  />
+                {group.runs.map((run) => (
+                  <div className="disp-run" key={run[0]!.column.key}>
+                    {run.map(({ column, density }) => (
+                      <Column
+                        key={column.key}
+                        state={state}
+                        column={column}
+                        density={density}
+                        fold={detail === "auto"}
+                        currentId={state.event.currentMatch}
+                        register={(id, el) => {
+                          if (el) {
+                            boxes.current.set(id, el);
+                          } else {
+                            boxes.current.delete(id);
+                          }
+                        }}
+                      />
+                    ))}
+                  </div>
                 ))}
               </div>
             </section>
@@ -1391,8 +1425,12 @@ function densityOf(column: RoundColumn, index: number, focus: number, detail: De
     return "compact";
   }
 
+  // Full cards on a round that is still more than a screen of rows even after
+  // folding would drag the fit down for every other column; keep it compact.
+  const full: Density = Math.ceil(column.matches.length / 2) > FOLD_AT ? "compact" : "full";
+
   if (index === focus) {
-    return "full";
+    return full;
   }
 
   // A finished round behind the focus is the single biggest waste of space on the
@@ -1410,19 +1448,55 @@ function densityOf(column: RoundColumn, index: number, focus: number, detail: De
     return "collapsed";
   }
 
-  return Math.abs(index - focus) === 1 ? "full" : "compact";
+  return Math.abs(index - focus) === 1 ? full : "compact";
+}
+
+/**
+ * What an unfilled slot says. `sourceLabel` spells it out — "Winner of Kenny vs
+ * Lil Debbie" — which is right on a phone and, sixteen times over, is what makes
+ * every column on the big screen wide. Here the slot names the two cars it could
+ * be, or the round code it waits on; which of them it gets is what the bracket
+ * the card sits in already says.
+ */
+function displaySource(state: StatePayload, match: PublicMatch, side: "a" | "b"): string {
+  const edge = state.edges.find((e) => e.to === match.id && e.toSlot === side);
+  const from = edge ? state.matches.find((m) => m.id === edge.from) : undefined;
+  if (!edge || !from) {
+    return "TBD";
+  }
+  // A bye has no loser; the slot it feeds in the losers bracket stays empty.
+  if (from.state === "bye" && edge.outcome === "L") {
+    return "Bye";
+  }
+
+  const a = racerById(state, from.a);
+  const b = racerById(state, from.b);
+  if (a && b) {
+    return `${a.name} or ${b.name}`;
+  }
+
+  const code =
+    from.bracket === "GF" || from.bracket === "GFR" ? from.bracket : `${from.bracket}${from.round}`;
+  return `${edge.outcome === "W" ? "Winner" : "Loser"} of ${code}`;
 }
 
 function Column({
   state,
   column,
   density,
+  fold,
   currentId,
   register,
 }: {
   state: StatePayload;
   column: RoundColumn;
   density: Density;
+  /**
+   * Folding trades height for width, which only pays when the tree is narrow —
+   * the auto view, where most rounds are collapsed stubs. "All rounds" is
+   * already eighteen columns wide and width-bound; folding there shrinks it.
+   */
+  fold: boolean;
   currentId: number | null;
   register: (id: number, el: HTMLElement | null) => void;
 }) {
@@ -1434,6 +1508,47 @@ function Column({
         <span className="disp-col-tally code">
           {done > 0 ? `✓${done}` : `${column.matches.length}`}
         </span>
+      </section>
+    );
+  }
+
+  if (fold && column.matches.length > FOLD_AT) {
+    // Two to a row, interleaved: the pair on row j is exactly the two heats that
+    // feed match j of the next round, so the connector leaves the pair as one line
+    // and nothing crosses a card. Both heats register the pair as their box, which
+    // is where the track starts from and what follow mode aims at.
+    const pairs: PublicMatch[][] = [];
+    for (let i = 0; i < column.matches.length; i += 2) {
+      pairs.push(column.matches.slice(i, i + 2));
+    }
+
+    return (
+      <section className={`disp-col disp-col-${density} disp-col-folded`}>
+        <h2 className="disp-col-head">{column.label}</h2>
+        <div className="disp-col-body">
+          {pairs.map((pair) => (
+            <div
+              key={pair[0]!.id}
+              className="disp-pair"
+              ref={(el) => {
+                for (const match of pair) {
+                  register(match.id, el);
+                }
+              }}
+            >
+              {pair.map((match) => (
+                <DisplayMatch
+                  key={match.id}
+                  state={state}
+                  match={match}
+                  density={density}
+                  current={match.id === currentId}
+                  register={null}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
       </section>
     );
   }
@@ -1468,7 +1583,8 @@ function DisplayMatch({
   match: PublicMatch;
   density: Density;
   current: boolean;
-  register: (id: number, el: HTMLElement | null) => void;
+  /** Null inside a folded pair, where the pair is the box. */
+  register: ((id: number, el: HTMLElement | null) => void) | null;
 }) {
   const a = racerById(state, match.a);
   const b = racerById(state, match.b);
@@ -1488,17 +1604,17 @@ function DisplayMatch({
   }
 
   return (
-    <div className={classes.join(" ")} ref={(el) => register(match.id, el)}>
+    <div className={classes.join(" ")} ref={register ? (el) => register(match.id, el) : undefined}>
       <DisplaySide
         racer={a}
-        source={sourceLabel(state, match, "a")}
+        source={displaySource(state, match, "a")}
         won={match.winner !== null && match.winner === match.a}
         lost={match.winner !== null && match.winner !== match.a && a !== null}
         density={density}
       />
       <DisplaySide
         racer={b}
-        source={sourceLabel(state, match, "b")}
+        source={displaySource(state, match, "b")}
         won={match.winner !== null && match.winner === match.b}
         lost={match.winner !== null && match.winner !== match.b && b !== null}
         density={density}
@@ -1531,7 +1647,9 @@ function DisplaySide({
   return (
     <div className={classes.join(" ")}>
       {density === "full" ? <Avatar racer={racer} size="sm" /> : null}
-      <span className="dm-name racer-name">{racer ? racer.name : source}</span>
+      <span className={`dm-name racer-name${racer ? "" : " dm-tbd"}`}>
+        {racer ? racer.name : source}
+      </span>
       {won ? <span className="dm-check">Winner</span> : null}
     </div>
   );

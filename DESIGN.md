@@ -316,6 +316,26 @@ Then measure the composed bracket and scale it to fit
 Because culling already did most of the work, the scale rarely drops far below 1 — which is
 exactly what keeps photos legible.
 
+Culling alone stopped working at 32+ cars, and four more rules got the auto view back to
+readable (each measured at 1080p with a 35-car field; together they took it from a third
+scale to full):
+
+- **Byes are not drawn.** A field of 35 draws a 64-slot bracket whose first round is 29 byes
+  and three heats; a bye is a row of nothing that real rounds shrink to make room for. The
+  next round's cards name the car that walked through. A round that is nothing but byes goes
+  with them, and a losers-bracket slot fed by a bye reads `Bye`, not "Loser of W1".
+- **A round taller than 8 rows folds** (auto view only): two heats to a row, interleaved so
+  the pair on row *j* is exactly the two that feed match *j* of the next round, boxed
+  together so the one track leaving them reads as "this pair feeds that". Readable from a
+  couch is ~40px slots, which on a 1080p frame is eight matches per column. Not applied in
+  All rounds, which is eighteen columns wide and width-bound — folding there only shrinks it.
+- **Consecutive collapsed rounds stack** in one narrow column instead of each taking a column
+  and gap of their own; eight stubs side by side was most of a screen.
+- **Cards are a fixed width, not a minimum,** so one long name — or a "Lead Foot Lou or Cheryl
+  From HR" slot — ellipsizes instead of widening its whole column. On the big screen an
+  unfilled slot names the two cars it could be (`Kenny or Lil Debbie`) or the round code it
+  waits on (`Winner of L1`), italic and faint; the phone keeps the longer "Winner of …" form.
+
 **Focus is automatic and stays automatic.** It follows the current match, and the arrow keys
 can step it while fitted. Clicking a column to focus it was built and removed: with Follow
 on, focusing re-flows the layout, which makes Follow re-aim on the live heat — so the click
