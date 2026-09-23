@@ -45,6 +45,7 @@ const KEY = {
   detail: "race-tracker.disp.detail",
   compress: "race-tracker.disp.compress",
   follow: "race-tracker.disp.follow",
+  followZoom: "race-tracker.disp.followZoom",
   sound: "race-tracker.disp.sound",
   dismissed: "race-tracker.disp.msgDismissed",
 } as const;
@@ -344,10 +345,13 @@ function Racing({ state }: { state: StatePayload }) {
   /**
    * Zoom under follow is a multiplier on the card size follow aims for, not a
    * scale of its own: follow keeps re-aiming as the race moves, and a raw scale
-   * would be overwritten at the next heat. Resets to 1 whenever follow is
-   * switched on, so it always starts at the size it was tuned for.
+   * would be overwritten at the next heat. It survives follow being dropped by a
+   * pan and picked up again — the size was chosen for this screen, not this
+   * heat — and comes back after a refresh with the rest of the settings.
    */
-  const [followZoom, setFollowZoom] = useState(1);
+  const [followZoom, setFollowZoom] = useState(() =>
+    clamp(Number(localStorage.getItem(KEY.followZoom)) || 1, FOLLOW_ZOOM_MIN, FOLLOW_ZOOM_MAX),
+  );
   const [sound, setSound] = useState(() => localStorage.getItem(KEY.sound) !== "0");
   const [fit, setFit] = useState(1);
   const [dismissed, setDismissed] = useState(() => storedNumber(KEY.dismissed));
@@ -363,6 +367,7 @@ function Racing({ state }: { state: StatePayload }) {
   useEffect(() => localStorage.setItem(KEY.detail, detail), [detail]);
   useEffect(() => localStorage.setItem(KEY.compress, compress ? "1" : "0"), [compress]);
   useEffect(() => localStorage.setItem(KEY.follow, follow ? "1" : "0"), [follow]);
+  useEffect(() => localStorage.setItem(KEY.followZoom, String(followZoom)), [followZoom]);
   useEffect(() => localStorage.setItem(KEY.sound, sound ? "1" : "0"), [sound]);
   useEffect(() => localStorage.setItem(KEY.dismissed, String(dismissed)), [dismissed]);
 
@@ -465,6 +470,7 @@ function Racing({ state }: { state: StatePayload }) {
     setView(FIT);
     setFocus(null);
     setFollow(false);
+    setFollowZoom(1);
   }, []);
 
   /** Any hand on the controls drops follow. Auto-framing that fights the person
@@ -480,10 +486,7 @@ function Racing({ state }: { state: StatePayload }) {
     setFollow(false);
   }, []);
 
-  const toggleFollow = useCallback(() => {
-    setFollowZoom(1);
-    setFollow((f) => !f);
-  }, []);
+  const toggleFollow = useCallback(() => setFollow((f) => !f), []);
 
   const zoomBy = useCallback(
     (steps: number) => {

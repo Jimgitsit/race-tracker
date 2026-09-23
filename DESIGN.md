@@ -530,9 +530,11 @@ not the number. If the live heat isn't rendered at all — filtered out, or in a
 round — follow has nothing to aim at and does nothing. It re-aims on layout, not on a timer, so a collapsing round or a
 resized window moves it too. A drag, a filter change or Fit drops it: auto-framing that
 fights the person driving is worse than none. **Zoom does not.** The +/− buttons, keys and a
-trackpad pinch scale the card size follow aims for (a multiplier, ×0.5–×3, reset to 1 each
-time follow is switched on), so the live heat stays framed at the new size through every
-re-aim. A raw scale would be overwritten at the next heat, which is why it is a multiplier.
+trackpad pinch scale the card size follow aims for (a multiplier, ×0.5–×3), so the live heat
+stays framed at the new size through every re-aim. A raw scale would be overwritten at the
+next heat, which is why it is a multiplier. The multiplier is remembered — pan away, click
+Follow again, and it comes back at the size it was left at; it persists with the other
+settings and only Esc puts it back to 1.
 
 **It holds through a result, and only through a result.** What follow aims at *lags* the
 live heat by `FLASH_MS` — `currentMatch` advances the instant the director saves, which is
