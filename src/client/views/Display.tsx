@@ -1443,7 +1443,6 @@ function BracketCanvas({
                         column={column}
                         density={density}
                         compress={compress}
-                        fold={compress}
                         currentId={flash ?? state.event.currentMatch}
                         register={(id, el) => {
                           if (el) {
@@ -1566,21 +1565,19 @@ function Column({
   column,
   density,
   compress,
-  fold,
   currentId,
   register,
 }: {
   state: StatePayload;
   column: RoundColumn;
   density: Density;
-  compress: boolean;
   /**
-   * Folding trades height for width, which pays when the tree is narrow — most
-   * rounds collapsed to stubs. In "All rounds" it measured ~15% smaller, and it
-   * folds there anyway: a Compress that visibly doesn't compress in one view
-   * cost more confusion than the 15% bought.
+   * Compress folds tall rounds. Folding trades height for width, which pays
+   * when the tree is narrow — most rounds collapsed to stubs. In "All rounds" it
+   * measured ~15% smaller, and it folds there anyway: a Compress that visibly
+   * doesn't compress in one view cost more confusion than the 15% bought.
    */
-  fold: boolean;
+  compress: boolean;
   currentId: number | null;
   register: (id: number, el: HTMLElement | null) => void;
 }) {
@@ -1596,7 +1593,7 @@ function Column({
     );
   }
 
-  if (fold && column.matches.length > FOLD_AT) {
+  if (compress && column.matches.length > FOLD_AT) {
     // Two to a row, interleaved: the pair on row j is exactly the two heats that
     // feed match j of the next round, so the connector leaves the pair as one line
     // and nothing crosses a card. Both heats register the pair as their box, which
