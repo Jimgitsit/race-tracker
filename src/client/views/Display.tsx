@@ -15,8 +15,12 @@ import posterUrl from "../assets/y-not-nationals-2026.jpg";
  * in density, which is the part nobody could hold in their head.
  */
 type Filter = "all" | "main" | "losers" | "consolation";
-/** How much of each round is drawn: collapse what's settled, or show all of it. */
-type Detail = "auto" | "all";
+/**
+ * How much of each round is drawn: collapse what's settled; the same, but with
+ * tall rounds folded and collapsed rounds stacked so a 32-car field fits
+ * ("compress"); or every round at one size.
+ */
+type Detail = "auto" | "compress" | "all";
 type Density = "full" | "compact" | "collapsed";
 
 /** Pan offset plus scale, where a null scale means "whatever fits". */
@@ -50,7 +54,7 @@ const KEY = {
 
 
 const FILTER_KEYS: Filter[] = ["all", "main", "losers", "consolation"];
-const DETAIL_KEYS: Detail[] = ["auto", "all"];
+const DETAIL_KEYS: Detail[] = ["auto", "compress", "all"];
 
 function stored<T extends string>(key: string, allowed: T[], fallback: T): T {
   const found = localStorage.getItem(key);
@@ -514,7 +518,7 @@ function Racing({ state }: { state: StatePayload }) {
           setView(FIT);
           break;
         case "d":
-          setDetail((d) => (d === "all" ? "auto" : "all"));
+          setDetail((d) => DETAIL_KEYS[(DETAIL_KEYS.indexOf(d) + 1) % DETAIL_KEYS.length]!);
           break;
         case "f":
           manual();
@@ -620,7 +624,7 @@ function Racing({ state }: { state: StatePayload }) {
           scale={view.scale}
           fit={fit}
           onFilter={pickFilter}
-          onDetail={() => setDetail((d) => (d === "all" ? "auto" : "all"))}
+          onDetail={(mode) => setDetail((d) => (d === mode ? "auto" : mode))}
           onFollow={() => setFollow((f) => !f)}
           onSound={() => setSound((s) => !s)}
           onZoom={zoomBy}
@@ -770,7 +774,7 @@ function Controls({
   scale: number | null;
   fit: number;
   onFilter: (key: Filter) => void;
-  onDetail: () => void;
+  onDetail: (mode: Detail) => void;
   onFollow: () => void;
   onSound: () => void;
   onZoom: (steps: number) => void;
@@ -796,8 +800,16 @@ function Controls({
       <div className="disp-ctl-set">
         <button
           type="button"
+          className={`disp-ctl-btn ${detail === "compress" ? "is-on" : ""}`}
+          onClick={() => onDetail("compress")}
+          title="Fold tall rounds two heats to a row and stack the collapsed ones, so a big field fits"
+        >
+          Compress
+        </button>
+        <button
+          type="button"
           className={`disp-ctl-btn ${detail === "all" ? "is-on" : ""}`}
-          onClick={onDetail}
+          onClick={() => onDetail("all")}
           title="Draw every round at the same size instead of collapsing what's settled"
         >
           All rounds
@@ -984,12 +996,17 @@ function BracketCanvas({
         out.push(group);
       }
 
-      // Consecutive collapsed rounds stack in one narrow column rather than each
-      // taking a column's width and gap of their own: eight stubs side by side is
-      // most of a screen, and the width is what the fit is short of once the tall
-      // rounds are folded. Stacked, they read as "the rounds ahead" at a glance.
+      // Compress: consecutive collapsed rounds stack in one narrow column rather
+      // than each taking a column's width and gap of their own. Eight stubs side by
+      // side is most of a screen, and width is what the fit is short of once the
+      // tall rounds are folded. Stacked, they read as "the rounds ahead".
       const run = group.runs[group.runs.length - 1];
-      if (run && entry.density === "collapsed" && run[0]!.density === "collapsed") {
+      if (
+        detail === "compress" &&
+        run &&
+        entry.density === "collapsed" &&
+        run[0]!.density === "collapsed"
+      ) {
         run.push(entry);
       } else {
         group.runs.push([entry]);
@@ -997,7 +1014,7 @@ function BracketCanvas({
     }
 
     return out;
-  }, [ordered]);
+  }, [ordered, detail]);
 
   // Measure in layout coordinates (offsetLeft/Top), which the scale transform on
   // the wrapper does not affect — so connectors stay correct at any zoom.
@@ -1369,7 +1386,7 @@ function BracketCanvas({
                         state={state}
                         column={column}
                         density={density}
-                        fold={detail === "auto"}
+                        fold={detail === "compress"}
                         currentId={state.event.currentMatch}
                         register={(id, el) => {
                           if (el) {
@@ -1425,9 +1442,11 @@ function densityOf(column: RoundColumn, index: number, focus: number, detail: De
     return "compact";
   }
 
-  // Full cards on a round that is still more than a screen of rows even after
-  // folding would drag the fit down for every other column; keep it compact.
-  const full: Density = Math.ceil(column.matches.length / 2) > FOLD_AT ? "compact" : "full";
+  // Full cards on a round that is more than a screen of rows (after folding, if
+  // compressed) would drag the fit down for every other column; keep it compact.
+  const rows =
+    detail === "compress" ? Math.ceil(column.matches.length / 2) : column.matches.length;
+  const full: Density = rows > FOLD_AT ? "compact" : "full";
 
   if (index === focus) {
     return full;
@@ -1493,8 +1512,8 @@ function Column({
   density: Density;
   /**
    * Folding trades height for width, which only pays when the tree is narrow —
-   * the auto view, where most rounds are collapsed stubs. "All rounds" is
-   * already eighteen columns wide and width-bound; folding there shrinks it.
+   * with most rounds collapsed to stubs. "All rounds" is already eighteen
+   * columns wide and width-bound; folding there shrinks it.
    */
   fold: boolean;
   currentId: number | null;
