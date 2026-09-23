@@ -355,10 +355,12 @@
 
 /* Two strokes make the cross-section: a wide rail underneath, a narrower bed on
    top, leaving the rail colour showing along both edges. */
+/* Square ends: the track runs into the card, not up to it. A round cap put half
+   its width under the card, which showed through translucent bye cards. */
 .trk-rail,
 .trk-bed {
   fill: none;
-  stroke-linecap: round;
+  stroke-linecap: butt;
   stroke-linejoin: round;
 }
 
