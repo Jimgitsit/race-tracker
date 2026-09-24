@@ -155,8 +155,14 @@ export function useRace(): { state: StatePayload | null; connected: boolean } {
   return { state, connected };
 }
 
-/** How long a result holds the screen before the next heat takes over. */
-export const FLASH_MS = 4000;
+/**
+ * How long a result holds the screen before the next heat takes over. The
+ * director set it just under the length of the big screen's race clip
+ * (`sound.ts`, 11.8 s). It's a plain timer, never the clip's `ended` event — the
+ * swap must happen whether or not audio played. Know that a new result restarts
+ * the hold, so results entered faster than this keep the banner on the newest one.
+ */
+export const FLASH_MS = 11000;
 
 /**
  * Fires when a match's result lands, so a view can celebrate it.

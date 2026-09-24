@@ -5,6 +5,7 @@ import { matchById, racerById, roundsOf, sourceLabel, type RoundColumn } from ".
 import { FLASH_MS, useResultFlash } from "../lib/useRace.ts";
 import { playLaunch, unlockAudio } from "../lib/sound.ts";
 import { timeAgo, useNow } from "../lib/time.ts";
+import { useWakeLock } from "../lib/useWakeLock.ts";
 import { Avatar } from "../components/Avatar.tsx";
 import { JoinQR } from "../components/QR.tsx";
 import posterUrl from "../assets/y-not-nationals-2026.jpg";
@@ -169,55 +170,6 @@ function ExitBar({ onExit }: { onExit: () => void }) {
       <span className="disp-exit-hint">Turn your phone sideways</span>
     </div>
   );
-}
-
-/**
- * TVs sleep. Browsers also drop the lock whenever the tab is backgrounded, so
- * re-request it on visibilitychange rather than assuming the first grant holds.
- */
-function useWakeLock(): void {
-  useEffect(() => {
-    type Sentinel = { release: () => Promise<void> };
-    const nav = navigator as Navigator & {
-      wakeLock?: { request: (kind: "screen") => Promise<Sentinel> };
-    };
-
-    if (!nav.wakeLock) {
-      return;
-    }
-
-    let sentinel: Sentinel | null = null;
-    let live = true;
-
-    const acquire = async () => {
-      try {
-        const next = await nav.wakeLock!.request("screen");
-        if (live) {
-          sentinel = next;
-        } else {
-          await next.release();
-        }
-      } catch {
-        // A denied wake lock is not worth surfacing on a TV.
-      }
-    };
-
-    void acquire();
-
-    const onVisible = () => {
-      if (document.visibilityState === "visible") {
-        void acquire();
-      }
-    };
-
-    document.addEventListener("visibilitychange", onVisible);
-
-    return () => {
-      live = false;
-      document.removeEventListener("visibilitychange", onVisible);
-      void sentinel?.release();
-    };
-  }, []);
 }
 
 // ---------------------------------------------------------------------------------

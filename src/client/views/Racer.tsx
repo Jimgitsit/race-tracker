@@ -18,9 +18,18 @@ import {
   statusChip,
   statusFor,
 } from "../lib/derive.ts";
-import { alertsEnabled, canVibrate, disableAlerts, enableAlerts } from "../lib/alerts.ts";
+import {
+  alertsEnabled,
+  canVibrate,
+  chime,
+  describeChime,
+  disableAlerts,
+  enableAlerts,
+  onAudioAsleep,
+} from "../lib/alerts.ts";
 import { useMessages, useRaceAlerts, type Message } from "../lib/useAlerts.ts";
 import { useResultFlash } from "../lib/useRace.ts";
+import { useWakeLock } from "../lib/useWakeLock.ts";
 import { clockTime, timeAgo, useNow } from "../lib/time.ts";
 import { Avatar } from "../components/Avatar.tsx";
 import {
@@ -287,8 +296,14 @@ function Main({
   const [inbox, setInbox] = useState(false);
   const messages = useMessages(state, meId);
   const { unread, markRead } = useUnread(messages);
+  const [alertsOn, setAlertsOn] = useState(alertsEnabled);
+  const [asleep, setAsleep] = useState<AudioContextState | "none" | null>(null);
 
   useRaceAlerts(state, meId, messages);
+  useEffect(() => onAudioAsleep(setAsleep), []);
+  // A chime can't play on a locked phone, so while alerts are on hold the
+  // screen awake. Lives here, not in the card, so switching tabs keeps it.
+  useWakeLock(me !== null && alertsOn);
 
   useEffect(() => {
     localStorage.setItem(TAB_KEY, tab);
@@ -326,6 +341,14 @@ function Main({
         </div>
       </header>
 
+      {/* An alert that couldn't sound, usually because the phone was locked in
+          between. A tap is what wakes iOS audio, so ask for one and say why. */}
+      {asleep ? (
+        <p className="rc-asleep" role="status">
+          Sound went to sleep while the phone was locked ({asleep}) — tap anywhere to wake it.
+        </p>
+      ) : null}
+
       {/* On the Now tab the message has a card of its own; anywhere else it has to
           come to you, because the alert chime doesn't say what was said. */}
       {unread && tab !== "now" ? (
@@ -344,6 +367,8 @@ function Main({
             onExplain={() => setTab("rules")}
             onJoin={onJoin}
             onSignOut={onSignOut}
+            alertsOn={alertsOn}
+            onAlertsChange={setAlertsOn}
           />
         ) : null}
         {tab === "bracket" ? <BracketTab state={state} meId={meId} /> : null}
@@ -448,6 +473,8 @@ function NowTab({
   onExplain,
   onJoin,
   onSignOut,
+  alertsOn,
+  onAlertsChange,
 }: {
   state: StatePayload;
   meId: number | null;
@@ -458,6 +485,8 @@ function NowTab({
   onExplain: () => void;
   onJoin?: () => void;
   onSignOut: () => void;
+  alertsOn: boolean;
+  onAlertsChange: (on: boolean) => void;
 }) {
   const messageSlot = (
     <MessageSlot
@@ -499,7 +528,7 @@ function NowTab({
           ) : null}
         </section>
         {messageSlot}
-        {me ? <AlertsCard /> : null}
+        {me ? <AlertsCard on={alertsOn} onChange={onAlertsChange} /> : null}
         {me ? <PhotoCard racer={me} /> : null}
         {me ? <SignOut racer={me} onSignOut={onSignOut} /> : null}
       </div>
@@ -557,7 +586,7 @@ function NowTab({
         </section>
       ) : null}
 
-      {me ? <AlertsCard /> : null}
+      {me ? <AlertsCard on={alertsOn} onChange={onAlertsChange} /> : null}
 
       {me ? <PhotoCard racer={me} /> : null}
 
@@ -726,9 +755,14 @@ function Inbox({
  * phone will actually do, because promising a buzz an iPhone can't deliver is
  * worse than promising nothing.
  */
-function AlertsCard() {
-  const [on, setOn] = useState(alertsEnabled);
+function AlertsCard({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
+  const setOn = onChange;
   const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+
+  const test = async (tone: "up-now" | "on-deck" | "message") => {
+    setNote(describeChime(await chime(tone)));
+  };
 
   const enable = async () => {
     setBusy(true);
@@ -747,20 +781,34 @@ function AlertsCard() {
           <p className="rc-alerts-head">Alerts are on</p>
           <p className="rc-alerts-sub">
             {canVibrate()
-              ? "You'll hear a chime and feel a buzz when you're up."
-              : "You'll hear a chime when you're up. This phone can't vibrate from a web page."}
+              ? "You'll hear a chime and feel a buzz when you're up. Keep this page open — it holds the screen awake, and a locked phone can't chime."
+              : "You'll hear a chime when you're up. Keep this page open — it holds the screen awake, and a locked phone can't chime. This phone can't vibrate from a web page."}
           </p>
+          {note ? <p className="rc-alerts-note">{note}</p> : null}
         </div>
-        <button
-          type="button"
-          className="btn btn-ghost rc-alerts-btn"
-          onClick={() => {
-            disableAlerts();
-            setOn(false);
-          }}
-        >
-          Turn off
-        </button>
+        {/* Test is the answer to "is it working?" asked at a party: a tap that
+            makes the exact sound, or doesn't, and tells you which right now. */}
+        <div className="rc-alerts-actions">
+          <button type="button" className="btn btn-ghost rc-alerts-btn" onClick={() => void test("up-now")}>
+            Up now
+          </button>
+          <button type="button" className="btn btn-ghost rc-alerts-btn" onClick={() => void test("on-deck")}>
+            On deck
+          </button>
+          <button type="button" className="btn btn-ghost rc-alerts-btn" onClick={() => void test("message")}>
+            Message
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost rc-alerts-btn"
+            onClick={() => {
+              disableAlerts();
+              setOn(false);
+            }}
+          >
+            Turn off
+          </button>
+        </div>
       </section>
     );
   }

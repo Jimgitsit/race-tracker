@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { api, type StatePayload } from "./api.ts";
-import { alertsEnabled, fire } from "./alerts.ts";
+import { alertsEnabled, armAudio, fire } from "./alerts.ts";
 
 export type Message = { id: number; body: string; at: number; direct: boolean };
 
@@ -59,6 +59,14 @@ export function useRaceAlerts(
   messages: Message[],
 ): void {
   const seen = useRef<{ current: number | null; onDeck: boolean; message: number } | null>(null);
+
+  // The audio "Turn on" unlocked belongs to the page it was tapped in. A reload
+  // still says alerts are on, so give the new page its own on its first tap.
+  useEffect(() => {
+    if (alertsEnabled()) {
+      armAudio();
+    }
+  }, []);
 
   useEffect(() => {
     if (!state || meId === null) {

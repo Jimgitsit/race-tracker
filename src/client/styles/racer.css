@@ -846,11 +846,35 @@
   color: var(--ink-dim);
 }
 
+.rc-asleep {
+  margin: var(--s-2) var(--s-3) 0;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-md);
+  background: var(--track-deep);
+  color: var(--surface);
+  font-size: var(--t-sm);
+  font-weight: 600;
+}
+
+.rc-alerts-note {
+  margin-top: var(--s-2);
+  font-size: var(--t-sm);
+  color: var(--ink);
+}
+
 .rc-alerts-btn {
   flex: none;
   min-height: 44px;
   padding: 0 var(--s-4);
   font-size: var(--t-sm);
+}
+
+/* Test above Turn off, one column, so the card stays as wide as the text. */
+.rc-alerts-actions {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--s-2);
 }
 
 .rc-msg-head {

@@ -303,7 +303,10 @@ for car photos.
   names in a very large weight, `VS` between. When a result lands the banner runs **the same
   celebration as the racer view** (§3.1): a green ring on the winner's photo, their name in
   green, **WINNER!** landing on the photo oversized-and-transparent then scaling down onto
-  it, and the loser dimmed and struck. It holds ~4s, then the banner swaps to the next match.
+  it, and the loser dimmed and struck. It holds 11s — the director's choice, just under the
+  race clip's length — then the banner swaps to the next match. The hold is a plain timer,
+  never the audio's `ended` event, so it swaps whether or not sound played. A new result
+  restarts the hold, so results entered faster than 11s keep the banner on the newest one.
   This animation is the thing that makes a room look up — and it is the *same* animation on
   the phone in your hand and on the screen across the room, on purpose.
 - **Body: the bracket, auto-framed** (below).
@@ -462,16 +465,15 @@ pannable: at fit there is nothing to pan, but a pinch still has to reach the app
 zooming the whole page. Nothing is lost — `.disp` is a fixed-height, overflow-hidden screen
 with no page scroll behind it.
 
-**Sound.** One sound, on the big screen only: a real dragster launching as the winner's car
-runs up its connector.
+**Sound.** One sound, on the big screen only: a drag race, start to finish, as the winner's
+car runs up its connector.
 
-The clip is a 1.7s cut from a **CC0 / public-domain** recording — "auto performance dragster
-take off", [freesound.org sound 637195](https://freesound.org/s/637195/) by *kyles*. CC0
-imposes no attribution obligation; the provenance is recorded because knowing where an asset
-came from is worth more than the licence demands. The source is 12.5s and its power builds
-to a peak around 4.5s, so the cut is **3.0–4.7s** — the launch itself, not the quiet approach
-that precedes it. Gained, limited, faded at both ends so it neither clicks nor outlasts the
-animation. **24 KB**, bundled by Vite with a content hash.
+The clip (`drag-race-winner.mp3`) was supplied by the race director: **11.8s**, stereo,
+192 kbps, **284 KB**, bundled by Vite with a content hash. The only processing is a one-second
+fade at the end so it doesn't chop off. The result hold (`FLASH_MS`) is 11s, just under it, by
+the director's choice, but as an independent timer — the swap must never wait on audio. A
+result landing mid-clip fades the old clip out over 300ms rather than stacking two races. (It
+replaced a 1.7s CC0 dragster launch from freesound 637195, kept in git history.)
 
 A synthesised engine (two detuned sawtooths through an opening lowpass, plus a band-passed
 noise burst) remains as a **fallback** if the clip ever fails to decode. It is markedly worse
@@ -660,10 +662,43 @@ nothing left to interrupt anyone with.
 | Audio | works after one user gesture | works after one user gesture |
 
 So **sound is the only channel that reaches everyone's phone**, and it's what this leans on:
-a synthesised chime (no asset to fetch on bad wifi), fired when a racer goes on deck, when
-they're up, and when a message arrives. Vibration and notifications are layered on where they
-exist. Opting in has to happen inside a real tap, because that gesture is what unlocks the
-`AudioContext` for the rest of the session.
+a sound fired when a racer goes on deck, when they're up, and when a message arrives.
+"You're up" is a dragster idling (`dragster-idle.mp3`, 10 s, faded), a message is a car horn
+(`car-honk.mp3`), both supplied by the director and decoded once the audio context exists so
+nothing fetches at alert time; on deck is a synthesised two-tone. Every tone has a synth
+fallback if its clip fails to decode, tuned for a phone speaker — square waves around 1 kHz
+through a lowpass, because the first pretty 520 Hz triangle was inaudible in a room. Vibration
+and notifications are layered on where they exist. Opting in has to happen inside a real tap,
+because that gesture is what unlocks the `AudioContext` for the rest of the session.
+
+**Keeping the sound alive — three things that silently killed it, each found on a real
+iPhone.** (1) The `AudioContext` that "Turn on" unlocked belongs to the page it was tapped
+in; after any reload the card still said "Alerts are on" above a `chime()` that returned on a
+null context. Now `armAudio()` runs on every load where alerts are on and builds/resumes the
+context on the first tap of the new page — any tap is a gesture. (2) iOS's mute switch
+silences Web Audio outright (WebKit bug 237322); the standard fix, `unmute-ios-audio`, plays
+a looping silent `<audio>` on first interaction, which moves the page's audio onto the media
+channel. (3) A backgrounded tab, a call or a lock puts Safari's context in its non-standard
+`interrupted` state, which nothing resumes unless asked; `wake()` resumes on
+`visibilitychange` and before every chime. On Safari 16.4+ `armAudio()` also sets
+`navigator.audioSession.type = "playback"`, the direct form of fix (2). The on-state card has
+a button per sound — **Up now / On deck / Message** — because "is it working?" at a party needs
+an answer that is a sound, right now; each prints what the browser did, so "Played" versus
+"wouldn't start audio" tells you whether to look at the phone (ringer switch, volume,
+Bluetooth) or at the code.
+
+**Don't count on a locked phone, but don't let it lock either.** Safari normally freezes a
+tab once the screen is off — no stream, no timers, no audio. With the `"playback"` audio
+session and the silent loop, a real iPhone *was* observed to chime while locked shortly after
+being locked; how long that survives is unverified, so it's a bonus, not the design. The
+supported posture is phone on the table, screen on: while alerts are on and the page is yours,
+the racer view holds a screen wake lock (the same `useWakeLock` the big screen uses; it
+re-acquires on `visibilitychange`), and the copy says so. When an alert fires and the context
+won't run — which `resume()` after a lock has been seen to refuse even inside a tap — the page
+shows a bar naming the browser's state and asking for a tap; the tap discards the dead context,
+makes a fresh one inside the gesture, and plays the missed tone late. The big screen's
+dragster launch (`sound.ts`) plays through this same context and arming, so a phone watching
+Big screen gets the same recovery for free rather than a second, older audio path.
 
 **Say what each phone will really do.** The opt-in card reads the platform and adjusts:
 Android is promised a buzz, iPhone is told plainly that a web page can't vibrate it. None of
